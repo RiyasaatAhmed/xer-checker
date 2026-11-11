@@ -1,8 +1,8 @@
 """Check Primavera P6 schedule files (.xer).
 
 For every .xer file in data/: report broken rows, run three DCMA checks
-(missing links, negative float, high float), summarize the results (see summary.py),
-then save one chart as chart.png with the summaries under it.
+(missing links, negative float, high float), summarize the results (code gives every number,
+Gemini only the words: see summary.py), then save one chart as chart.png with the summaries under it.
 A file that can't be checked gets a plain reason instead of a crash (see reader.py).
 
 Usage:
@@ -20,7 +20,7 @@ matplotlib.use("Agg")  # draw straight to a file; no window
 import matplotlib.pyplot as plt  # noqa: E402  (must come after matplotlib.use)
 
 from reader import FileError, read_xer  # noqa: E402  (reads a .xer file; FileError says why one can't be checked)
-from summary import summarize  # noqa: E402  (writes each file's summary from the computed numbers)
+from summary import summarize  # noqa: E402  (writes the summary: code gives the numbers, AI the words)
 
 # ---------- Constants ----------
 
@@ -60,7 +60,7 @@ CHART_WRAP = 118  # characters per line under the chart, which is wider
 SUMMARY_LINE_HEIGHT = 0.19  # inches per line of summary text on the chart
 SQUARE_GAP = 0.022  # gap between a file's coloured square and its name, as a share of the chart width
 NOTE_COLOR = "#52514e"  # dark grey, for who wrote each summary
-SUMMARY_NOTE = "Every figure in the summaries is filled in by code."
+SUMMARY_NOTE = "Every figure in the summaries is filled in by code. Gemini, when used, only chooses the words."
 
 
 # ---------- 2. Run the three checks ----------
@@ -127,14 +127,14 @@ def check(tables, broken):
 # ---------- 3. Hand the numbers to the summary ----------
 
 def summary_facts(checked, failures, broken):
-    """Every number the summary may use, by name and already formatted."""
+    """Every number the summary may use, by name and already formatted, so the AI never computes one."""
     facts = {"checked": str(checked), "broken_rows": str(len(broken)), "high_float_days": str(HIGH_FLOAT_DAYS)}
     for check_name, codes in failures.items():
         key = check_name.lower().replace(" ", "_")  # "Missing links" -> "missing_links"
         pct = percent(len(codes), checked)
         facts[key] = str(len(codes))  # e.g. "20"
         facts[key + "_pct"] = f"{pct:.1f}%"  # e.g. "15.0%", rounded like the report and the chart
-        over_or_within = "within" if pct <= LIMITS[check_name] else "over"  # code judges the limit
+        over_or_within = "within" if pct <= LIMITS[check_name] else "over"  # code judges the limit, not the AI
         facts[key + "_vs_limit"] = f"{over_or_within} DCMA's {LIMITS[check_name]}% limit" if checked else "nothing to check"
     return facts
 
@@ -237,7 +237,7 @@ def main():
             failed += 1
             continue
         checked, failures = check(tables, broken)  # 2. check
-        summary = summarize(summary_facts(checked, failures, broken))  # 3. summarize
+        summary = summarize(summary_facts(checked, failures, broken))  # 3. summarize: code's numbers, AI's words
         report(path.name, checked, failures, broken, notes, summary)  # 4. print
         results.append((path.name, checked, failures, summary))  # keep it for the chart
     if not named and results:

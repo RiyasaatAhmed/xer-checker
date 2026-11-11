@@ -1,21 +1,51 @@
-"""Write a short summary of one file's check results. Code fills in every number.
+"""Write a short summary of one file's check results: Gemini picks the words, code fills in every number.
 
-checker.py computes the facts and hands them over by name, like {"missing_links": "20"}.
-fill() swaps each {fact} in a sentence for its value, so every figure comes from code.
+How it stops the AI from inventing a figure:
+  1. checker.py computes the facts and hands them over by name, like {"missing_links": "20"}.
+  2. Gemini writes sentences that point at facts, like "{missing_links} activities have no link ...".
+     It never types a number itself.
+  3. problems() checks every sentence against the rules below. If one breaks a rule, Gemini
+     gets one more try and is told exactly what was wrong.
+  4. fill() swaps each {fact} for its value from code, so every figure in the summary comes from code.
+If a setting is missing, the call fails, or both tries break a rule, code writes the summary from
+the same facts instead, and says why. The checker never depends on the AI.
 
-problems() holds the rules an AI-written summary will have to pass before it's used: no number
-typed or spelled out, no made-up fact, and no sentence without a fact. The template passes them.
+Gemini only sees the facts: no activity names and nothing else from the file, so text inside
+a schedule can't give it instructions.
+
+Settings live in the environment, not in this code: copy .env.example to .env and fill it in.
+.env is gitignored, so the key stays on your machine.
 """
 
-import re  # finds {facts}, digits and amount words in a sentence
+import functools  # keeps one Gemini client for the whole run
+import json  # sends Gemini the facts, and reads its reply
+import os  # reads the settings from environment variables
+import re  # finds {facts}, digits and amount words in Gemini's sentences
+from dataclasses import dataclass  # holds the checked settings
+from pathlib import Path  # finds the .env file next to this one
+
+from dotenv import load_dotenv  # copies the settings in .env into the environment variables
 
 # ---------- Constants ----------
 
-# Shape of the summary
-MAX_SENTENCES = 4  # short enough to fit under the chart
-MAX_SENTENCE_LENGTH = 250  # characters
+# Settings: names of the environment variables, all documented in .env.example
+ENV_FILE = Path(__file__).parent / ".env"  # your settings go here; gitignored
+API_KEY_VARS = ("GEMINI_API_KEY", "GOOGLE_API_KEY")  # can hold the key, checked in this order
+MODEL_VAR = "GEMINI_MODEL"  # the model that writes the summaries; required with a key
+THINKING_VAR = "GEMINI_THINKING_LEVEL"  # optional: how much the model thinks before answering
+THINKING_LEVELS = ("minimal", "low", "medium", "high")  # what THINKING_VAR accepts; empty = model's default
 
-# What an AI may not write itself, because a figure has to come from a {fact}
+# Gemini calls
+TIMEOUT_MS = 30_000  # give up on a Gemini call after 30 seconds
+MAX_TRIES = 2  # the first try, plus one retry that says what was wrong
+MAX_REASON_SHOWN = 60  # characters of an error shown when code writes the summary instead
+
+# Shape of the summary
+MAX_SENTENCES = 4  # short enough to fit under the chart (the instructions ask for 2 to 4)
+MAX_SENTENCE_LENGTH = 250  # characters
+REPLY_SCHEMA = {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": MAX_SENTENCES}
+
+# What Gemini may not write itself, because a figure has to come from a {fact}
 FACT = re.compile(r"\{(\w+)\}")  # a fact name in braces, like {missing_links}
 DIGIT = re.compile(r"\d")  # a number typed in digits
 NUMBER_WORDS = ("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
@@ -25,7 +55,36 @@ NUMBER_WORDS = ("zero one two three four five six seven eight nine ten eleven tw
 AMOUNT_WORDS = "all most majority minority none every nearly almost few many several single couple handful"
 WORD = re.compile(r"\b(" + "|".join((NUMBER_WORDS + " " + AMOUNT_WORDS).split()) + r")\b", re.IGNORECASE)
 
-# The summary code writes. fill() puts in the numbers from the facts.
+# Gemini's instructions. The facts, and the feedback on a retry, go in the request itself.
+RULES = """You summarize the results of a construction schedule check for project controls staff.
+You'll get the facts as JSON: each fact's name and value. Code computed every value.
+
+Rules:
+1. Never write a number yourself, in digits or in words. To use a fact, write its name in curly
+   braces, like {missing_links}. Code replaces it with the real value.
+2. Only use the fact names you were given.
+3. Every sentence must use at least one fact.
+4. Don't describe amounts with words like all, most, none, few, many, half or twice. Use a fact.
+5. Don't write % or "percent". Each _pct fact already ends with a % sign.
+6. To say whether a result is over or within its limit, use its _vs_limit fact. Don't judge it yourself.
+7. You may say what a result usually means (high float often means links are missing), but don't
+   claim anything about this schedule that the facts don't show.
+8. Write 2 to 4 short, plain sentences. Start with the biggest problem.
+
+What the facts mean:
+- checked: unfinished work activities checked. Finished activities, milestones, level of effort
+  and WBS summaries are left out, as DCMA says.
+- broken_rows: rows that break the file format, or hold data the checker can't use.
+- missing_links: activities with no link before them, or no link after them.
+- negative_float: activities with float below zero, which are already late for a deadline.
+- high_float: activities with more than {high_float_days} working days of float.
+- high_float_days: the working-day threshold for high float.
+- Each _pct fact: that count as a share of the checked activities.
+- Each _vs_limit fact: whether that share is over or within DCMA's limit, already in words.
+
+Reply with a JSON list of sentences."""
+
+# The summary code writes when Gemini can't. Same facts, same fill(), so the same numbers.
 CODE_SUMMARY = [
     "Checked {checked} unfinished work activities; broken rows: {broken_rows}.",
     "Missing links: {missing_links} ({missing_links_pct}), {missing_links_vs_limit}.",
@@ -34,11 +93,93 @@ CODE_SUMMARY = [
 ]
 
 
+# ---------- Settings ----------
+
+# Read .env into the environment once, when this file is imported. No .env file is fine: the AI
+# stays off. A variable already set in the terminal wins, so `GEMINI_API_KEY= python checker.py`
+# turns the AI off for one run.
+load_dotenv(ENV_FILE)
+
+
+@dataclass(frozen=True)
+class Settings:
+    """The Gemini settings, read from the environment and checked."""
+    api_key: str
+    model: str
+    thinking_level: str | None  # None: the model's own default
+
+
+class SettingsError(Exception):
+    """A missing or invalid setting. The message names it and points to .env.example."""
+
+
+def read_settings():
+    """Read the Gemini settings from the environment (.env included), and check them.
+
+    Raises SettingsError when the AI can't run, so code writes the summary and says why.
+    """
+    api_key = next((os.environ[var].strip() for var in API_KEY_VARS if os.environ.get(var, "").strip()), None)
+    if not api_key:  # the AI is off
+        raise SettingsError(f"no {API_KEY_VARS[0]}; see .env.example")
+    model = os.environ.get(MODEL_VAR, "").strip()
+    if not model:  # no model in the code to fall back on: the environment decides
+        raise SettingsError(f"no {MODEL_VAR}; see .env.example")
+    thinking_level = os.environ.get(THINKING_VAR, "").strip().lower() or None
+    if thinking_level not in (None, *THINKING_LEVELS):  # the SDK would only warn, and send it anyway
+        raise SettingsError(f"{THINKING_VAR} must be {', '.join(THINKING_LEVELS)} or empty")
+    return Settings(api_key, model, thinking_level)
+
+
 # ---------- The summary ----------
 
 def summarize(facts):
     """Return (summary, who wrote it). Every figure in the summary comes from `facts`."""
-    return fill(CODE_SUMMARY, facts), "code"
+    try:
+        settings = read_settings()
+    except SettingsError as problem:  # the AI is off or set up wrong: code writes it, and says why
+        return fill(CODE_SUMMARY, facts), f"code ({problem})"
+    feedback = ""  # empty on the first try
+    for _ in range(MAX_TRIES):
+        try:
+            sentences = ask_gemini(settings, facts, feedback)
+        except Exception as error:  # no internet, bad key, quota, timeout, empty reply: fall back, never crash
+            return fill(CODE_SUMMARY, facts), f"code (Gemini failed: {reason(error)})"
+        issues = problems(sentences, facts)
+        if not issues:  # every rule holds, so every figure will come from code
+            return fill(sentences, facts), f"Gemini ({settings.model})"
+        # Show Gemini its answer and what was wrong with it, then try once more.
+        feedback = f"Your last answer was:\n{json.dumps(sentences)}\nIt broke these rules:\n" + "\n".join(issues)
+    return fill(CODE_SUMMARY, facts), f"code (Gemini broke a rule twice: {issues[0][:MAX_REASON_SHOWN]})"
+
+
+def ask_gemini(settings, facts, feedback):
+    """Send Gemini the facts and return its sentences, still with {facts} in them."""
+    from google.genai import types  # imported here, so the checker still runs without the AI library
+
+    request = "Facts:\n" + json.dumps(facts, indent=2)
+    if feedback:  # on the retry, say exactly what to fix
+        request += "\n\n" + feedback
+    thinking = types.ThinkingConfig(thinking_level=settings.thinking_level) if settings.thinking_level else None
+    reply = gemini_client(settings.api_key).models.generate_content(
+        model=settings.model,
+        contents=request,
+        config=types.GenerateContentConfig(
+            system_instruction=RULES,
+            response_mime_type="application/json",  # reply in JSON...
+            response_json_schema=REPLY_SCHEMA,  # ...shaped as a list of 1 to 4 sentences
+            thinking_config=thinking,  # None: the model's own default
+        ),
+    )
+    return json.loads(reply.text)  # problems() checks the shape, so an odd reply can't slip through
+
+
+@functools.cache
+def gemini_client(api_key):
+    """One Gemini client per key, made on first use and then reused, with its open connections."""
+    from google import genai  # imported here, so the checker still runs without the AI library
+    from google.genai import types
+
+    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
 
 
 def problems(sentences, facts):
@@ -51,7 +192,7 @@ def problems(sentences, facts):
             issues.append(f"sentence {n} is empty or isn't text")
             continue
         names = FACT.findall(sentence)  # the facts this sentence points at
-        own_words = FACT.sub("", sentence)  # everything the AI wrote itself
+        own_words = FACT.sub("", sentence)  # everything Gemini wrote itself
         if DIGIT.search(own_words):
             issues.append(f"sentence {n} has a number in digits; use a fact in braces instead")
         if word := WORD.search(own_words):
@@ -73,3 +214,11 @@ def problems(sentences, facts):
 def fill(sentences, facts):
     """Swap each {fact} for its value from code, and join the sentences into one paragraph."""
     return " ".join(FACT.sub(lambda match: facts[match.group(1)], s.strip()) for s in sentences)
+
+
+def reason(error):
+    """A short, readable reason for a failed Gemini call."""
+    if getattr(error, "status", None) == "DEADLINE_EXCEEDED":  # Google's server stopped at our time limit
+        return f"no answer within {TIMEOUT_MS // 1000} seconds"
+    text = getattr(error, "message", None) or str(error) or type(error).__name__  # API errors carry .message
+    return text.splitlines()[0][:MAX_REASON_SHOWN]
