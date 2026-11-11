@@ -181,8 +181,10 @@ every number, and the AI only chooses the words.**
 
 1. `checker.py` computes the facts and passes them by name, like `"missing_links": "20"` or
    `"missing_links_vs_limit": "over DCMA's 5% limit"`. Code decides pass or flag, not the AI.
-2. Gemini writes sentences that point at facts instead of typing numbers:
-   `{missing_links} activities ({missing_links_pct}) have no link before or after them`.
+2. Gemini replies in a fixed JSON shape, enforced by the API: up to 4 sentences, each one saying
+   first what it's `about` (`overview`, or one check, from a fixed list) and then its `text`. The
+   text points at facts instead of typing numbers:
+   `{"about": "missing_links", "text": "{missing_links} activities ({missing_links_pct}) have no link before or after them"}`.
 3. [`summary.py`](summary.py) checks every sentence. One is rejected if it:
 
 | Rule | What it stops |
@@ -192,17 +194,27 @@ every number, and the AI only chooses the words.**
 | has a % sign | `{missing_links}%`, which would turn a count of 20 into a made-up 20% |
 | points at a fact that doesn't exist | an invented figure, like `{critical_path_days}` |
 | doesn't point at any fact | a claim with nothing behind it, like "the schedule is healthy" |
+| writes a fact's name without braces | "missing_links reached 25.0%" showing up in the summary |
+| uses a fact from another check | the high-float count in a sentence about negative float |
+
+The reply as a whole is rejected if a check that's over its limit has no sentence, so the AI
+can't leave out a flag.
 
 4. Code puts the real values in. If a sentence broke a rule, Gemini gets one retry and is told
    exactly what was wrong. If the retry fails too, the call fails, or a setting is missing, code
-   writes the summary from the same facts. The chart says who wrote it, and why code did.
+   writes the summary from the same facts. The chart says who wrote it, and why code did. When
+   Google answers "busy" (429 or 5xx), the call is retried up to 3 times; a timeout isn't.
+
+Measured on 30 real calls (3 files, 10 each): every reply passed every rule on the first try.
+Before the `about` field and the last two rules, 3 in 14 replies wrote a bare fact name like
+`missing_links`, and one called a share of checked activities "of the schedule".
 
 Gemini only sees the facts: no activity names and nothing else from the file, so text inside a
 schedule can't give it instructions.
 
-What the rules can't catch is a wrong *word*, like putting the high-float count in a sentence about
-negative float. The facts have plain names to make that unlikely, but someone should still read a
-summary before it goes to a client.
+What the rules can't catch is a wrong *word* inside a sentence, like a vague phrase or a claim the
+facts don't support. Each sentence is now tied to one check, which narrows that down, but someone
+should still read a summary before it goes to a client.
 
 ## How the results were validated
 
