@@ -48,8 +48,8 @@ GOOD_REPLY = [
     say("{high_float} of the {checked} activities ({high_float_pct}) have high float, {high_float_vs_limit}.", "high_float"),
     say("{missing_links} activities ({missing_links_pct}) lack a link, {missing_links_vs_limit}."),
 ]
-GOOD_TEXT = ("78 of the 133 activities (58.6%) have high float, over DCMA's 5% limit. "
-             "20 activities (15.0%) lack a link, over DCMA's 5% limit.")
+GOOD_TEXT = ["78 of the 133 activities (58.6%) have high float, over DCMA's 5% limit.",
+             "20 activities (15.0%) lack a link, over DCMA's 5% limit."]
 
 
 def test_reply_that_points_at_facts_passes_and_gets_filled():
@@ -95,6 +95,28 @@ def test_fact_from_another_check_is_rejected():  # the right number in the wrong
         "sentence 1 is about missing_links but uses {high_float}; give that its own sentence")
 
 
+def test_two_sentences_in_one_point_are_rejected():  # one point, one idea
+    assert "more than one sentence" in problems([say("{missing_links} lack a link. Fix them first.")], FACTS)[0]
+    assert "more than one sentence" in problems([say("{missing_links} lack a link; fix them first.")], FACTS)[0]
+
+
+def test_long_point_is_rejected():
+    words = " ".join(["word"] * 26)
+    assert "more than 25 words" in problems([say("{missing_links} " + words + ".")], FACTS)[0]
+
+
+def test_saying_limit_itself_is_rejected():  # over or within comes only from the _vs_limit fact
+    assert "'limit'" in problems([say("{missing_links} activities exceed the limit, {missing_links_vs_limit}.")], FACTS)[0]
+
+
+def test_overview_cant_relate_broken_rows_to_activities():  # rows in the file are not activities
+    assert "uses {checked}" in problems([say("{broken_rows} of {checked} activities are broken.", "overview")], FACTS)[0]
+
+
+def test_filler_that_sounds_machine_written_is_rejected():
+    assert "'Additionally'" in problems([say("Additionally, {missing_links} activities lack a link.")], FACTS)[0]
+
+
 def test_unknown_topic_is_rejected():
     assert problems([say("{checked} activities.", "critical_path")], FACTS)[0].startswith(
         "sentence 1 is about 'critical_path'; use one of: overview, missing_links")
@@ -125,7 +147,10 @@ def test_reply_that_is_not_a_list_of_sentences_is_rejected():
 def test_no_key_means_code_writes_the_summary():
     text, author = summarize(FACTS)
     assert author == "code (no GEMINI_API_KEY; see .env.example)"
-    assert text.startswith("Checked 133 unfinished work activities")
+    assert text == ["Missing links: 20 of 133 activities (15.0%), over DCMA's 5% limit.",
+                    "Negative float: 0 of 133 activities (0.0%), within DCMA's 0% limit.",
+                    "Float over 44 working days: 78 of 133 activities (58.6%), over DCMA's 5% limit.",
+                    "Broken rows in the file: 0."]
 
 
 def test_key_without_a_model_means_code_writes_the_summary(monkeypatch):

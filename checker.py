@@ -58,7 +58,7 @@ LABEL_FONT_SIZE = 9  # size of the numbers on top of the bars, and of the summar
 SUMMARY_WRAP = 100  # characters per line in the terminal, like the report above it
 CHART_WRAP = 118  # characters per line under the chart, which is wider
 SUMMARY_LINE_HEIGHT = 0.19  # inches per line of summary text on the chart
-SQUARE_GAP = 0.022  # gap between a file's coloured square and its name, as a share of the chart width
+SQUARE_GAP = 0.022  # indent of a file's name after its square, and of each point after its bullet
 NOTE_COLOR = "#52514e"  # dark grey, for who wrote each summary
 SUMMARY_NOTE = "Every figure in the summaries is filled in by code. Gemini, when used, only chooses the words."
 
@@ -158,18 +158,19 @@ def report(name, checked, failures, broken, notes, summary):
         verdict = "n/a" if not checked else "pass" if pct <= LIMITS[check_name] else "FLAG"  # FLAG: worth a closer look
         examples = ", ".join(codes[:EXAMPLES_SHOWN])  # a few failing activity codes
         print(f"  {check_name:<15} {len(codes):>4}  {pct:5.1f}%  {verdict} (limit {LIMITS[check_name]}%)  {examples}")
-    text, author = summary
+    points, author = summary
     print(f"  Summary, written by {author}:")
-    print(textwrap.fill(text, SUMMARY_WRAP, initial_indent="    ", subsequent_indent="    "))
+    for point in points:  # one finding per bullet
+        print(textwrap.fill(point, SUMMARY_WRAP, initial_indent="    • ", subsequent_indent="      "))
 
 
 def draw_chart(results):
     """Save chart.png: % failing per check, one bar per file, a dashed line at each DCMA limit, summaries under it."""
     names = list(LIMITS)  # the three checks, in a fixed order
-    # Wrap each summary first, because its number of lines sets how tall the text panel is.
-    summaries = [(file_name, author, textwrap.wrap(text, CHART_WRAP))
-                 for file_name, _, _, (text, author) in results]
-    rows = sum(len(lines) + 2 for _, _, lines in summaries) + 1  # per file: header, summary, blank row; then the note
+    # Wrap each point first, because the number of lines sets how tall the text panel is.
+    summaries = [(file_name, author, [textwrap.wrap(point, CHART_WRAP) for point in points])
+                 for file_name, _, _, (points, author) in results]
+    rows = sum(sum(map(len, points)) + 2 for _, _, points in summaries) + 1  # per file: header, points, blank row
     panel = rows * SUMMARY_LINE_HEIGHT  # height of the text panel, in inches
     # Two areas stacked: the bars on top, the summaries under them.
     fig, (ax, text_ax) = plt.subplots(2, 1, figsize=(CHART_SIZE[0], CHART_SIZE[1] + panel), dpi=CHART_DPI,
@@ -201,14 +202,17 @@ def draw_summaries(ax, summaries, rows):
     ax.axis("off")  # a blank panel: no axes, ticks or border
     step = 1 / rows  # height of one row, as a share of the panel
     y = 1  # start at the top
-    for i, (file_name, author, lines) in enumerate(summaries):
+    for i, (file_name, author, points) in enumerate(summaries):
         # Header row: a square in the file's bar colour, the file's name, and who wrote its summary.
         write(ax, 0, y, "■", color=FILE_COLORS[i % len(FILE_COLORS)])
         write(ax, SQUARE_GAP, y, file_name, fontweight="bold")
         write(ax, 1, y, f"written by {author}", color=NOTE_COLOR, ha="right")
-        for line in lines:  # the summary itself
-            y -= step
-            write(ax, 0, y, line)
+        for point in points:  # a bullet, then the point's lines, lined up with the file's name
+            for n, line in enumerate(point):
+                y -= step
+                if n == 0:
+                    write(ax, 0, y, "•")
+                write(ax, SQUARE_GAP, y, line)
         y -= 2 * step  # leave a blank row before the next file
     write(ax, 0, y, SUMMARY_NOTE, color=NOTE_COLOR)
 
@@ -227,7 +231,7 @@ def main():
     """
     named = [Path(arg) for arg in sys.argv[1:]]  # files typed after "python checker.py", if any
     paths = named or sorted(Path(DATA_DIR).glob(XER_PATTERN))  # otherwise every .xer, alphabetically
-    results = []  # (file name, activities checked, failures, (summary, who wrote it)) for each file
+    results = []  # (file name, activities checked, failures, (summary points, who wrote them)) for each file
     failed = 0  # files that couldn't be checked
     for path in paths:
         try:

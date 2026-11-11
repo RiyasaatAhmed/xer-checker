@@ -22,7 +22,7 @@ import json  # sends Gemini the facts, and reads its reply
 import os  # reads the settings from environment variables
 import re  # finds {facts}, digits and amount words in Gemini's sentences
 from dataclasses import dataclass  # holds the checked settings
-from pathlib import Path  # finds the .env file next to this one
+from pathlib import Path  # finds the .env and prompt files next to this one
 
 from dotenv import load_dotenv  # copies the settings in .env into the environment variables
 
@@ -44,10 +44,15 @@ MAX_TRIES = 2  # the first try, plus one retry that says what was wrong
 MAX_REASON_SHOWN = 60  # characters of an error shown when code writes the summary instead
 
 # Shape of the summary
-MAX_SENTENCES = 4  # short enough to fit under the chart (the instructions ask for 2 to 4)
+MAX_SENTENCES = 4  # points per file: short enough to fit under the chart (the instructions ask for 2 to 4)
 MAX_SENTENCE_LENGTH = 250  # characters
+MAX_POINT_WORDS = 25  # one point is one short sentence
+MORE_THAN_ONE_SENTENCE = re.compile(r"[.!?]\s+\S|;")  # a sentence ends and another starts, or a ";" joins two
+OWN_JUDGEMENT = re.compile(r"\b(limits?|thresholds?)\b", re.IGNORECASE)  # only _vs_limit may say this
+FILLER = re.compile(r"\b(additionally|furthermore|moreover|meanwhile|overall|notably|importantly|"
+                    r"in summary|in conclusion|it'?s worth noting|it is worth noting)\b", re.IGNORECASE)
 OVERVIEW = "overview"  # what a sentence about the file as a whole is "about"
-OVERVIEW_FACTS = ("checked", "broken_rows")  # the facts an overview sentence may use
+OVERVIEW_FACTS = ("broken_rows",)  # the facts an overview sentence may use: rows, never activities
 SHARED_FACTS = ("checked",)  # a fact any sentence may use: the number the shares are out of
 
 # What Gemini may not write itself, because a figure has to come from a {fact}
@@ -60,53 +65,18 @@ NUMBER_WORDS = ("zero one two three four five six seven eight nine ten eleven tw
 AMOUNT_WORDS = "all most majority minority none every nearly almost few many several single couple handful"
 WORD = re.compile(r"\b(" + "|".join((NUMBER_WORDS + " " + AMOUNT_WORDS).split()) + r")\b", re.IGNORECASE)
 
-# Gemini's instructions. The facts, and the feedback on a retry, go in the request itself.
-RULES = """You write a short summary of a construction schedule check, for project controls staff.
-Code has already computed every number and judged every limit. Your job is only the words.
-
-You get the facts as JSON. Reply with 2 to 4 sentences. For each one, first say what it's
-"about": "overview", or the name of one check. Then write its "text".
-
-Rules:
-1. Never write a number yourself, in digits or in words. To use a fact, write its name in curly
-   braces, like {missing_links}. Code replaces it with the real value.
-2. Always put a fact's name in braces. "missing_links reached {missing_links_pct}" is wrong;
-   write "{missing_links} activities ({missing_links_pct}) ...".
-3. A sentence about a check uses only that check's facts, plus {checked}. An overview sentence uses
-   only {checked} and {broken_rows}. To talk about two checks, write two sentences.
-4. Every check whose _vs_limit fact says "over" gets its own sentence. Put those first, the one
-   with the larger _pct first. A check within its limit gets a short sentence of its own, or none.
-5. To say whether a result is over or within its limit, use its _vs_limit fact. Don't judge it yourself.
-6. A _pct fact is a share of the checked activities, not of the schedule, the project or the file.
-   It already ends with a % sign, so don't add % or "percent".
-7. Don't describe amounts with words like all, most, none, few, many, half or twice. Use a fact.
-8. You may say what a result usually means (high float often means links are missing), but don't
-   claim anything about this schedule that the facts don't show.
-9. Every sentence uses at least one fact, and only the fact names you were given. Keep sentences
-   short and plain: no headings, lists or quotes.
-
-An example sentence:
-{"about": "high_float", "text": "{high_float} of the {checked} activities ({high_float_pct}) have more than {high_float_days} working days of float, {high_float_vs_limit}, which often means links are missing."}
-
-What the facts mean:
-- checked: unfinished work activities checked. Finished activities, milestones, level of effort
-  and WBS summaries are left out, as DCMA says.
-- broken_rows: rows that break the file format, or hold data the checker can't use.
-- missing_links: activities with no link before them, or no link after them.
-- negative_float: activities with negative float, which are already late for a deadline.
-- high_float: activities with more than {high_float_days} working days of float.
-- high_float_days: the working-day threshold for high float.
-- Each _pct fact: that count as a share of the checked activities.
-- Each _vs_limit fact: whether that share is over or within DCMA's limit, already in words.
-  "nothing to check" means no activities were left to check."""
+# Gemini's instructions live in their own file, so they read (and get reviewed) like a document.
+RULES = (Path(__file__).parent / "summary_prompt.md").read_text()
 
 # The summary code writes when Gemini can't. Same facts, same fill(), so the same numbers.
 CODE_SUMMARY = [
-    {"about": OVERVIEW, "text": "Checked {checked} unfinished work activities; broken rows: {broken_rows}."},
-    {"about": "missing_links", "text": "Missing links: {missing_links} ({missing_links_pct}), {missing_links_vs_limit}."},
-    {"about": "negative_float", "text": "Negative float: {negative_float} ({negative_float_pct}), {negative_float_vs_limit}."},
-    {"about": "high_float",
-     "text": "High float, over {high_float_days} working days: {high_float} ({high_float_pct}), {high_float_vs_limit}."},
+    {"about": "missing_links",
+     "text": "Missing links: {missing_links} of {checked} activities ({missing_links_pct}), {missing_links_vs_limit}."},
+    {"about": "negative_float",
+     "text": "Negative float: {negative_float} of {checked} activities ({negative_float_pct}), {negative_float_vs_limit}."},
+    {"about": "high_float", "text": "Float over {high_float_days} working days: {high_float} of {checked} activities "
+                                    "({high_float_pct}), {high_float_vs_limit}."},
+    {"about": OVERVIEW, "text": "Broken rows in the file: {broken_rows}."},
 ]
 
 
@@ -150,7 +120,7 @@ def read_settings():
 # ---------- The summary ----------
 
 def summarize(facts):
-    """Return (summary, who wrote it). Every figure in the summary comes from `facts`."""
+    """Return (points, who wrote them). Every figure in the points comes from `facts`."""
     try:
         settings = read_settings()
     except SettingsError as problem:  # the AI is off or set up wrong: code writes it, and says why
@@ -209,10 +179,10 @@ def check_names(facts):
 
 def belongs(fact, about):
     """May a sentence about `about` use this fact? Its own check's facts, plus the shared ones."""
-    if fact in SHARED_FACTS:
-        return True
     if about == OVERVIEW:
         return fact in OVERVIEW_FACTS
+    if fact in SHARED_FACTS:
+        return True
     return fact == about or fact.startswith(about + "_")
 
 
@@ -270,6 +240,14 @@ def problems(sentences, facts):
             issues.append(f"sentence {n} doesn't use any fact")
         if len(sentence) > MAX_SENTENCE_LENGTH:
             issues.append(f"sentence {n} is longer than {MAX_SENTENCE_LENGTH} characters")
+        if MORE_THAN_ONE_SENTENCE.search(own_words):  # one point, one idea
+            issues.append(f"sentence {n} holds more than one sentence; make it one point with one idea")
+        if len(sentence.split()) > MAX_POINT_WORDS:
+            issues.append(f"sentence {n} has more than {MAX_POINT_WORDS} words; make it shorter")
+        if judgement := OWN_JUDGEMENT.search(own_words):
+            issues.append(f"sentence {n} says {judgement.group(0)!r} itself; the _vs_limit fact already says it")
+        if filler := FILLER.search(own_words):  # words that make a summary sound machine-written
+            issues.append(f"sentence {n} says {filler.group(0)!r}; state the finding directly")
     covered = {item.get("about") for item in sentences if isinstance(item, dict)}
     for check in check_names(facts):  # a check over its limit can't be left out
         if facts[check + "_vs_limit"].startswith("over") and check not in covered:
@@ -278,8 +256,8 @@ def problems(sentences, facts):
 
 
 def fill(sentences, facts):
-    """Swap each {fact} for its value from code, and join the sentences into one paragraph."""
-    return " ".join(FACT.sub(lambda match: facts[match.group(1)], s["text"].strip()) for s in sentences)
+    """Swap each {fact} for its value from code. Returns the points, one sentence each."""
+    return [FACT.sub(lambda match: facts[match.group(1)], s["text"].strip()) for s in sentences]
 
 
 def reason(error):
