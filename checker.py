@@ -2,13 +2,14 @@
 
 For every .xer file in data/: report broken rows, run three DCMA checks
 (missing links, negative float, high float), then save one chart as chart.png.
+A file that can't be checked gets a plain reason instead of a crash (see reader.py).
 
 Usage:
   python checker.py              check every .xer in data/ and save chart.png
   python checker.py FILE.xer     check only the files named (no chart, so chart.png stays as is)
 """
 
-import sys  # reads file names given on the command line
+import sys  # reads file names given on the command line, and sets the exit code
 from pathlib import Path  # finds the .xer files
 
 import matplotlib
@@ -16,7 +17,7 @@ import matplotlib
 matplotlib.use("Agg")  # draw straight to a file; no window
 import matplotlib.pyplot as plt  # noqa: E402  (must come after matplotlib.use)
 
-from reader import read_xer  # noqa: E402  (reads a .xer file into tables, and flags broken rows)
+from reader import FileError, read_xer  # noqa: E402  (reads a .xer file; FileError says why one can't be checked)
 
 # ---------- Constants ----------
 
@@ -117,12 +118,14 @@ def check(tables, broken):
 def report(name, checked, failures, broken):
     """Print the first broken rows, then count, %, pass/fail and example codes per check."""
     print(f"\n{name}: {checked} activities checked")
+    if not checked:  # say so, instead of a misleading "pass"
+        print("  Nothing to check: every activity is finished, a milestone, level of effort or a WBS summary")
     print(f"  Broken rows: {len(broken)}")
     for line, problem in sorted(broken)[:MAX_BROKEN_SHOWN]:  # show the first few, in line order
         print(f"    line {line}: {problem}")
     for check_name, codes in failures.items():
         pct = percent(len(codes), checked)  # share that failed (0 if nothing checked)
-        verdict = "pass" if pct <= LIMITS[check_name] else "FLAG"  # over the DCMA limit: worth a closer look
+        verdict = "n/a" if not checked else "pass" if pct <= LIMITS[check_name] else "FLAG"  # FLAG: worth a closer look
         examples = ", ".join(codes[:EXAMPLES_SHOWN])  # a few failing activity codes
         print(f"  {check_name:<15} {len(codes):>4}  {pct:5.1f}%  {verdict} (limit {LIMITS[check_name]}%)  {examples}")
 
@@ -156,19 +159,27 @@ def main():
     """Check the .xer files named on the command line, or every .xer in DATA_DIR.
 
     The chart is saved only for the DATA_DIR run, so checking a test file never replaces it.
+    Returns the exit code: 1 if any file couldn't be checked, otherwise 0.
     """
     named = [Path(arg) for arg in sys.argv[1:]]  # files typed after "python checker.py", if any
     paths = named or sorted(Path(DATA_DIR).glob(XER_PATTERN))  # otherwise every .xer, alphabetically
     results = []  # (file name, activities checked, failures) for each file
+    failed = 0  # files that couldn't be checked
     for path in paths:
-        tables, broken = read_xer(path)  # 1. read
+        try:
+            tables, broken = read_xer(path)  # 1. read
+        except FileError as problem:  # it can't be checked: say why in plain words, then go on
+            print(f"\n{path.name}: can't be checked: {problem}")
+            failed += 1
+            continue
         checked, failures = check(tables, broken)  # 2. check
         report(path.name, checked, failures, broken)  # 3. print
         results.append((path.name, checked, failures))  # keep it for the chart
-    if not named:
+    if not named and results:
         draw_chart(results)  # one chart for all files in DATA_DIR
         print(f"\nSaved {CHART_FILE}")
+    return 1 if failed else 0  # 1 tells a script that a file couldn't be checked
 
 
 if __name__ == "__main__":  # only when run directly, not when imported
-    main()
+    sys.exit(main())
