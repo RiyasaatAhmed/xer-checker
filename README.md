@@ -172,7 +172,8 @@ What the pamphlet says, and how this checker uses it:
 A row is broken when it has the wrong number of values, it has no table above it (or its `%T`
 line has no name), a line doesn't start with a P6 marker (`%T`, `%F`, `%R`, `%E`), a link points
 to an activity that's missing or on a broken row, a float isn't a number, or the file has no `%E`
-end marker. `reader.py` reads the file and finds these; `checker.py` runs the checks.
+end marker. [`reader.py`](xer_checker/reader.py) reads the file and finds these;
+[`checks.py`](xer_checker/checks.py) runs the checks.
 
 ## The AI summary
 
@@ -180,14 +181,14 @@ Each file gets a few bullet points, in the terminal and under the chart: one sho
 one finding per point, the way a scheduler writes notes. The rule: **code owns
 every number, and the AI only chooses the words.**
 
-1. `checker.py` computes the facts and passes them by name, like `"missing_links": "20"` or
+1. [`facts.py`](xer_checker/facts.py) computes the facts and passes them by name, like `"missing_links": "20"` or
    `"missing_links_vs_limit": "over DCMA's 5% limit"`. Code decides pass or flag, not the AI.
 2. Gemini replies in a fixed JSON shape, enforced by the API: up to 4 points, each one saying
    first what it's `about` (`overview`, or one check, from a fixed list) and then its `text`. The
    text points at facts instead of typing numbers:
    `{"about": "missing_links", "text": "{missing_links} activities ({missing_links_pct}) have no link before or after them"}`.
-   Its instructions are in [`summary_prompt.md`](summary_prompt.md).
-3. [`summary.py`](summary.py) checks every point. One is rejected if it:
+   Its instructions are in [`prompt.md`](xer_checker/summary/prompt.md).
+3. [`rules.py`](xer_checker/summary/rules.py) checks every point. One is rejected if it:
 
 | Rule | What it stops |
 |---|---|
@@ -221,6 +222,28 @@ schedule can't give it instructions.
 What the rules can't catch is a wrong *word* inside a sentence, like a vague phrase or a claim the
 facts don't support. Each sentence is now tied to one check, which narrows that down, but someone
 should still read a summary before it goes to a client.
+
+## How the code is organized
+
+`checker.py` only starts the program. The code is in `xer_checker/`, one job per file, and each
+file has its own tests in `tests/`:
+
+| File | Its one job | Tests |
+|---|---|---|
+| `reader.py` | Read a `.xer` file into tables; say why a broken one can't be checked | `test_reader.py` |
+| `checks.py` | The three DCMA checks | `test_checks.py` |
+| `facts.py` | Turn the results into the named numbers a summary may use | `test_facts.py` |
+| `summary/settings.py` | Read the Gemini settings from `.env`, and check them | `test_summary_settings.py` |
+| `summary/rules.py` | The rules a summary must pass; filling in the facts | `test_summary_rules.py` |
+| `summary/gemini.py` | The call to Gemini: reply shape, time limit, retries | `test_summary_gemini.py` |
+| `summary/writer.py` | Ask Gemini, check, retry once, or let code write it | `test_summary_writer.py` |
+| `summary/prompt.md` | Gemini's instructions | |
+| `report.py`, `chart.py` | Print one file's results; draw the chart | `test_report_and_chart.py` |
+| `cli.py` | Run those steps for each file, and set the exit code | `test_cli.py` |
+
+The steps only pass plain data to each other (tables, then results, then facts), so each one can
+be tested alone. `test_checks.py` also locks in the numbers above for both real files: a change
+that moves one fails the tests.
 
 ## How the results were validated
 
