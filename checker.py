@@ -122,6 +122,11 @@ def number(text):
         return None  # "TBD" -> None, instead of crashing
 
 
+def percent(count, checked):
+    """count as a % of the activities checked (0 if nothing was checked, instead of dividing by 0)."""
+    return 100 * count / checked if checked else 0
+
+
 # ---------- 2. Run the three checks ----------
 
 def check(tables, broken):
@@ -179,7 +184,7 @@ def report(name, checked, failures, broken):
     for line, problem in sorted(broken)[:MAX_BROKEN_SHOWN]:  # show the first few, in line order
         print(f"    line {line}: {problem}")
     for check_name, codes in failures.items():
-        pct = 100 * len(codes) / checked if checked else 0  # share that failed (0 if nothing checked)
+        pct = percent(len(codes), checked)  # share that failed (0 if nothing checked)
         verdict = "pass" if pct <= LIMITS[check_name] else "FLAG"  # over the DCMA limit: worth a closer look
         examples = ", ".join(codes[:EXAMPLES_SHOWN])  # a few failing activity codes
         print(f"  {check_name:<15} {len(codes):>4}  {pct:5.1f}%  {verdict} (limit {LIMITS[check_name]}%)  {examples}")
@@ -193,7 +198,7 @@ def draw_chart(results):
     for i, (file_name, checked, failures) in enumerate(results):  # one colour per file
         # Spread each file's bar side by side around its check (file 1 left, file 2 right).
         xs = [x + (i - (len(results) - 1) / 2) * width for x in range(len(names))]
-        pcts = [100 * len(failures[n]) / checked for n in names]  # bar heights in %
+        pcts = [percent(len(failures[n]), checked) for n in names]  # bar heights in %
         bars = ax.bar(xs, pcts, width * 0.9, label=file_name, color=FILE_COLORS[i % len(FILE_COLORS)])
         # Write "count (percent)" on top of each bar, with one decimal like the printed report.
         ax.bar_label(bars, labels=[f"{len(failures[n])} ({p:.1f}%)" for n, p in zip(names, pcts)], fontsize=LABEL_FONT_SIZE)
