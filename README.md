@@ -176,16 +176,18 @@ end marker. `reader.py` reads the file and finds these; `checker.py` runs the ch
 
 ## The AI summary
 
-Each file gets a few plain sentences, in the terminal and under the chart. The rule: **code owns
+Each file gets a few bullet points, in the terminal and under the chart: one short sentence and
+one finding per point, the way a scheduler writes notes. The rule: **code owns
 every number, and the AI only chooses the words.**
 
 1. `checker.py` computes the facts and passes them by name, like `"missing_links": "20"` or
    `"missing_links_vs_limit": "over DCMA's 5% limit"`. Code decides pass or flag, not the AI.
-2. Gemini replies in a fixed JSON shape, enforced by the API: up to 4 sentences, each one saying
+2. Gemini replies in a fixed JSON shape, enforced by the API: up to 4 points, each one saying
    first what it's `about` (`overview`, or one check, from a fixed list) and then its `text`. The
    text points at facts instead of typing numbers:
    `{"about": "missing_links", "text": "{missing_links} activities ({missing_links_pct}) have no link before or after them"}`.
-3. [`summary.py`](summary.py) checks every sentence. One is rejected if it:
+   Its instructions are in [`summary_prompt.md`](summary_prompt.md).
+3. [`summary.py`](summary.py) checks every point. One is rejected if it:
 
 | Rule | What it stops |
 |---|---|
@@ -196,6 +198,9 @@ every number, and the AI only chooses the words.**
 | doesn't point at any fact | a claim with nothing behind it, like "the schedule is healthy" |
 | writes a fact's name without braces | "missing_links reached 25.0%" showing up in the summary |
 | uses a fact from another check | the high-float count in a sentence about negative float |
+| holds two sentences, a semicolon, or more than 25 words | a paragraph instead of one point with one idea |
+| says "limit" or "threshold" itself | "exceed the float limit": over or within comes only from the facts |
+| uses filler like "additionally", "overall", "notably" | text that sounds machine-written |
 
 The reply as a whole is rejected if a check that's over its limit has no sentence, so the AI
 can't leave out a flag.
@@ -205,7 +210,8 @@ can't leave out a flag.
    writes the summary from the same facts. The chart says who wrote it, and why code did. When
    Google answers "busy" (429 or 5xx), the call is retried up to 3 times; a timeout isn't.
 
-Measured on 30 real calls (3 files, 10 each): every reply passed every rule on the first try.
+Measured on 30 real calls (3 files, 10 each): every reply passed every rule on the first try,
+with about 3 points per file and 15 words per point.
 Before the `about` field and the last two rules, 3 in 14 replies wrote a bare fact name like
 `missing_links`, and one called a share of checked activities "of the schedule".
 
