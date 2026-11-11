@@ -3,12 +3,15 @@
 Two kinds of problem:
   - A broken row (wrong number of values, a stray line, no end marker) is listed with its line
     number, and the rest of the file is still checked.
+  - A row that only ends early, missing optional values at the end, is read with those values
+    blank and listed as a note. Other P6 versions, and editors that strip trailing tabs, do this.
   - A file that can't be checked at all (missing, empty, not an XER export, no activities, or a
     column the checks need is missing) raises FileError, with the reason in plain words.
 """
 
 import csv  # splits each line into values
 import io  # lets csv read from a string in memory
+import re  # checks that a short row's values still fit their columns
 
 # ---------- Constants ----------
 
@@ -34,6 +37,14 @@ REQUIRED_COLUMNS = {
 }
 
 
+# What a value must look like, so a short row's values can be trusted to line up with their columns.
+# A value missing in the middle shifts the rest one column left, and they stop fitting.
+DATE = re.compile(r"\d{1,4}[-/]\d{1,2}[-/]\d{1,4}( .*)?")  # 2026-01-01 08:00, 2/12/2004 3:19:00 PM, ...
+NUMBER = re.compile(r"-?\d+(\.\d+)?")  # IDs, hours, quantities, percentages
+NUMBER_ENDINGS = ("_id", "_cnt", "_qty", "_pct")  # columns whose names end like this hold numbers
+CODE_PREFIXES = {("TASK", "status_code"): "TK_", ("TASK", "task_type"): "TT_", ("TASKPRED", "pred_type"): "PR_"}
+
+
 class FileError(Exception):
     """A file that can't be checked. The message says why, in plain words."""
 
@@ -43,13 +54,14 @@ class FileError(Exception):
 def read_xer(path):
     """Parse an .xer file.
 
-    Returns (tables, broken):
+    Returns (tables, broken, notes):
       tables  {table name: [row dict, ...]}, each row maps column -> value, plus "_line"
       broken  [(line number, problem), ...] for rows that break the format
+      notes   [(line number, note), ...] for rows that end early and were read with blanks
     Raises FileError when the file can't be checked at all.
     """
     text = read_text(path)
-    tables, broken = {}, []  # the results we return
+    tables, broken, notes = {}, [], []  # the results we return
     table, columns, ended = None, None, False  # memory: current table, its columns, saw %E yet?
     csv.field_size_limit(MAX_FIELD_SIZE)  # allow very long values (P6 calendars)
     # Tab-separated. csv also rejoins quoted values that span several lines.
@@ -77,12 +89,15 @@ def read_xer(path):
                 broken.append((line, "row with no table above it"))
             elif columns is None:  # a row with no column names before it
                 broken.append((line, f"{table} row comes before its column names"))
-            elif len(values) - 1 != len(columns):  # wrong number of values (-1 skips "%R")
+            elif len(values) - 1 != len(columns) and not ends_early(table, columns, values[1:]):
                 broken.append((line, f"{table} row has {len(values) - 1} values, expected {len(columns)}"))
             else:  # a good row: pair each column name with its value
-                row = dict(zip(columns, values[1:]))
+                missing = columns[len(values) - 1:]  # optional columns cut off at the end, if any
+                row = dict(zip(columns, values[1:] + [""] * len(missing)))
                 row["_line"] = line  # keep the line number for later error messages
                 tables[table].append(row)
+                if missing:
+                    notes.append((line, f"{table} row ends early; read as blank: {', '.join(missing)}"))
         elif kind == END_OF_FILE:
             ended = True  # the file is complete
         elif kind != EXPORT_HEADER:  # anything else isn't valid XER
@@ -90,7 +105,30 @@ def read_xer(path):
     if not ended:  # no %E means the file was probably cut off
         broken.append((last_line, "no %E end marker, so the file may be cut off"))
     check_usable(tables, broken)
-    return tables, broken
+    return tables, broken, notes
+
+
+def ends_early(table, columns, values):
+    """True when a short row only lacks optional values at the end: none the checks need, and
+    every value it has still fits its column. Anything else is a broken row."""
+    missing = columns[len(values):]
+    if len(values) > len(columns) or set(missing) & set(REQUIRED_COLUMNS.get(table, ())):
+        return False
+    return all(fits(table, column, value) for column, value in zip(columns, values))
+
+
+def fits(table, column, value):
+    """Does `value` look like what P6 writes in this column? A blank always fits."""
+    if not value:
+        return True
+    if column.endswith("_date"):
+        return bool(DATE.fullmatch(value))
+    if column.endswith(NUMBER_ENDINGS):
+        return bool(NUMBER.fullmatch(value))
+    if column.endswith("_flag"):
+        return value in ("Y", "N")
+    prefix = CODE_PREFIXES.get((table, column))
+    return value.startswith(prefix) if prefix else True  # other columns: any text
 
 
 def read_text(path):

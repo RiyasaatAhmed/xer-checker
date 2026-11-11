@@ -77,19 +77,44 @@ def test_no_activity_could_be_read(tmp_path):
 # ---------- A file that can be read, is ----------
 
 def test_byte_order_mark_is_not_a_broken_row(tmp_path):
-    tables, broken = read_xer(save(tmp_path, "﻿" + GOOD))
+    tables, broken, _ = read_xer(save(tmp_path, "﻿" + GOOD))
     assert broken == [] and len(tables["TASK"]) == 1
 
 
 def test_file_resaved_as_utf16_is_read(tmp_path):
-    tables, broken = read_xer(save(tmp_path, GOOD, encoding="utf-16"))
+    tables, broken, _ = read_xer(save(tmp_path, GOOD, encoding="utf-16"))
     assert broken == [] and len(tables["TASK"]) == 1
 
 
-def test_damaged_example_is_still_checked_with_its_10_broken_rows():
-    tables, broken = read_xer(HERE / "broken_test.xer")
+def test_damaged_example_is_still_checked_with_its_7_broken_rows():
+    tables, broken, notes = read_xer(HERE / "broken_test.xer")
     checker.check(tables, broken)  # adds the bad links and the float typed as text
-    assert len(broken) == 10
+    assert len(broken) == 7
+    assert notes == [(17, "TASK row ends early; read as blank: crt_path_num")]
+
+
+# ---------- A row that only ends early is read, and noted ----------
+
+# Like MPXJ's real TwentyFourHourCalendar.xer: its TASK row stops before the optional location_id.
+ENDS_EARLY = ("ERMHDR\t8.2.0\n%T\tTASK\n"
+              "%F\ttask_id\ttask_code\tstatus_code\ttask_type\ttotal_float_hr_cnt\tclndr_id\tupdate_date\tlocation_id\n"
+              "%R\t1\tA1000\tTK_NotStart\tTT_Task\t0\t1\t2020-03-17 13:25\n%E\n")
+
+
+def test_row_that_only_ends_early_is_read_with_blanks_and_a_note(tmp_path):
+    tables, broken, notes = read_xer(save(tmp_path, ENDS_EARLY))
+    assert broken == [] and tables["TASK"][0]["location_id"] == ""
+    assert notes == [(4, "TASK row ends early; read as blank: location_id")]
+
+
+def test_value_missing_in_the_middle_is_still_broken(tmp_path):
+    text = ENDS_EARLY.replace("\tTK_NotStart", "")  # every value after it shifts one column left
+    assert reason(save(tmp_path, text)).endswith("TASK row has 6 values, expected 8")
+
+
+def test_row_missing_a_column_the_checks_need_is_still_broken(tmp_path):
+    text = ENDS_EARLY.replace("\t0\t1\t2020-03-17 13:25\n", "\n")  # stops before total float
+    assert reason(save(tmp_path, text)).endswith("TASK row has 4 values, expected 8")
 
 
 # ---------- What the command line says ----------

@@ -115,14 +115,18 @@ def check(tables, broken):
 
 # ---------- 3. Print the results and draw the chart ----------
 
-def report(name, checked, failures, broken):
-    """Print the first broken rows, then count, %, pass/fail and example codes per check."""
+def report(name, checked, failures, broken, notes):
+    """Print the first broken rows and notes, then count, %, pass/fail and example codes per check."""
     print(f"\n{name}: {checked} activities checked")
     if not checked:  # say so, instead of a misleading "pass"
         print("  Nothing to check: every activity is finished, a milestone, level of effort or a WBS summary")
     print(f"  Broken rows: {len(broken)}")
     for line, problem in sorted(broken)[:MAX_BROKEN_SHOWN]:  # show the first few, in line order
         print(f"    line {line}: {problem}")
+    if notes:  # rows that ended early and were read with blanks
+        print(f"  Rows read with blanks at the end: {len(notes)}")
+        for line, note in notes[:MAX_BROKEN_SHOWN]:
+            print(f"    line {line}: {note}")
     for check_name, codes in failures.items():
         pct = percent(len(codes), checked)  # share that failed (0 if nothing checked)
         verdict = "n/a" if not checked else "pass" if pct <= LIMITS[check_name] else "FLAG"  # FLAG: worth a closer look
@@ -167,13 +171,13 @@ def main():
     failed = 0  # files that couldn't be checked
     for path in paths:
         try:
-            tables, broken = read_xer(path)  # 1. read
+            tables, broken, notes = read_xer(path)  # 1. read
         except FileError as problem:  # it can't be checked: say why in plain words, then go on
             print(f"\n{path.name}: can't be checked: {problem}")
             failed += 1
             continue
         checked, failures = check(tables, broken)  # 2. check
-        report(path.name, checked, failures, broken)  # 3. print
+        report(path.name, checked, failures, broken, notes)  # 3. print
         results.append((path.name, checked, failures))  # keep it for the chart
     if not named and results:
         draw_chart(results)  # one chart for all files in DATA_DIR
