@@ -1,18 +1,21 @@
 # XER checker
 
 Checks Primavera P6 schedule files (`.xer`): flags broken rows, runs three DCMA checks
-(missing links, negative float, high float) and draws one chart.
+(missing links, negative float, high float), draws one chart, and writes a short summary of
+each file under it. Gemini can word the summary, but every figure in it comes from code.
 
 ![Chart](chart.png)
 
 <sub>Each bar is the share of a file's unfinished work activities caught by a check; the dashed
 line is the DCMA limit. Both files <b>pass</b> negative float. <code>example_xer_file.xer</code> also
 <b>passes</b> missing links (1.6%). Over the limit: missing links in <code>CSTv2.4.xer</code> (15.0%), and
-high float in both files (58.6% and 46.6%).</sub>
+high float in both files (58.6% and 46.6%). Under the bars: each file's summary, and who wrote it
+(see <a href="#the-ai-summary">The AI summary</a>).</sub>
 
 ## Run it
 
-Install the one library it needs (matplotlib, for the chart):
+Install what it needs: matplotlib for the chart, plus google-genai and python-dotenv for the
+optional AI summary:
 
 ```
 pip install -r requirements.txt
@@ -39,20 +42,77 @@ python checker.py broken_test.xer
 ```
 
 ```
-broken_test.xer: 3 activities checked
-  Broken rows: 10
+broken_test.xer: 4 activities checked
+  Broken rows: 7
     line 12: TASK total float 'TBD' is not a number
     line 13: TASK row has 15 values, expected 61
     line 14: line doesn't start with %T, %F, %R or %E: '& Surrounding Area - P1SA NB'
-    line 17: TASK row has 60 values, expected 61
     line 21: TASKPRED link points to an activity that's missing or on a broken row
     ...
     line 26: no %E end marker, so the file may be cut off
+  Rows read with blanks at the end: 1
+    line 17: TASK row ends early; read as blank: crt_path_num
 ```
 
-It catches a float typed as text, two rows with missing values, a stray line from a line
-break typed into a task name, links to activities that are missing or on broken rows, and the
-missing end marker.
+It catches a float typed as text, a row cut short by a line break typed into a task name (and
+the stray line that break left behind), links to activities that are missing or on broken rows,
+and the missing end marker.
+
+**A row that only ends early is read, not thrown away.** Line 17 is the original row with its
+last, empty value dropped. Real exports do this: MPXJ's public test file
+`TwentyFourHourCalendar.xer` (P6 8.2) stops before optional columns like `location_id`, and
+editors that strip trailing tabs cause the same. Such a row is read with the missing values blank
+and listed as a note, but only when none of them is a column the checks need and every value it
+has still fits its column (dates look like dates, IDs are numbers, `TK_`/`TT_` codes are in
+place). A value missing in the middle shifts the rest out of place, so that row stays broken.
+This rule was checked against 10,583 full rows in 8 real exports from 5 sources (P6 8.2 to 24.12).
+
+**A file that can't be checked says why.** There's no crash and no misleading "pass": the
+checker names the problem in plain words, goes on to the next file, and exits with code 1.
+
+| File | What the checker says |
+|---|---|
+| Missing | `can't open the file (no such file or directory)` |
+| Empty | `the file is empty` |
+| A P6 XML export | `it's an XML file, not an XER export: export the schedule from P6 as XER` |
+| Not a P6 export, like a PDF | `it isn't a P6 XER export: line 1 should start with ERMHDR, not '%PDF-1.7'` |
+| No activities | `it has no TASK table, so there are no activities to check` |
+| A column the checks need is missing | `its TASK table has no status_code column, which the checks need` |
+
+When nothing can be read, the message also names the first broken row, which usually explains
+the rest. A file whose activities are all finished, milestones, level of effort or WBS summaries
+says "Nothing to check" and shows n/a, not pass. A UTF-8 byte-order mark, or a file re-saved as
+UTF-16, is read normally.
+
+**Let Gemini word the summaries (optional).** Without a key, code writes them. Copy the example
+settings file, then replace `<YOUR_API_KEY>` in `.env` with your key from
+[Google AI Studio](https://aistudio.google.com/apikey):
+
+```
+cp .env.example .env
+```
+
+`.env` is gitignored, so the key stays on your machine. All the AI settings live there, none in
+the code:
+
+| Setting | What it does | In `.env.example` |
+|---|---|---|
+| `GEMINI_API_KEY` | Turns the AI on; empty turns it off | `<YOUR_API_KEY>` |
+| `GEMINI_MODEL` | The model that writes the summaries; required with a key | `gemini-3.5-flash-lite` |
+| `GEMINI_THINKING_LEVEL` | How much the model thinks first: `minimal`, `low`, `medium` or `high`; empty for the model's own default | `minimal` |
+
+Rewording numbers that code already computed doesn't need a big model. On the same request,
+`gemini-3.5-flash-lite` with minimal thinking answered in 1.8 seconds, where `gemini-3.8-flash`
+took 113. A missing or invalid setting never stops the checker: code writes the summary, and the
+output names the setting to fix. A variable set in the terminal wins over `.env`, so
+`GEMINI_API_KEY= python checker.py` turns the AI off for one run.
+
+**Run the tests.** They need no key or internet, because Gemini's replies are faked:
+
+```
+pip install pytest
+pytest
+```
 
 ## Results
 
@@ -109,9 +169,40 @@ What the pamphlet says, and how this checker uses it:
 | Negative float (4.7) | "total float less than 0 working days" ... "there should not be any negative float" | Negative float, limit 0 |
 | Over a limit (4.0) | "not in and of itself synonymous with failure" | Reported as FLAG, not FAIL |
 
-A row is broken when it has the wrong number of values, a line doesn't start with a P6 marker
-(`%T`, `%F`, `%R`, `%E`), a link points to an activity that's missing or on a broken row, a float
-isn't a number, or the file has no `%E` end marker.
+A row is broken when it has the wrong number of values, it has no table above it (or its `%T`
+line has no name), a line doesn't start with a P6 marker (`%T`, `%F`, `%R`, `%E`), a link points
+to an activity that's missing or on a broken row, a float isn't a number, or the file has no `%E`
+end marker. `reader.py` reads the file and finds these; `checker.py` runs the checks.
+
+## The AI summary
+
+Each file gets a few plain sentences, in the terminal and under the chart. The rule: **code owns
+every number, and the AI only chooses the words.**
+
+1. `checker.py` computes the facts and passes them by name, like `"missing_links": "20"` or
+   `"missing_links_vs_limit": "over DCMA's 5% limit"`. Code decides pass or flag, not the AI.
+2. Gemini writes sentences that point at facts instead of typing numbers:
+   `{missing_links} activities ({missing_links_pct}) have no link before or after them`.
+3. [`summary.py`](summary.py) checks every sentence. One is rejected if it:
+
+| Rule | What it stops |
+|---|---|
+| has a digit | a typed number, like "21" when the fact says 20 |
+| spells a number or an amount (twenty, half, most, none ...) | a number in words, or "most" for 46.6% |
+| has a % sign | `{missing_links}%`, which would turn a count of 20 into a made-up 20% |
+| points at a fact that doesn't exist | an invented figure, like `{critical_path_days}` |
+| doesn't point at any fact | a claim with nothing behind it, like "the schedule is healthy" |
+
+4. Code puts the real values in. If a sentence broke a rule, Gemini gets one retry and is told
+   exactly what was wrong. If the retry fails too, the call fails, or a setting is missing, code
+   writes the summary from the same facts. The chart says who wrote it, and why code did.
+
+Gemini only sees the facts: no activity names and nothing else from the file, so text inside a
+schedule can't give it instructions.
+
+What the rules can't catch is a wrong *word*, like putting the high-float count in a sentence about
+negative float. The facts have plain names to make that unlikely, but someone should still read a
+summary before it goes to a client.
 
 ## How the results were validated
 
