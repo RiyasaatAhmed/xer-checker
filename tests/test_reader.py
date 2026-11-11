@@ -1,29 +1,13 @@
-"""Broken files get a clear answer, never a crash. Each test writes a small file, then reads it.
+"""Reading .xer files (xer_checker/reader.py): a broken file gets a clear answer, never a crash.
 
-Run: pytest
+Each test writes a small file, then reads it.
 """
 
-import sys
-from pathlib import Path
-
 import pytest
+from helpers import ENDS_EARLY, GOOD, ROOT, save
 
-import checker
-from reader import FileError, read_xer
-
-HERE = Path(__file__).parent
-
-# The smallest file the checks can run on: one unfinished activity.
-GOOD = ("ERMHDR\t23.12\n%T\tTASK\n"
-        "%F\ttask_id\ttask_code\tstatus_code\ttask_type\ttotal_float_hr_cnt\tclndr_id\n"
-        "%R\t1\tA1000\tTK_NotStart\tTT_Task\t0\t1\n%E\n")
-
-
-def save(tmp_path, text, encoding="utf-8"):
-    """Write `text` to a .xer file in a temporary folder, and return its path."""
-    path = tmp_path / "test.xer"
-    path.write_bytes(text.encode(encoding))
-    return path
+from xer_checker.checks import check
+from xer_checker.reader import FileError, read_xer
 
 
 def reason(path):
@@ -32,8 +16,6 @@ def reason(path):
         read_xer(path)
     return str(caught.value)
 
-
-# ---------- A file that can't be checked says why ----------
 
 def test_missing_file(tmp_path):
     assert reason(tmp_path / "missing.xer") == "can't open the file (no such file or directory)"
@@ -74,8 +56,6 @@ def test_no_activity_could_be_read(tmp_path):
         "none of its activities could be read; the first broken row is line 4: TASK row has 5 values, expected 6")
 
 
-# ---------- A file that can be read, is ----------
-
 def test_byte_order_mark_is_not_a_broken_row(tmp_path):
     tables, broken, _ = read_xer(save(tmp_path, "﻿" + GOOD))
     assert broken == [] and len(tables["TASK"]) == 1
@@ -84,21 +64,6 @@ def test_byte_order_mark_is_not_a_broken_row(tmp_path):
 def test_file_resaved_as_utf16_is_read(tmp_path):
     tables, broken, _ = read_xer(save(tmp_path, GOOD, encoding="utf-16"))
     assert broken == [] and len(tables["TASK"]) == 1
-
-
-def test_damaged_example_is_still_checked_with_its_7_broken_rows():
-    tables, broken, notes = read_xer(HERE / "broken_test.xer")
-    checker.check(tables, broken)  # adds the bad links and the float typed as text
-    assert len(broken) == 7
-    assert notes == [(17, "TASK row ends early; read as blank: crt_path_num")]
-
-
-# ---------- A row that only ends early is read, and noted ----------
-
-# Like MPXJ's real TwentyFourHourCalendar.xer: its TASK row stops before the optional location_id.
-ENDS_EARLY = ("ERMHDR\t8.2.0\n%T\tTASK\n"
-              "%F\ttask_id\ttask_code\tstatus_code\ttask_type\ttotal_float_hr_cnt\tclndr_id\tupdate_date\tlocation_id\n"
-              "%R\t1\tA1000\tTK_NotStart\tTT_Task\t0\t1\t2020-03-17 13:25\n%E\n")
 
 
 def test_row_that_only_ends_early_is_read_with_blanks_and_a_note(tmp_path):
@@ -117,22 +82,8 @@ def test_row_missing_a_column_the_checks_need_is_still_broken(tmp_path):
     assert reason(save(tmp_path, text)).endswith("TASK row has 4 values, expected 8")
 
 
-# ---------- What the command line says ----------
-
-def run_checker(monkeypatch, capsys, path):
-    """Run `python checker.py <path>`. Returns (exit code, what it printed)."""
-    monkeypatch.setattr(sys, "argv", ["checker.py", str(path)])
-    exit_code = checker.main()
-    return exit_code, capsys.readouterr().out
-
-
-def test_file_that_cant_be_checked_says_why_and_exits_with_1(tmp_path, monkeypatch, capsys):
-    exit_code, out = run_checker(monkeypatch, capsys, tmp_path / "missing.xer")
-    assert exit_code == 1
-    assert "missing.xer: can't be checked: can't open the file (no such file or directory)" in out
-
-
-def test_nothing_to_check_shows_na_not_pass(tmp_path, monkeypatch, capsys):
-    exit_code, out = run_checker(monkeypatch, capsys, save(tmp_path, GOOD.replace("TK_NotStart", "TK_Complete")))
-    assert exit_code == 0
-    assert "Nothing to check" in out and "n/a" in out and "pass" not in out
+def test_damaged_example_is_still_checked_with_its_7_broken_rows():
+    tables, broken, notes = read_xer(ROOT / "broken_test.xer")
+    _, _, problems = check(tables)  # the bad links and the float typed as text
+    assert len(broken + problems) == 7
+    assert notes == [(17, "TASK row ends early; read as blank: crt_path_num")]

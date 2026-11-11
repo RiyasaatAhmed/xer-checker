@@ -2,11 +2,11 @@
 
 import pytest
 
-import summary
+from xer_checker.summary import settings
 
 
 @pytest.fixture(autouse=True)
 def no_real_ai_settings(monkeypatch):
     """Clear the Gemini settings before every test, so a real .env never leaks into one."""
-    for var in (*summary.API_KEY_VARS, summary.MODEL_VAR, summary.THINKING_VAR):
+    for var in (*settings.API_KEY_VARS, settings.MODEL_VAR, settings.THINKING_VAR):
         monkeypatch.delenv(var, raising=False)

@@ -1,0 +1,4 @@
+# Test settings. Run the tests with: pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]  # where the tests are
+pythonpath = ["."]     # lets the tests import the xer_checker package without installing it
