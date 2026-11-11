@@ -2,7 +2,7 @@
 
 For every .xer file in data/: report broken rows, run three DCMA checks
 (missing links, negative float, high float), summarize the results (see summary.py),
-then save one chart as chart.png.
+then save one chart as chart.png with the summaries under it.
 A file that can't be checked gets a plain reason instead of a crash (see reader.py).
 
 Usage:
@@ -11,7 +11,7 @@ Usage:
 """
 
 import sys  # reads file names given on the command line, and sets the exit code
-import textwrap  # wraps the summaries to fit the terminal
+import textwrap  # wraps the summaries to fit the terminal and the chart
 from pathlib import Path  # finds the .xer files
 
 import matplotlib
@@ -48,14 +48,19 @@ EXAMPLES_SHOWN = 3  # failing activity codes printed per check
 
 # Chart
 CHART_SIZE = (9, 4.8)  # inches
-CHART_DPI = 150  # pixels per inch, so the image is 1350 x 720
+CHART_DPI = 150  # pixels per inch, so the bars are 1350 x 720 (the summaries add height)
 BAR_WIDTH = 0.35  # width of one file's group slot; each bar fills 90% of it
 FILE_COLORS = ["#2a78d6", "#eb6834"]  # one per file (blue, orange), so the chart supports 2 files
 LIMIT_LINE_COLOR = "#52514e"  # dark grey dashed line
-LABEL_FONT_SIZE = 9  # size of the numbers on top of the bars
+LABEL_FONT_SIZE = 9  # size of the numbers on top of the bars, and of the summaries under the chart
 
-# Summaries (in the terminal)
+# Summaries (in the terminal and under the chart)
 SUMMARY_WRAP = 100  # characters per line in the terminal, like the report above it
+CHART_WRAP = 118  # characters per line under the chart, which is wider
+SUMMARY_LINE_HEIGHT = 0.19  # inches per line of summary text on the chart
+SQUARE_GAP = 0.022  # gap between a file's coloured square and its name, as a share of the chart width
+NOTE_COLOR = "#52514e"  # dark grey, for who wrote each summary
+SUMMARY_NOTE = "Every figure in the summaries is filled in by code."
 
 
 # ---------- 2. Run the three checks ----------
@@ -159,11 +164,18 @@ def report(name, checked, failures, broken, notes, summary):
 
 
 def draw_chart(results):
-    """Save chart.png: % failing per check, one bar per file, dashed line at each DCMA limit."""
+    """Save chart.png: % failing per check, one bar per file, a dashed line at each DCMA limit, summaries under it."""
     names = list(LIMITS)  # the three checks, in a fixed order
-    fig, ax = plt.subplots(figsize=CHART_SIZE, dpi=CHART_DPI)  # an empty chart
+    # Wrap each summary first, because its number of lines sets how tall the text panel is.
+    summaries = [(file_name, author, textwrap.wrap(text, CHART_WRAP))
+                 for file_name, _, _, (text, author) in results]
+    rows = sum(len(lines) + 2 for _, _, lines in summaries) + 1  # per file: header, summary, blank row; then the note
+    panel = rows * SUMMARY_LINE_HEIGHT  # height of the text panel, in inches
+    # Two areas stacked: the bars on top, the summaries under them.
+    fig, (ax, text_ax) = plt.subplots(2, 1, figsize=(CHART_SIZE[0], CHART_SIZE[1] + panel), dpi=CHART_DPI,
+                                      height_ratios=[CHART_SIZE[1], panel])
     width = BAR_WIDTH
-    for i, (file_name, checked, failures) in enumerate(results):  # one colour per file
+    for i, (file_name, checked, failures, _) in enumerate(results):  # one colour per file
         # Spread each file's bar side by side around its check (file 1 left, file 2 right).
         xs = [x + (i - (len(results) - 1) / 2) * width for x in range(len(names))]
         pcts = [percent(len(failures[n]), checked) for n in names]  # bar heights in %
@@ -179,8 +191,32 @@ def draw_chart(results):
     ax.set_title("Unfinished work activities flagged by each check", loc="left")
     ax.spines[["top", "right"]].set_visible(False)  # remove the top and right borders
     ax.legend(frameon=False)
+    draw_summaries(text_ax, summaries, rows)
     fig.tight_layout()  # stop labels from being cut off
     fig.savefig(CHART_FILE)
+
+
+def draw_summaries(ax, summaries, rows):
+    """Write each file's summary in the empty panel `ax`, one row per line, top to bottom."""
+    ax.axis("off")  # a blank panel: no axes, ticks or border
+    step = 1 / rows  # height of one row, as a share of the panel
+    y = 1  # start at the top
+    for i, (file_name, author, lines) in enumerate(summaries):
+        # Header row: a square in the file's bar colour, the file's name, and who wrote its summary.
+        write(ax, 0, y, "■", color=FILE_COLORS[i % len(FILE_COLORS)])
+        write(ax, SQUARE_GAP, y, file_name, fontweight="bold")
+        write(ax, 1, y, f"written by {author}", color=NOTE_COLOR, ha="right")
+        for line in lines:  # the summary itself
+            y -= step
+            write(ax, 0, y, line)
+        y -= 2 * step  # leave a blank row before the next file
+    write(ax, 0, y, SUMMARY_NOTE, color=NOTE_COLOR)
+
+
+def write(ax, x, y, text, **style):
+    """One line of text in the panel, at x and y as shares of it (0 to 1). A "$" stays a dollar sign."""
+    ax.text(x, y, text, transform=ax.transAxes, va="top", fontsize=LABEL_FONT_SIZE, parse_math=False,
+            in_layout=False, **style)  # in_layout=False: the text never squeezes the bars
 
 
 def main():
@@ -191,7 +227,7 @@ def main():
     """
     named = [Path(arg) for arg in sys.argv[1:]]  # files typed after "python checker.py", if any
     paths = named or sorted(Path(DATA_DIR).glob(XER_PATTERN))  # otherwise every .xer, alphabetically
-    results = []  # (file name, activities checked, failures) for each file
+    results = []  # (file name, activities checked, failures, (summary, who wrote it)) for each file
     failed = 0  # files that couldn't be checked
     for path in paths:
         try:
@@ -203,7 +239,7 @@ def main():
         checked, failures = check(tables, broken)  # 2. check
         summary = summarize(summary_facts(checked, failures, broken))  # 3. summarize
         report(path.name, checked, failures, broken, notes, summary)  # 4. print
-        results.append((path.name, checked, failures))  # keep it for the chart
+        results.append((path.name, checked, failures, summary))  # keep it for the chart
     if not named and results:
         draw_chart(results)  # one chart for all files in DATA_DIR
         print(f"\nSaved {CHART_FILE}")
