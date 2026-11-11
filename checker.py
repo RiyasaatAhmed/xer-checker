@@ -1,7 +1,8 @@
 """Check Primavera P6 schedule files (.xer).
 
 For every .xer file in data/: report broken rows, run three DCMA checks
-(missing links, negative float, high float), then save one chart as chart.png.
+(missing links, negative float, high float), summarize the results (see summary.py),
+then save one chart as chart.png.
 A file that can't be checked gets a plain reason instead of a crash (see reader.py).
 
 Usage:
@@ -10,6 +11,7 @@ Usage:
 """
 
 import sys  # reads file names given on the command line, and sets the exit code
+import textwrap  # wraps the summaries to fit the terminal
 from pathlib import Path  # finds the .xer files
 
 import matplotlib
@@ -18,6 +20,7 @@ matplotlib.use("Agg")  # draw straight to a file; no window
 import matplotlib.pyplot as plt  # noqa: E402  (must come after matplotlib.use)
 
 from reader import FileError, read_xer  # noqa: E402  (reads a .xer file; FileError says why one can't be checked)
+from summary import summarize  # noqa: E402  (writes each file's summary from the computed numbers)
 
 # ---------- Constants ----------
 
@@ -50,6 +53,9 @@ BAR_WIDTH = 0.35  # width of one file's group slot; each bar fills 90% of it
 FILE_COLORS = ["#2a78d6", "#eb6834"]  # one per file (blue, orange), so the chart supports 2 files
 LIMIT_LINE_COLOR = "#52514e"  # dark grey dashed line
 LABEL_FONT_SIZE = 9  # size of the numbers on top of the bars
+
+# Summaries (in the terminal)
+SUMMARY_WRAP = 100  # characters per line in the terminal, like the report above it
 
 
 # ---------- 2. Run the three checks ----------
@@ -113,10 +119,25 @@ def check(tables, broken):
     return len(open_tasks), failures
 
 
-# ---------- 3. Print the results and draw the chart ----------
+# ---------- 3. Hand the numbers to the summary ----------
 
-def report(name, checked, failures, broken, notes):
-    """Print the first broken rows and notes, then count, %, pass/fail and example codes per check."""
+def summary_facts(checked, failures, broken):
+    """Every number the summary may use, by name and already formatted."""
+    facts = {"checked": str(checked), "broken_rows": str(len(broken)), "high_float_days": str(HIGH_FLOAT_DAYS)}
+    for check_name, codes in failures.items():
+        key = check_name.lower().replace(" ", "_")  # "Missing links" -> "missing_links"
+        pct = percent(len(codes), checked)
+        facts[key] = str(len(codes))  # e.g. "20"
+        facts[key + "_pct"] = f"{pct:.1f}%"  # e.g. "15.0%", rounded like the report and the chart
+        over_or_within = "within" if pct <= LIMITS[check_name] else "over"  # code judges the limit
+        facts[key + "_vs_limit"] = f"{over_or_within} DCMA's {LIMITS[check_name]}% limit" if checked else "nothing to check"
+    return facts
+
+
+# ---------- 4. Print the results and draw the chart ----------
+
+def report(name, checked, failures, broken, notes, summary):
+    """Print the first broken rows and notes, then count, %, pass/fail and example codes per check, then the summary."""
     print(f"\n{name}: {checked} activities checked")
     if not checked:  # say so, instead of a misleading "pass"
         print("  Nothing to check: every activity is finished, a milestone, level of effort or a WBS summary")
@@ -132,6 +153,9 @@ def report(name, checked, failures, broken, notes):
         verdict = "n/a" if not checked else "pass" if pct <= LIMITS[check_name] else "FLAG"  # FLAG: worth a closer look
         examples = ", ".join(codes[:EXAMPLES_SHOWN])  # a few failing activity codes
         print(f"  {check_name:<15} {len(codes):>4}  {pct:5.1f}%  {verdict} (limit {LIMITS[check_name]}%)  {examples}")
+    text, author = summary
+    print(f"  Summary, written by {author}:")
+    print(textwrap.fill(text, SUMMARY_WRAP, initial_indent="    ", subsequent_indent="    "))
 
 
 def draw_chart(results):
@@ -177,7 +201,8 @@ def main():
             failed += 1
             continue
         checked, failures = check(tables, broken)  # 2. check
-        report(path.name, checked, failures, broken, notes)  # 3. print
+        summary = summarize(summary_facts(checked, failures, broken))  # 3. summarize
+        report(path.name, checked, failures, broken, notes, summary)  # 4. print
         results.append((path.name, checked, failures))  # keep it for the chart
     if not named and results:
         draw_chart(results)  # one chart for all files in DATA_DIR
