@@ -38,43 +38,86 @@ def fake_gemini(monkeypatch, *replies, model="test-model"):
 
 # ---------- The rules ----------
 
-def test_sentence_that_points_at_facts_passes_and_gets_filled():
-    sentences = ["{missing_links} of {checked} activities ({missing_links_pct}) lack a link, {missing_links_vs_limit}."]
-    assert problems(sentences, FACTS) == []
-    assert fill(sentences, FACTS) == "20 of 133 activities (15.0%) lack a link, over DCMA's 5% limit."
+def say(text, about="missing_links"):
+    """One sentence of a reply, the way Gemini sends it."""
+    return {"about": about, "text": text}
+
+
+# A good reply for FACTS: a sentence for each check over its limit (high float, then missing links).
+GOOD_REPLY = [
+    say("{high_float} of the {checked} activities ({high_float_pct}) have high float, {high_float_vs_limit}.", "high_float"),
+    say("{missing_links} activities ({missing_links_pct}) lack a link, {missing_links_vs_limit}."),
+]
+GOOD_TEXT = ("78 of the 133 activities (58.6%) have high float, over DCMA's 5% limit. "
+             "20 activities (15.0%) lack a link, over DCMA's 5% limit.")
+
+
+def test_reply_that_points_at_facts_passes_and_gets_filled():
+    assert problems(GOOD_REPLY, FACTS) == []
+    assert fill(GOOD_REPLY, FACTS) == GOOD_TEXT
 
 
 def test_number_typed_in_digits_is_rejected():
-    assert "digits" in problems(["{checked} checked, and 21 lack a link."], FACTS)[0]
+    assert "digits" in problems([say("{checked} checked, and 21 lack a link.")], FACTS)[0]
 
 
 def test_number_spelled_out_is_rejected():
-    assert "'Twenty'" in problems(["Twenty of {checked} activities lack a link."], FACTS)[0]
+    assert "'Twenty'" in problems([say("Twenty of {checked} activities lack a link.")], FACTS)[0]
 
 
 def test_vague_amount_is_rejected():  # 46.6% is not "most"
-    assert "'Most'" in problems(["Most activities have high float ({high_float_pct})."], FACTS)[0]
+    assert "'Most'" in problems([say("Most activities have high float ({high_float_pct}).", "high_float")], FACTS)[0]
 
 
 def test_fact_that_does_not_exist_is_rejected():
-    assert "doesn't exist: critical_path_days" in problems(["The critical path is {critical_path_days} days."], FACTS)[0]
+    assert "doesn't exist: critical_path_days" in problems([say("It takes {critical_path_days} days.")], FACTS)[0]
 
 
 def test_sentence_without_a_fact_is_rejected():  # an unsupported claim, like "the schedule is healthy"
-    assert problems(["The schedule looks healthy."], FACTS) == ["sentence 1 doesn't use any fact"]
+    assert problems([say("The schedule looks healthy.")], FACTS)[0] == "sentence 1 doesn't use any fact"
 
 
 def test_percent_sign_is_rejected():  # "{missing_links}%" would turn a count of 20 into a made-up 20%
-    assert "% sign" in problems(["{missing_links}% lack a link."], FACTS)[0]
+    assert "% sign" in problems([say("{missing_links}% lack a link.")], FACTS)[0]
 
 
 def test_broken_brace_is_rejected():
-    assert "brace" in problems(["{missing links} lack a link, {missing_links_vs_limit}."], FACTS)[0]
+    assert "brace" in problems([say("{missing links} lack a link, {missing_links_vs_limit}.")], FACTS)[0]
+
+
+def test_fact_name_without_braces_is_rejected():  # it would show up in the summary as "missing_links"
+    assert problems([say("missing_links reached {missing_links_pct}.")], FACTS)[0] == (
+        "sentence 1 writes missing_links without braces; write {missing_links}")
+
+
+def test_fact_from_another_check_is_rejected():  # the right number in the wrong sentence
+    assert problems([say("{high_float} activities lack a link.")], FACTS)[0] == (
+        "sentence 1 is about missing_links but uses {high_float}; give that its own sentence")
+
+
+def test_unknown_topic_is_rejected():
+    assert problems([say("{checked} activities.", "critical_path")], FACTS)[0].startswith(
+        "sentence 1 is about 'critical_path'; use one of: overview, missing_links")
+
+
+def test_check_over_its_limit_cant_be_left_out():
+    assert problems(GOOD_REPLY[1:], FACTS) == ["no sentence is about high_float, which is over its limit"]
+
+
+def test_only_an_overview_sentence_may_use_broken_rows():
+    assert problems([*GOOD_REPLY, say("Broken rows: {broken_rows}.", "overview")], FACTS) == []
+    assert "uses {broken_rows}" in problems([say("{broken_rows} rows are broken.", "high_float")], FACTS)[0]
+
+
+def test_reply_shape_sent_to_gemini_lists_the_allowed_topics():
+    about = summary.reply_schema(FACTS)["properties"]["sentences"]["items"]["properties"]["about"]
+    assert about["enum"] == ["overview", "missing_links", "negative_float", "high_float"]
 
 
 def test_reply_that_is_not_a_list_of_sentences_is_rejected():
-    assert problems("just a string", FACTS) == ["the reply must be a list of 1 to 4 sentences"]
-    assert problems([], FACTS) == ["the reply must be a list of 1 to 4 sentences"]
+    assert problems("just a string", FACTS) == ["the reply must have 1 to 4 sentences"]
+    assert problems([], FACTS) == ["the reply must have 1 to 4 sentences"]
+    assert problems(["a plain string"], FACTS)[0] == 'sentence 1 needs an "about" and some "text"'
 
 
 # ---------- Settings ----------
@@ -93,7 +136,7 @@ def test_key_without_a_model_means_code_writes_the_summary(monkeypatch):
 
 
 def test_model_comes_from_the_environment(monkeypatch):
-    calls = fake_gemini(monkeypatch, ["{high_float} have high float."], model="model-from-env")
+    calls = fake_gemini(monkeypatch, GOOD_REPLY, model="model-from-env")
     text, author = summarize(FACTS)
     assert calls[0][0].model == "model-from-env"
     assert author == "Gemini (model-from-env)"
@@ -132,21 +175,21 @@ def test_env_example_documents_every_setting_and_holds_no_key():
 # ---------- What summarize() does with Gemini's reply ----------
 
 def test_good_reply_is_used(monkeypatch):
-    fake_gemini(monkeypatch, ["{high_float} activities ({high_float_pct}) have high float, {high_float_vs_limit}."])
+    fake_gemini(monkeypatch, GOOD_REPLY)
     text, author = summarize(FACTS)
-    assert text == "78 activities (58.6%) have high float, over DCMA's 5% limit."
+    assert text == GOOD_TEXT
     assert author == "Gemini (test-model)"
 
 
 def test_bad_reply_gets_one_retry_that_says_what_was_wrong(monkeypatch):
-    calls = fake_gemini(monkeypatch, ["About 20 lack a link."], ["{missing_links} lack a link."])
+    calls = fake_gemini(monkeypatch, [say("About 20 lack a link.")], GOOD_REPLY)
     text, author = summarize(FACTS)
-    assert text == "20 lack a link." and author == "Gemini (test-model)"
+    assert text == GOOD_TEXT and author == "Gemini (test-model)"
     assert calls[0][1] == "" and "sentence 1 has a number in digits" in calls[1][1]
 
 
 def test_two_bad_replies_mean_code_writes_the_summary(monkeypatch):
-    fake_gemini(monkeypatch, ["About 20 lack a link."], ["Twenty lack a link."])
+    fake_gemini(monkeypatch, [say("About 20 lack a link.")], [say("missing_links: {missing_links}.")])
     text, author = summarize(FACTS)
     assert author.startswith("code (Gemini broke a rule twice")
     assert text == fill(CODE_SUMMARY, FACTS)
@@ -161,6 +204,11 @@ def test_failed_call_means_code_writes_the_summary(monkeypatch):
     text, author = summarize(FACTS)
     assert author == "code (Gemini failed: The read operation timed out)"
     assert text == fill(CODE_SUMMARY, FACTS)
+
+
+def test_busy_errors_are_retried_but_timeouts_are_not():
+    retry = summary.http_options().retry_options
+    assert retry.attempts == 3 and 503 in retry.http_status_codes and 504 not in retry.http_status_codes
 
 
 def test_server_timeout_is_explained_in_plain_words():
