@@ -8,3 +8,6 @@ context/
 
 # The local database, used when DATABASE_URL is not set
 *.db
+
+# Installed agent skills: restore them with `npx skills experimental_install` (see skills-lock.json)
+.claude/skills/stageshow/
