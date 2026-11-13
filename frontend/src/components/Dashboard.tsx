@@ -57,6 +57,10 @@ export function Dashboard({ result }: { result: CheckResult }) {
         <Summary points={result.summary} author={result.summary_author} />
         <FileIssues broken={result.broken_rows} notes={result.notes} />
       </div>
+
+      <p className="hint small dash-foot">
+        Checks follow DCMA-EA PAM 200.1 (2012), section 4. A number over its limit is a reason to look closer, not a failed schedule.
+      </p>
     </div>
   )
 }

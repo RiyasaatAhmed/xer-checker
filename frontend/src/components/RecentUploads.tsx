@@ -5,14 +5,11 @@ import { StatusPill } from './StatusPill'
 
 interface Props {
   uploads: UploadSummary[]
-  openId: string | null // the upload on screen
   onOpen: (uploadId: string) => void
 }
 
-/** Saved checks, newest first. A checked one opens again; a failed one shows why. */
-export function RecentUploads({ uploads, openId, onOpen }: Props) {
-  if (uploads.length === 0) return null
-
+/** Saved checks, newest first. A checked one opens; a failed one shows why. */
+export function RecentUploads({ uploads, onOpen }: Props) {
   /** Open in place, unless the user asked for a new tab or window. */
   function open(event: React.MouseEvent, uploadId: string) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
@@ -21,23 +18,19 @@ export function RecentUploads({ uploads, openId, onOpen }: Props) {
   }
 
   return (
-    <section className="card recent" aria-labelledby="recent-title">
-      <div className="card-head">
-        <h2 id="recent-title">Recent checks</h2>
-      </div>
-      <div className="table-scroll">
+    <div className="table-scroll recent">
         <table>
           <thead>
             <tr>
               <th scope="col" className="label">File</th>
               <th scope="col" className="label">Checked</th>
               <th scope="col" className="label">Result</th>
-              <th scope="col" className="label">Checked</th>
+              <th scope="col" className="label">Date</th>
             </tr>
           </thead>
           <tbody>
             {uploads.map((upload) => (
-              <tr key={upload.upload_id} aria-current={upload.upload_id === openId || undefined}>
+              <tr key={upload.upload_id}>
                 <td className="recent-file">
                   {upload.status === 'ready' ? (
                     <a href={pathFor(upload.upload_id)} onClick={(event) => open(event, upload.upload_id)}>
@@ -62,7 +55,6 @@ export function RecentUploads({ uploads, openId, onOpen }: Props) {
             ))}
           </tbody>
         </table>
-      </div>
-    </section>
+    </div>
   )
 }

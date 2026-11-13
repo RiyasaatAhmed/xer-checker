@@ -17,17 +17,43 @@ async function uploadWith(upload: () => Response, name = 'CSTv2.4.xer') {
   const fetch = fakeBackend(upload)
   vi.stubGlobal('fetch', fetch)
   render(<App />)
-  await user().upload(screen.getAllByTestId('file-input')[0], new File(['ERMHDR'], name))
+  const [input] = await screen.findAllByTestId('file-input') // the home page shows once its list has loaded
+  await user().upload(input, new File(['ERMHDR'], name))
   return fetch
 }
 
 describe('App', () => {
-  it('starts with what it does and where to drop a file', () => {
+  it('with no checks yet, shows the demo and one upload button', async () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT)))
     render(<App />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Find what’s slowing your schedule down.')
-    expect(screen.getByText('Drop a .xer file anywhere on this page')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Choose a file' })).toBeEnabled()
+    expect(await screen.findByRole('region', { name: 'Upload a schedule' })).toBeInTheDocument()
+    expect(screen.getByText(/Or drop a .xer file anywhere on this page/)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Upload a .xer file' })).toHaveLength(1) // not repeated in the header
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument() // no headline copy
+  })
+
+  it('with saved checks, shows the list and the upload button instead of the demo', async () => {
+    vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
+    render(<App />)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Recent checks' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Upload a schedule' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Upload a .xer file' })).toHaveLength(1)
+  })
+
+  it('shows nothing, not the demo, while the list loads', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {}))) // never answers
+    render(<App />)
+    expect(screen.queryByRole('region', { name: 'Upload a schedule' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+  })
+
+  it('a check has an All checks link back to the list, and an upload button in the header', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    await screen.findByRole('heading', { level: 1, name: 'CSTv2.4.xer' })
+    expect(screen.getByRole('button', { name: 'Upload a .xer file' })).toBeInTheDocument()
+    await user().click(screen.getByRole('link', { name: '← All checks' }))
+    expect(window.location.pathname).toBe('/')
+    expect(await screen.findByRole('region', { name: 'Upload a schedule' })).toBeInTheDocument()
   })
 
   it('leads with what needs attention after an upload', async () => {
@@ -87,7 +113,7 @@ describe('App', () => {
   it("shows the backend's reason when a file can't be checked", async () => {
     await uploadWith(() => reply(422, { detail: "can't be checked: the file is empty" }))
     expect(await screen.findByRole('alert')).toHaveTextContent("Can't be checked: the file is empty.")
-    expect(screen.getByRole('button', { name: 'Try another file' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Upload a .xer file' })).toBeInTheDocument() // on the page under the notice
   })
 
   it('refuses a file that is not a .xer before sending it', async () => {

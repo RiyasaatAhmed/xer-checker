@@ -3,9 +3,8 @@ import { UploadError, getUpload, listUploads, uploadXer } from './api'
 import { Checking } from './components/Checking'
 import { Dashboard } from './components/Dashboard'
 import { DropOverlay } from './components/DropOverlay'
-import { EmptyState } from './components/EmptyState'
 import { ErrorNotice } from './components/ErrorNotice'
-import { RecentUploads } from './components/RecentUploads'
+import { Home } from './components/Home'
 import { UploadButton } from './components/UploadButton'
 import { useUploadRoute } from './route'
 import type { CheckResult, UploadSummary } from './types'
@@ -26,7 +25,7 @@ type View =
 export function App() {
   const [uploadId, go] = useUploadRoute()
   const [state, setView] = useState<View>(() => (uploadId ? { step: 'loading', text: OPENING } : { step: 'empty' }))
-  const [uploads, setUploads] = useState<UploadSummary[]>([])
+  const [uploads, setUploads] = useState<UploadSummary[] | null>(null) // null until the list has loaded
   const shownId = useRef<string | null>(null) // the upload on screen, so a fresh upload isn't fetched again
 
   // The list is a convenience: if it can't load, uploading still works.
@@ -109,22 +108,25 @@ export function App() {
           <a href="/" className="wordmark" onClick={home}>
             {APP_NAME}
           </a>
-          <UploadButton busy={busy} onFile={check} />
+          {/* On the home page the button sits in the page itself, so it isn't shown twice */}
+          {view.step !== 'empty' && view.step !== 'failed' && <UploadButton busy={busy} onFile={check} />}
         </div>
       </header>
 
       <main className="main">
-        {view.step === 'failed' && <ErrorNotice message={view.message} onFile={check} />}
+        {view.step === 'failed' && <ErrorNotice message={view.message} />}
         {view.step === 'loading' && <Checking text={view.text} />}
-        {(view.step === 'empty' || view.step === 'failed') && <EmptyState onFile={check} />}
-        {/* key: each upload starts a fresh dashboard, with its own selected rule */}
-        {view.step === 'done' && <Dashboard key={view.result.upload_id} result={view.result} />}
-        <RecentUploads uploads={uploads} openId={view.step === 'done' ? view.result.upload_id : null} onOpen={go} />
+        {(view.step === 'empty' || view.step === 'failed') && <Home uploads={uploads} onFile={check} onOpen={go} />}
+        {view.step === 'done' && (
+          <>
+            <a href="/" className="back" onClick={home}>
+              ← All checks
+            </a>
+            {/* key: each upload starts a fresh dashboard, with its own selected rule */}
+            <Dashboard key={view.result.upload_id} result={view.result} />
+          </>
+        )}
       </main>
-
-      <footer className="foot">
-        <p>Checks follow DCMA-EA PAM 200.1 (2012), section 4. A number over its limit is a reason to look closer, not a failed schedule.</p>
-      </footer>
     </div>
   )
 }
