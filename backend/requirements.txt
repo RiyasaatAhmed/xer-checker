@@ -4,3 +4,5 @@ python-dotenv>=1.0  # reads GEMINI_API_KEY from .env
 fastapi>=0.115  # the API
 uvicorn[standard]>=0.30  # runs the API
 python-multipart>=0.0.9  # lets the API read uploaded files
+sqlmodel>=0.0.22  # the tables, and the database sessions
+psycopg[binary]>=3.2  # talks to PostgreSQL
