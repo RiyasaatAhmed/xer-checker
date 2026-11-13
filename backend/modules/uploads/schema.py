@@ -1,5 +1,7 @@
-"""The shape of one checked file's answer, as the API sends it."""
+"""The shapes of the API's answers about uploads."""
 
+import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -23,11 +25,24 @@ class RowNote(BaseModel):
 
 
 class CheckResult(BaseModel):
-    """Everything the checker found in one file."""
+    """Everything the checker found in one file, as saved."""
+    upload_id: uuid.UUID = Field(description="Open it again with GET /api/uploads/{upload_id}")
+    uploaded_at: datetime
     file_name: str
     checked: int = Field(description="Unfinished work activities checked")
     rules: list[RuleResult] = Field(description="One result per DCMA rule, in report order")
-    broken_rows: list[RowNote] = Field(description="Rows that couldn't be used")
+    broken_rows: list[RowNote] = Field(description="Rows that couldn't be used, in line order")
     notes: list[RowNote] = Field(description="Rows that ended early and were read with blanks")
     summary: list[str] = Field(description="Short points; every number in them is filled in by code")
     summary_author: str = Field(description="Gemini, or code and why")
+
+
+class UploadSummary(BaseModel):
+    """One upload in the list of recent uploads."""
+    upload_id: uuid.UUID
+    uploaded_at: datetime
+    file_name: str
+    status: Literal["ready", "failed"]
+    failure_reason: str | None = Field(description="Why the file couldn't be checked")
+    checked: int | None = Field(description="Activities checked; None when the upload failed")
+    flags: int | None = Field(description="Rules over their DCMA limit; None when the upload failed")
