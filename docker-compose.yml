@@ -1,0 +1,34 @@
+# Runs the backend, frontend and database on your machine:
+#   docker compose up --build
+# Settings come from .env (copy .env.example). Everything runs without it.
+
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false  # without it, the AI is off and code writes the summaries
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"  # open http://localhost:3000
+
+  database:
+    build: ./database
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-xer_checker}
+      POSTGRES_USER: ${POSTGRES_USER:-xer_checker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-only}  # local default; set a strong one in .env on a server
+    ports:
+      - "5432:5432"
+    volumes:
+      - database-data:/var/lib/postgresql/data  # keeps the data when the container stops
+    healthcheck:  # ready once it accepts connections
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  database-data:
