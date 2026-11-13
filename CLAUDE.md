@@ -30,7 +30,7 @@ A checker for Primavera P6 schedule files (`.xer`). For each file, it:
 
 | Folder | What it holds | Status |
 |---|---|---|
-| `backend/` | The checker: code, tests, `data/` and `results-from-kazinex/` | Works. The API comes next |
+| `backend/` | The FastAPI app and the checker: code, tests, `data/` and `results-from-kazinex/` | Works |
 | `frontend/` | The upload page | A placeholder page served by nginx |
 | `database/` | PostgreSQL | Empty, no tables |
 
@@ -42,21 +42,34 @@ Run the Python commands from `backend/`: `checker.py` finds `data/` from the cur
 
 | Command | What it does |
 |---|---|
-| `docker compose up --build` | From the repo root: builds and starts all three services. |
+| `docker compose up --build` | From the repo root: builds and starts all three services. The API is at http://localhost:8000/docs. |
+| `../.venv/bin/uvicorn main:app --reload` | Runs the API on port 8000. |
 | `../.venv/bin/python checker.py` | Checks every `.xer` in `data/`, prints the report and rewrites `chart.png`. Calls Gemini if a key is set. |
 | `../.venv/bin/python checker.py FILE.xer` | Checks one file. No chart. |
 | `GEMINI_API_KEY= ../.venv/bin/python checker.py` | Runs with the AI off. |
-| `../.venv/bin/python -m pytest -q` | Runs all tests. No key or internet needed. |
+| `../.venv/bin/python -m pytest -q` | Runs all tests. No key or internet needed. Packages: `requirements-dev.txt`. |
 | `uv pip install --python ../.venv/bin/python <package>` | Adds a package. The `.venv` has no `pip`. Add it to `requirements.txt` too, for Docker. |
 
 ## How the code is organized
 
-In `backend/`, `checker.py` only starts the program. Each file in `xer_checker/` has one job and one test file in `tests/`.
+`backend/` follows one layout, from the hcc-platform pattern:
+
+| Path | Job |
+|---|---|
+| `main.py` | Creates the FastAPI app, with a health route at `/`, and adds each module's router |
+| `modules/<feature>/` | One API feature: `route.py` (HTTP only), `schema.py` (pydantic answers), `service.py` (the work) |
+| `modules/check/` | `POST /api/checks`: upload a `.xer`, get its results. Reuses `cli.check_file` |
+| `checker.py` | Starts the command line |
+| `xer_checker/` | The checker, shared by the API and the command line |
+
+In `xer_checker/`, each file has one job and one test file in `tests/`:
 
 | File | Job |
 |---|---|
 | `reader.py` | `read_xer`: reads a file, flags broken rows, or raises `FileError` with a plain reason |
-| `checks.py` | `check(tables)`: the 3 DCMA checks, with `LIMITS` and `percent` |
+| `checks.py` | `check(tables)`: picks the activities DCMA checks, works out links and float in days, runs every rule |
+| `activity.py` | `Activity`: what a rule sees about one activity |
+| `rules/` | One file per DCMA rule: `NAME`, `LIMIT`, `DCMA_SECTION`, `fails(activity)`. `RULES` and `LIMITS` are in `__init__.py` |
 | `facts.py` | `summary_facts`: the named numbers a summary may use |
 | `result.py` | `FileResult`: one file's results |
 | `report.py`, `chart.py` | Print one file's results; draw the chart |
@@ -82,6 +95,9 @@ In `backend/`, `checker.py` only starts the program. Each file in `xer_checker/`
 - One job per module, one test file per module. Steps pass plain data, so each can be tested alone.
 - Every fixed value is a named constant in the Constants block, with a comment.
 - Reuse an existing function before you write a new one. One job per function.
+- A new DCMA rule is a new file in `xer_checker/rules/`, added to `RULES`, with its own `tests/test_rule_<name>.py`.
+- A new API feature is a new folder in `modules/`, with `route.py`, `schema.py` and `service.py`, added in `main.py`.
+- Route functions that call the checker are plain `def`, not `async def`: a slow Gemini call then runs in a thread.
 
 ## Don't change unless the user asks
 
