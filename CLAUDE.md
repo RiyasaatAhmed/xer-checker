@@ -61,7 +61,7 @@ Run the Python commands from `backend/`: `checker.py` finds `data/` from the cur
 |---|---|
 | `main.py` | Creates the FastAPI app, with a health route at `/`, and adds each module's router |
 | `modules/<feature>/` | One API feature: `route.py` (HTTP only), `schema.py` (pydantic answers), `service.py` (the work), `model.py` (its tables) |
-| `modules/uploads/` | `POST /api/uploads` checks and saves a file; `GET /api/uploads` lists them; `GET /api/uploads/{id}` opens one. Reuses `cli.check_file` |
+| `modules/uploads/` | `POST /api/uploads` checks and saves a file; `GET /api/uploads` lists them; `GET /api/uploads/{id}` opens one. Reuses `cli.check_file`. `snapshot.py` saves and reads the schedule rows |
 | `database/db.py` | `DATABASE_URL` (PostgreSQL in Docker, else SQLite), `get_session` per request, `init_db` creates missing tables |
 | `checker.py` | Starts the command line |
 | `xer_checker/` | The checker, shared by the API and the command line |
@@ -74,6 +74,8 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 | `checks.py` | `check(tables)`: picks the activities DCMA checks, works out links and float in days, runs every rule |
 | `activity.py` | `Activity`: what a rule sees about one activity |
 | `rules/` | One file per DCMA rule: `NAME`, `LIMIT`, `DCMA_SECTION`, `fails(activity)`. `RULES` and `LIMITS` are in `__init__.py` |
+| `schedule.py` | `read_schedule(tables)`: projects, activities (name, WBS, float, dates) and every link row, with the counted ones marked |
+| `overview.py` | `overview(...)`: what's in the schedule, counted. Facts, not pass or fail; locked to Kazinex in `test_overview.py` |
 | `facts.py` | `summary_facts`: the named numbers a summary may use |
 | `result.py` | `FileResult`: one file's results |
 | `report.py`, `chart.py` | Print one file's results; draw the chart |
