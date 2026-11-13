@@ -1,0 +1,110 @@
+/* Colors are tokens. Dark mode redefines them; status colors stay the same in both. */
+:root {
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --hairline: #e1e0d9;
+  --track: #ecebe6;
+  --border: rgba(11, 11, 11, 0.1);
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --good: #0ca30c;
+  --serious: #ec835a;
+  --none: #c3c2b7;
+  --error-bg: #fdecec;
+  --error-ink: #8a1f1f;
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--page);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --hairline: #2c2c2a;
+    --track: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.1);
+    --none: #52514e;
+    --error-bg: #3a1515;
+    --error-ink: #f4b4b4;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); }
+h1, h2 { margin: 0; }
+h2 { font-size: 1rem; margin-bottom: 8px; }
+
+.page { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+
+/* ---------- Header ---------- */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.brand { font-weight: 700; font-size: 1.25rem; }
+.tagline { color: var(--ink-2); font-size: 0.9rem; }
+.upload-button {
+  font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 8px; border: 0;
+  background: var(--accent); color: var(--accent-ink); cursor: pointer;
+}
+.upload-button:disabled { opacity: 0.6; cursor: progress; }
+.upload-button:focus-visible, .meter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- States ---------- */
+.empty { text-align: center; padding: 64px 16px; color: var(--ink-2); }
+.empty h1 { color: var(--ink); margin-bottom: 12px; }
+.status { color: var(--ink-2); }
+.error { background: var(--error-bg); color: var(--error-ink); padding: 12px 16px; border-radius: 8px; }
+
+/* ---------- Dashboard ---------- */
+.dashboard { display: grid; gap: 16px; }
+.file-name { font-size: 1.4rem; overflow-wrap: anywhere; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+.hint { color: var(--ink-2); font-size: 0.9rem; margin: 0 0 12px; }
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.stack { display: grid; gap: 16px; }
+@media (max-width: 760px) { .columns { grid-template-columns: 1fr; } }
+
+/* Stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.tile-label { color: var(--ink-2); font-size: 0.9rem; }
+.tile-value { font-size: 2rem; font-weight: 700; margin: 4px 0; }
+.tile-note { color: var(--muted); font-size: 0.8rem; }
+
+/* Rule meters: name, bar with the limit marked, figure and status */
+.meters { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.meter {
+  width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 180px 1fr 150px; grid-template-areas: "name track figure" ". status status";
+  gap: 4px 16px; align-items: center; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid transparent; background: transparent;
+}
+.meter:hover { background: var(--track); }
+.meter[aria-pressed="true"] { border-color: var(--accent); }
+.meter-name { grid-area: name; font-weight: 600; }
+.meter-section { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+.meter-track { grid-area: track; position: relative; height: 12px; background: var(--track); border-radius: 4px; }
+.meter-fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; min-width: 2px; }
+.meter-limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); }
+.meter-figure { grid-area: figure; text-align: right; font-variant-numeric: tabular-nums; }
+.meter-status { grid-area: status; color: var(--ink-2); font-size: 0.85rem; }
+.status-pass .meter-fill { background: var(--good); }
+.status-flag .meter-fill { background: var(--serious); }
+.status-none .meter-fill { background: var(--none); }
+@media (max-width: 760px) {
+  .meter { grid-template-columns: 1fr auto; grid-template-areas: "name figure" "track track" "status status"; }
+}
+
+/* Lists and tables */
+.points { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 6px; }
+.table-scroll { max-height: 360px; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+caption { text-align: left; font-weight: 600; padding: 8px 0; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--hairline); }
+th { color: var(--ink-2); font-weight: 600; position: sticky; top: 0; background: var(--surface); }
+td.number { font-variant-numeric: tabular-nums; color: var(--muted); width: 4rem; }
