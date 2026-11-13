@@ -32,7 +32,7 @@ A checker for Primavera P6 schedule files (`.xer`). You upload a file in the bro
 | Folder | What it holds | Status |
 |---|---|---|
 | `backend/` | The FastAPI app and the checker: code, tests, `data/` and `results-from-kazinex/` | Works |
-| `frontend/` | Vite, React and TypeScript: the upload button and the dashboard. nginx serves it in Docker and passes `/api` to the backend | Works |
+| `frontend/` | Vite, React and TypeScript, styled after thecritpath.com: upload, what needs attention, the checks band, the activities behind each number. nginx serves it in Docker and passes `/api` to the backend | Works |
 | `database/` | PostgreSQL 17. The backend creates the tables at start | Works |
 
 Each folder has a `Dockerfile`. `docker-compose.yml` runs all three. `.env` and `.env.example` stay at the repo root, and Docker Compose reads `.env` too.
@@ -105,6 +105,10 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 - Tests use the `db_session` and `client` fixtures in `tests/conftest.py`: a fresh in-memory SQLite database each.
 - The tables are made with `create_all` at start. Once a table needs a change, add Alembic migrations first.
 - Frontend: one component per file in `src/components/`. Status shows an icon and a word, never color alone.
+- Frontend look: every color, font and shape is a token in `frontend/src/theme.css`, from thecritpath.com. Square corners, mono capitals for small labels, orange only for actions and checks over their limit.
+- Frontend words around the numbers live in `frontend/src/rules.ts`: what a check means, and what to do in P6. The numbers always come from the API.
+- `frontend/src/kit/` is Stageshow's kit, copied in: don't edit it, except as its README records.
+- To change `HeroDemo.tsx`, use the `stageshow` skill. Restore it with `npx skills experimental_install`. Film it with `--gate` at both widths until it ends `rehearsal passed`, then update `REHEARSAL.md`.
 - To test a commit on its own, use a temporary `git worktree`. Never `git stash`: the repo holds an old stash entry.
 - Route functions that call the checker are plain `def`, not `async def`: a slow Gemini call then runs in a thread.
 

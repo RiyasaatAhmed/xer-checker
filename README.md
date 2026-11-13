@@ -1,6 +1,6 @@
 # XER checker
 
-Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and see a dashboard of its results.
+Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and see what needs attention first, then the checks and the activities behind each number.
 
 ![Dashboard](frontend/dashboard.png)
 
@@ -93,7 +93,7 @@ Every extra activity Kazinex flags is one DCMA leaves out:
 | Folder | What it holds |
 |---|---|
 | [`backend/`](backend/) | The API and the checker: code, tests, the two files and Kazinex's reports |
-| [`frontend/`](frontend/) | The page where you upload a file and see its dashboard. See its [README](frontend/README.md) |
+| [`frontend/`](frontend/) | The page where you upload a file and see what needs attention, styled after [thecritpath.com](https://thecritpath.com/). See its [README](frontend/README.md) |
 | [`database/`](database/) | PostgreSQL: every upload and its results. See its [README](database/README.md) |
 
 Each folder has its own `Dockerfile`. [`docker-compose.yml`](docker-compose.yml) runs all three.
