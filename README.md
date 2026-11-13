@@ -57,7 +57,7 @@ Checks Primavera P6 schedule files (`.xer`). For each file, it:
 2. Run the tests from `backend/`. They need no key or internet, because Gemini's replies are faked.
    ```
    cd backend
-   pip install pytest openpyxl
+   pip install -r requirements-dev.txt
    pytest
    ```
 3. **Pass:** no number moved. **Fail:** a number changed, so we find the bug and fix it before it reaches a client.
@@ -86,7 +86,7 @@ Every extra activity Kazinex flags is one DCMA leaves out:
 
 | Folder | What it holds | Status |
 |---|---|---|
-| [`backend/`](backend/) | The checker: its code, tests, the two files and Kazinex's reports | Works. The API comes next |
+| [`backend/`](backend/) | The API and the checker: code, tests, the two files and Kazinex's reports | Works |
 | [`frontend/`](frontend/) | The page where you upload a file | A placeholder page. Comes after the backend |
 | [`database/`](database/) | PostgreSQL, to save results | Empty. Comes last |
 
@@ -102,18 +102,44 @@ docker compose up --build
 
 | Service | What you get |
 |---|---|
-| backend | The report for both files, printed once |
+| backend | The API at http://localhost:8000. Upload a file at http://localhost:8000/docs |
 | frontend | A placeholder page at http://localhost:3000 |
 | database | An empty PostgreSQL database at `localhost:5432` |
 
-**Without Docker**, the checker only:
+**Without Docker**, from `backend/`:
 
 ```
 cd backend
-pip install -r requirements.txt      # matplotlib, plus google-genai and python-dotenv for the optional AI
-python checker.py                    # check both files in data/ and save chart.png
+pip install -r requirements.txt      # the API, the chart, and the optional AI
+uvicorn main:app --reload            # the API at http://localhost:8000
+python checker.py                    # or the command line: check both files in data/ and save chart.png
 python checker.py data/CSTv2.4.xer   # check one file; chart.png stays as it is
 ```
+
+## The API
+
+| Method | Path | What it does |
+|---|---|---|
+| `GET` | `/` | Answers `{"status": "ok"}` when the API is up |
+| `POST` | `/api/checks` | Checks one uploaded `.xer` file, sent as the form field `file` |
+| `GET` | `/docs` | A page to try each endpoint in the browser |
+
+```
+curl -F "file=@data/CSTv2.4.xer" http://localhost:8000/api/checks
+```
+
+**The answer** has the same results as the command line:
+
+- **`checked`:** unfinished work activities checked.
+- **`rules`:** one entry per DCMA rule, with its DCMA section, limit, count, percent, status (`pass`, `flag` or `n/a`) and the activity IDs.
+- **`broken_rows` and `notes`:** each with its line number.
+- **`summary` and `summary_author`:** the short points, and who wrote them.
+
+| Status | When |
+|---|---|
+| `200` | The file was checked |
+| `413` | The file is over 50 MB |
+| `422` | The file can't be checked, with the reason: `can't be checked: the file is empty` |
 
 **Broken rows.** The two real files have none. So `broken_test.xer` is a short excerpt of `CSTv2.4.xer`, damaged on purpose. From `backend/`:
 
@@ -163,11 +189,15 @@ Only unfinished work activities are checked.
 
 **Float:** how many working days an activity can slip without delaying the project. P6 stores it in hours. The checker converts it to days with each activity's own calendar (8 or 24 hours a day).
 
-| Check | Why it matters | Limit |
-|---|---|---|
-| Missing links | A loose activity can slip without moving the finish date, so the schedule can't be trusted | 5% |
-| Negative float | The activity is already late for a deadline | 0% |
-| High float | Over 44 working days (about 2 months) of spare time can mean a link is missing | 5% |
+**Each rule is its own file** in [`backend/xer_checker/rules/`](backend/xer_checker/rules/), with its own tests. A wrong count points straight to one file:
+
+| Check | Why it matters | Limit | Rule file | Its tests |
+|---|---|---|---|---|
+| Missing links | A loose activity can slip without moving the finish date, so the schedule can't be trusted | 5% | [`missing_links.py`](backend/xer_checker/rules/missing_links.py) | [`test_rule_missing_links.py`](backend/tests/test_rule_missing_links.py) |
+| Negative float | The activity is already late for a deadline | 0% | [`negative_float.py`](backend/xer_checker/rules/negative_float.py) | [`test_rule_negative_float.py`](backend/tests/test_rule_negative_float.py) |
+| High float | Over 44 working days (about 2 months) of spare time can mean a link is missing | 5% | [`high_float.py`](backend/xer_checker/rules/high_float.py) | [`test_rule_high_float.py`](backend/tests/test_rule_high_float.py) |
+
+**To add a rule:** add its file to `rules/`, then add it to `RULES` in [`rules/__init__.py`](backend/xer_checker/rules/__init__.py). The report, the chart, the summary and the API pick it up.
 
 **Where the rules come from:** the DCMA 14-Point Assessment, section 4 of DCMA-EA PAM 200.1 (October 2012). It is the last published version.
 
@@ -191,7 +221,7 @@ Only unfinished work activities are checked.
 - its float isn't a number
 - or the file has no `%E` end marker
 
-[`reader.py`](backend/xer_checker/reader.py) finds these. [`checks.py`](backend/xer_checker/checks.py) runs the checks.
+[`reader.py`](backend/xer_checker/reader.py) finds these. [`checks.py`](backend/xer_checker/checks.py) picks the activities to check, works out their links and float, and runs every rule.
 
 ## The AI summary
 
@@ -253,15 +283,28 @@ cp .env.example .env
 
 ## How the code is organized
 
-All code is in `backend/`. `checker.py` only starts the program. The code is in `xer_checker/`, one job per file, each with its own tests in `tests/`. Steps pass plain data to each other, so each can be tested alone.
+All code is in `backend/`, one job per file, each with its own tests in `tests/`. Steps pass plain data to each other, so each can be tested alone.
+
+| Folder or file | What it is |
+|---|---|
+| `main.py` | Starts the API |
+| `modules/` | One folder per API feature, each with `route.py`, `schema.py` and `service.py`. Now: `check/` |
+| `checker.py` | Starts the command line |
+| `xer_checker/` | The checker itself, used by both |
+| `xer_checker/rules/` | One file per DCMA rule |
 
 <details>
 <summary>Every file, its job and its tests</summary>
 
 | File | Its one job | Tests |
 |---|---|---|
+| `main.py` | Create the API and add each module's routes | `test_main.py` |
+| `modules/check/route.py` | `POST /api/checks`: read the upload, answer 413 or 422 on errors | `test_check_route.py` |
+| `modules/check/service.py` | Run the checker on the upload; shape the answer (`schema.py`) | `test_check_service.py` |
 | `reader.py` | Read a `.xer` file into tables; say why a broken one can't be checked | `test_reader.py` |
-| `checks.py` | The three DCMA checks | `test_checks.py`, and `test_baseline.py` against Kazinex |
+| `checks.py` | Pick the activities to check, work out their links and float, run every rule | `test_checks.py`, and `test_baseline.py` against Kazinex |
+| `activity.py` | What a rule sees about one activity | |
+| `rules/*.py` | One DCMA rule each | `test_rule_*.py` |
 | `facts.py` | Turn the results into the named numbers a summary may use | `test_facts.py` |
 | `summary/settings.py` | Read the Gemini settings from `.env`, and check them | `test_summary_settings.py` |
 | `summary/rules.py` | The rules a summary must pass; filling in the facts | `test_summary_rules.py` |
@@ -269,7 +312,7 @@ All code is in `backend/`. `checker.py` only starts the program. The code is in 
 | `summary/writer.py` | Ask Gemini, check, retry once, or let code write it | `test_summary_writer.py` |
 | `summary/prompt.md` | Gemini's instructions | |
 | `report.py`, `chart.py` | Print one file's results; draw the chart | `test_report_and_chart.py` |
-| `cli.py` | Run those steps for each file, and set the exit code | `test_cli.py` |
+| `cli.py` | Run those steps for each file, and set the exit code. The API reuses its `check_file` | `test_cli.py` |
 
 </details>
 
