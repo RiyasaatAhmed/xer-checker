@@ -10,7 +10,7 @@ Checks Primavera P6 schedule files (`.xer`). For each file, it:
 3. **Draws one chart** of the results.
 4. **Writes a short summary.** Gemini picks the words; code computes every number.
 
-![Chart](chart.png)
+![Chart](backend/chart.png)
 
 **How to read the chart:**
 
@@ -19,9 +19,34 @@ Checks Primavera P6 schedule files (`.xer`). For each file, it:
 - Over the limit: missing links in `CSTv2.4.xer` (15.0%), and high float in both files (58.6% and 46.6%).
 - Under the bars: each file's summary, and who wrote it ([The AI summary](#the-ai-summary)).
 
+## Folders
+
+| Folder | What it holds | Status |
+|---|---|---|
+| [`backend/`](backend/) | The checker: its code, tests, the two files and Kazinex's reports | Works. The API comes next |
+| [`frontend/`](frontend/) | The page where you upload a file | A placeholder page. Comes after the backend |
+| [`database/`](database/) | PostgreSQL, to save results | Empty. Comes last |
+
+Each folder has its own `Dockerfile`. [`docker-compose.yml`](docker-compose.yml) runs all three.
+
 ## Run it
 
+**With Docker**, all three folders:
+
 ```
+docker compose up --build
+```
+
+| Service | What you get |
+|---|---|
+| backend | The report for both files, printed once |
+| frontend | A placeholder page at http://localhost:3000 |
+| database | An empty PostgreSQL database at `localhost:5432` |
+
+**Without Docker**, the checker only:
+
+```
+cd backend
 pip install -r requirements.txt      # matplotlib, plus google-genai and python-dotenv for the optional AI
 python checker.py                    # check both files in data/ and save chart.png
 python checker.py data/CSTv2.4.xer   # check one file; chart.png stays as it is
@@ -67,7 +92,8 @@ A file with nothing to check (only finished, milestone, LOE or WBS summary activ
 not pass. A UTF-8 byte-order mark or a UTF-16 file is read normally.
 
 **AI summary (optional).** Without a key, code writes it. To use Gemini, put your key from
-[Google AI Studio](https://aistudio.google.com/apikey) in `.env` (gitignored):
+[Google AI Studio](https://aistudio.google.com/apikey) in `.env`, at the repo root (gitignored).
+Docker Compose reads the same file:
 
 ```
 cp .env.example .env
@@ -86,10 +112,10 @@ names the setting to fix.
 ## Validation
 
 **Our source of truth is Kazinex.** Both files were run through [Kazinex](https://www.kazinex.com/),
-an independent P6 schedule checker. Its reports, in [`results-from-kazinex/`](results-from-kazinex/),
+an independent P6 schedule checker. Its reports, in [`backend/results-from-kazinex/`](backend/results-from-kazinex/),
 are the baseline our results must agree with.
 
-**[`tests/test_baseline.py`](tests/test_baseline.py) checks that on every test run.** It reads
+**[`test_baseline.py`](backend/tests/test_baseline.py) checks that on every test run.** It reads
 Kazinex's reports directly and fails if any of these breaks:
 
 | Test | Fails when |
@@ -102,6 +128,7 @@ Kazinex's reports directly and fails if any of these breaks:
 **Before anything ships:**
 
 ```
+cd backend
 pip install pytest openpyxl
 pytest
 ```
@@ -166,18 +193,18 @@ the last published version ([copy hosted by Mosaic Projects](https://mosaicproje
 
 **A row is broken** when it has the wrong number of values, no table above it, no `%T`/`%F`/`%R`/`%E`
 marker, a link to a missing or broken activity, or a float that isn't a number; or when the file has no `%E`
-end. [`reader.py`](xer_checker/reader.py) finds these; [`checks.py`](xer_checker/checks.py) runs the checks.
+end. [`reader.py`](backend/xer_checker/reader.py) finds these; [`checks.py`](backend/xer_checker/checks.py) runs the checks.
 
 ## The AI summary
 
 A few one-sentence points per file. **Code owns every number; the AI only chooses the words.**
 
-1. [`facts.py`](xer_checker/facts.py) computes named facts, like `"missing_links": "20"` or
+1. [`facts.py`](backend/xer_checker/facts.py) computes named facts, like `"missing_links": "20"` or
    `"missing_links_vs_limit": "over DCMA's 5% limit"`. Code decides pass or flag, not the AI.
 2. Gemini replies in a fixed JSON shape (up to 4 points), writing placeholders instead of numbers:
    `{"about": "missing_links", "text": "{missing_links} activities ({missing_links_pct}) have no link before or after them"}`.
-   Instructions: [`prompt.md`](xer_checker/summary/prompt.md).
-3. [`rules.py`](xer_checker/summary/rules.py) rejects a point that:
+   Instructions: [`prompt.md`](backend/xer_checker/summary/prompt.md).
+3. [`rules.py`](backend/xer_checker/summary/rules.py) rejects a point that:
 
 | Rule | What it stops |
 |---|---|
@@ -207,8 +234,8 @@ Gemini sees only the facts, never activity names or file text. The rules can't c
 
 ## How the code is organized
 
-`checker.py` only starts the program. The code is in `xer_checker/`, one job per file, each with
-its own tests. Steps pass plain data to each other, so each can be tested alone.
+All code is in `backend/`. `checker.py` only starts the program. The code is in `xer_checker/`,
+one job per file, each with its own tests in `tests/`. Steps pass plain data to each other, so each can be tested alone.
 
 | File | Its one job | Tests |
 |---|---|---|
@@ -233,4 +260,4 @@ its own tests. Steps pass plain data to each other, so each can be tested alone.
   `tests/fixtures/example_xer_file.xer` in [Badr1600/p6-analyzer](https://github.com/Badr1600/p6-analyzer).
   MIT license, Copyright (c) 2026 TeckFuture.
 
-Both are unchanged copies with their original names.
+Both are unchanged copies with their original names, in `backend/data/`.
