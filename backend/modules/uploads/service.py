@@ -5,6 +5,7 @@ The answer is always read back from the database, so a result looks the same now
 
 import hashlib  # the file's fingerprint
 import tempfile  # a folder that's deleted after the check
+from datetime import timezone
 from pathlib import Path
 
 from sqlmodel import col, select
@@ -93,7 +94,7 @@ def get_upload(session, upload_id):
                           .order_by(FileIssue.line_number, FileIssue.id)).all()
     review = session.exec(select(Review).where(Review.upload_id == upload_id)).one()
     return CheckResult(
-        upload_id=upload.id, uploaded_at=upload.created_at, file_name=upload.file_name,
+        upload_id=upload.id, uploaded_at=as_utc(upload.created_at), file_name=upload.file_name,
         checked=metrics[0].denominator, rules=[rule_result(session, metric) for metric in metrics],
         broken_rows=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "error"],
         notes=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "note"],
@@ -126,6 +127,11 @@ def summary(upload, metrics):
     """One line of the upload list."""
     ready = upload.status == READY and bool(metrics)
     return UploadSummary(
-        upload_id=upload.id, uploaded_at=upload.created_at, file_name=upload.file_name, status=upload.status,
+        upload_id=upload.id, uploaded_at=as_utc(upload.created_at), file_name=upload.file_name, status=upload.status,
         failure_reason=upload.failure_reason, checked=metrics[0].denominator if ready else None,
         flags=sum(m.verdict == "flag" for m in metrics) if ready else None)
+
+
+def as_utc(moment):
+    """The time marked as UTC. SQLite drops the time zone, so the browser would read UTC as local time."""
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)

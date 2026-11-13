@@ -69,3 +69,9 @@ def test_the_list_shows_the_newest_first_with_headline_numbers(db_session):
     assert (newest.file_name, newest.checked, newest.flags) == ("example_xer_file.xer", 365, 1)
     assert (older.file_name, older.checked, older.flags) == ("CSTv2.4.xer", 133, 2)
     assert len(list_uploads(db_session, 1)) == 1
+
+
+def test_times_are_sent_as_utc(db_session):
+    saved = check_upload(db_session, "CSTv2.4.xer", CST)
+    assert saved.uploaded_at.utcoffset().total_seconds() == 0  # "...Z", not a time the browser reads as local
+    assert list_uploads(db_session, 1)[0].uploaded_at.utcoffset().total_seconds() == 0
