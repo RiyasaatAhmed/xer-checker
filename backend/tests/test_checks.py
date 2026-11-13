@@ -1,8 +1,12 @@
-"""The DCMA checks (xer_checker/checks.py), on tiny schedules where the right answer is known."""
+"""Running the rules (xer_checker/checks.py), on tiny schedules where the right answer is known.
+
+Each rule on its own is tested in its own file: test_rule_*.py.
+"""
 
 import pytest
 
 from xer_checker.checks import check, percent, within_limit
+from xer_checker.rules import RULES
 
 
 def task(task_id, float_hours="0", status="TK_NotStart", kind="TT_Task", calendar="8h"):
@@ -30,6 +34,11 @@ def test_only_unfinished_work_is_checked():  # DCMA 4.0 leaves the rest out
     checked, failures, _ = check(schedule(tasks))
     assert checked == 2
     assert failures["Missing links"] == ["A1", "A7"]
+
+
+def test_every_rule_gets_a_list_in_report_order():
+    _, failures, _ = check(schedule([task("1")]))
+    assert list(failures) == [rule.NAME for rule in RULES] == ["Missing links", "Negative float", "High float"]
 
 
 # ---------- Missing links ----------
