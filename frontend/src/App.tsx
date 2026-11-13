@@ -1,29 +1,44 @@
-import { useState } from 'react'
-import { UploadError, uploadXer } from './api'
+import { useCallback, useEffect, useState } from 'react'
+import { UploadError, getUpload, listUploads, uploadXer } from './api'
 import { Dashboard } from './components/Dashboard'
+import { RecentUploads } from './components/RecentUploads'
 import { UploadButton } from './components/UploadButton'
-import type { CheckResult } from './types'
+import type { CheckResult, UploadSummary } from './types'
 
 type State =
   | { step: 'empty' }
-  | { step: 'checking'; fileName: string }
+  | { step: 'loading'; text: string }
   | { step: 'done'; result: CheckResult }
   | { step: 'failed'; message: string }
 
-/** The page: one upload button, then the results of the last file. */
+/** The page: one upload button, the results of the open file, and the recent uploads. */
 export function App() {
   const [state, setState] = useState<State>({ step: 'empty' })
+  const [uploads, setUploads] = useState<UploadSummary[]>([])
 
-  async function check(file: File) {
-    setState({ step: 'checking', fileName: file.name })
+  // The list is a convenience: if it can't load, the upload button still works.
+  const refreshList = useCallback(() => {
+    listUploads().then(setUploads, () => setUploads([]))
+  }, [])
+  useEffect(refreshList, [refreshList])
+
+  /** Show what `load` returns, or its error in plain words. */
+  async function show(text: string, load: () => Promise<CheckResult>) {
+    setState({ step: 'loading', text })
     try {
-      setState({ step: 'done', result: await uploadXer(file) })
+      setState({ step: 'done', result: await load() })
     } catch (error) {
       const message = error instanceof UploadError ? error.message : 'Something went wrong. Please try again.'
       setState({ step: 'failed', message })
     }
   }
 
+  async function check(file: File) {
+    await show(`Checking ${file.name}…`, () => uploadXer(file))
+    refreshList() // a failed upload is saved too, with its reason
+  }
+
+  const openId = state.step === 'done' ? state.result.upload_id : null
   return (
     <div className="page">
       <header className="top">
@@ -31,13 +46,11 @@ export function App() {
           <div className="brand">XER checker</div>
           <div className="tagline">Checks a Primavera P6 schedule against DCMA rules</div>
         </div>
-        <UploadButton busy={state.step === 'checking'} onFile={check} />
+        <UploadButton busy={state.step === 'loading'} onFile={check} />
       </header>
 
-      <main>
-        <div aria-live="polite">
-          {state.step === 'checking' && <p className="status">Checking {state.fileName}…</p>}
-        </div>
+      <main className="main">
+        <div aria-live="polite">{state.step === 'loading' && <p className="status">{state.text}</p>}</div>
         {state.step === 'failed' && (
           <p className="error" role="alert">
             {state.message}
@@ -50,8 +63,9 @@ export function App() {
             <p>You’ll see missing links, negative float and high float, each against DCMA’s limit.</p>
           </div>
         )}
-        {/* key: a new file starts a fresh dashboard, with its own selected rule */}
-        {state.step === 'done' && <Dashboard key={state.result.file_name} result={state.result} />}
+        {/* key: each upload starts a fresh dashboard, with its own selected rule */}
+        {state.step === 'done' && <Dashboard key={state.result.upload_id} result={state.result} />}
+        <RecentUploads uploads={uploads} openId={openId} onOpen={(id) => show('Opening…', () => getUpload(id))} />
       </main>
     </div>
   )

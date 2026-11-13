@@ -1,4 +1,4 @@
-// The answer from POST /api/uploads. Mirrors backend/modules/uploads/schema.py.
+// The backend's answers. Mirrors backend/modules/uploads/schema.py.
 
 export type RuleStatus = 'pass' | 'flag' | 'n/a'
 
@@ -19,8 +19,10 @@ export interface RowNote {
   message: string
 }
 
-/** Everything the checker found in one file. */
+/** Everything the checker found in one file, as saved. */
 export interface CheckResult {
+  upload_id: string // open it again with GET /api/uploads/{upload_id}
+  uploaded_at: string // ISO date and time
   file_name: string
   checked: number // unfinished work activities checked
   rules: RuleResult[]
@@ -28,4 +30,15 @@ export interface CheckResult {
   notes: RowNote[]
   summary: string[] // short points; every number in them is filled in by code
   summary_author: string // Gemini, or code and why
+}
+
+/** One upload in the list of recent uploads. */
+export interface UploadSummary {
+  upload_id: string
+  uploaded_at: string // ISO date and time
+  file_name: string
+  status: 'ready' | 'failed'
+  failure_reason: string | null // why the file couldn't be checked
+  checked: number | null // null when the upload failed
+  flags: number | null // rules over their DCMA limit; null when the upload failed
 }
