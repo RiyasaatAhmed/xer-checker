@@ -17,6 +17,7 @@ from .facts import summary_facts
 from .reader import FileError, read_xer
 from .report import report
 from .result import FileResult
+from .schedule import read_schedule
 from .summary import summarize
 
 # ---------- Constants ----------
@@ -33,7 +34,7 @@ def check_file(path):
     broken = broken + problems  # rows the reader couldn't use, then data the checks couldn't use
     facts = summary_facts(checked, failures, broken)  # 3. summarize: code's numbers, AI's words
     points, author = summarize(facts)
-    return FileResult(path.name, checked, failures, broken, notes, points, author, facts)
+    return FileResult(path.name, checked, failures, broken, notes, points, author, facts, read_schedule(tables))
 
 
 def main(args=None):
