@@ -1,6 +1,6 @@
 """What the checker found in one file. The report and the chart both read from this."""
 
-from dataclasses import dataclass  # a small record with named fields
+from dataclasses import dataclass, field  # a small record with named fields
 
 
 @dataclass(frozen=True)
@@ -13,3 +13,4 @@ class FileResult:
     notes: list  # [(line number, note), ...] rows that ended early and were read with blanks
     points: list  # the summary: one short sentence per point
     author: str  # who wrote the summary: Gemini, or code (and why)
+    facts: dict = field(default_factory=dict)  # the named numbers the summary was written from

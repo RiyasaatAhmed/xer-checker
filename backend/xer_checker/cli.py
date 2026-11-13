@@ -31,8 +31,9 @@ def check_file(path):
     tables, broken, notes = read_xer(path)  # 1. read
     checked, failures, problems = check(tables)  # 2. check
     broken = broken + problems  # rows the reader couldn't use, then data the checks couldn't use
-    points, author = summarize(summary_facts(checked, failures, broken))  # 3. summarize: code's numbers, AI's words
-    return FileResult(path.name, checked, failures, broken, notes, points, author)
+    facts = summary_facts(checked, failures, broken)  # 3. summarize: code's numbers, AI's words
+    points, author = summarize(facts)
+    return FileResult(path.name, checked, failures, broken, notes, points, author, facts)
 
 
 def main(args=None):
