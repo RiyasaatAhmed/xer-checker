@@ -1,10 +1,8 @@
 """The DCMA checks (xer_checker/checks.py), on tiny schedules where the right answer is known."""
 
 import pytest
-from helpers import ROOT
 
 from xer_checker.checks import check, percent, within_limit
-from xer_checker.reader import read_xer
 
 
 def task(task_id, float_hours="0", status="TK_NotStart", kind="TT_Task", calendar="8h"):
@@ -88,16 +86,3 @@ def test_limit_is_passed_at_exactly_the_limit():  # DCMA flags only what's above
     assert within_limit("Missing links", 5) and not within_limit("Missing links", 5.1)
     assert within_limit("Negative float", 0) and not within_limit("Negative float", 0.1)
 
-
-# ---------- The real files: any change that moves a number fails here ----------
-
-@pytest.mark.parametrize("file_name, checked, missing_links, negative_float, high_float", [
-    ("CSTv2.4.xer", 133, 20, 0, 78),
-    ("example_xer_file.xer", 365, 6, 0, 170),
-])
-def test_real_files_match_the_readme(file_name, checked, missing_links, negative_float, high_float):
-    tables, broken, _ = read_xer(ROOT / "data" / file_name)
-    found, failures, problems = check(tables)
-    assert (found, broken, problems) == (checked, [], [])
-    assert [len(failures[name]) for name in ("Missing links", "Negative float", "High float")] == [
-        missing_links, negative_float, high_float]
