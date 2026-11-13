@@ -1,3 +1,6 @@
 matplotlib>=3.8
 google-genai>=3.1  # Gemini, for the summaries; only called when GEMINI_API_KEY is set
 python-dotenv>=1.0  # reads GEMINI_API_KEY from .env
+fastapi>=0.115  # the API
+uvicorn[standard]>=0.30  # runs the API
+python-multipart>=0.0.9  # lets the API read uploaded files
