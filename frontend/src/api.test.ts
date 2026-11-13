@@ -19,7 +19,7 @@ describe('uploadXer', () => {
 
   it("shows the backend's reason when a file can't be checked", async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply(422, { detail: "can't be checked: the file is empty" })))
-    await expect(uploadXer(FILE)).rejects.toThrow("Can't be checked: the file is empty")
+    await expect(uploadXer(FILE)).rejects.toThrow("Can't be checked: the file is empty.")
   })
 
   it('shows the status code when the error has no reason', async () => {

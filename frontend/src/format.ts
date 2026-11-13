@@ -20,3 +20,22 @@ export function csvText(header: string[], rows: string[][]): string {
   const cell = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
   return [header, ...rows].map((row) => row.map(cell).join(',')).join('\n') + '\n'
 }
+
+/** A P6 date (site-local, no time zone) -> "6 May 2027". */
+export function dayText(local: string): string {
+  return new Date(local).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/** Calendar days from one P6 date to another, by their dates alone (so no clock or time zone shifts it). */
+export function daysBetween(from: string, to: string): number {
+  const day = (local: string) => {
+    const d = new Date(local)
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
+  }
+  return Math.round((day(to) - day(from)) / 86_400_000)
+}
+
+/** 51.21 -> "51.2", null -> "–". Working days, 1 decimal, as the checks round them. */
+export function daysText(days: number | null): string {
+  return days === null ? '–' : days.toFixed(1)
+}

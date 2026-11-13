@@ -60,7 +60,7 @@
 .file-name { font-size: clamp(32px, 4vw, 48px); line-height: 1.05; letter-spacing: -0.045em; overflow-wrap: anywhere; }
 .dash-meta { display: flex; flex-wrap: wrap; gap: 6px 20px; color: var(--muted); font-size: 14px; }
 .dash-meta span + span::before { content: '·'; margin-right: 20px; color: var(--faint); }
-.dash-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px; align-items: start; }
+.dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
 .stack { display: grid; gap: 24px; }
 @media (max-width: 960px) { .dash-grid { grid-template-columns: 1fr; } }
 
@@ -142,4 +142,90 @@ tr[aria-current] td { background: var(--paper); }
   /* Phones: the file, its result and when; the count is on the check itself */
   .recent th:nth-child(2), .recent td:nth-child(2) { display: none; }
   .recent .pill { white-space: normal; }
+}
+
+/* ---------- Project dates ---------- */
+.project { display: grid; grid-template-columns: auto 1fr; gap: 12px 32px; align-items: start; padding: 20px 24px; background: var(--paper); border: 1px solid var(--line); }
+.project-name { display: grid; gap: 4px; }
+.project-id { font-size: 20px; font-weight: 700; color: var(--navy); }
+.project-dates { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 24px; margin: 0; }
+.project-dates dd { margin: 2px 0 0; }
+.project-dates dd.num { font-size: 18px; font-weight: 650; color: var(--navy); }
+.project-gap { grid-column: 2; font-weight: 600; }
+.project-gap.ahead { color: var(--green-ink); }
+.project-gap.behind { color: var(--orange-dark); }
+@media (max-width: 860px) {
+  .project { grid-template-columns: 1fr; }
+  .project-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .project-gap { grid-column: 1; }
+}
+
+/* ---------- Activities behind the number ---------- */
+.activity-table th.right, .activity-table td.right { text-align: right; }
+.activity-table th.right .sort { margin-left: auto; }
+.nowrap { white-space: nowrap; }
+.strong { font-weight: 700; color: var(--navy); }
+.sort { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.sort:hover { color: var(--navy); }
+.name-cell { min-width: 220px; }
+.name-cell .name { display: block; color: var(--ink); }
+.name-cell .wbs { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.code-inline { display: none; } /* phones only: the ID shown above the name */
+.table-foot { margin-top: 10px; }
+
+/* ---------- What's in the file ---------- */
+.overview { display: grid; gap: 16px; }
+.overview-head { display: grid; gap: 6px; }
+.overview-head h2 { font-size: 28px; letter-spacing: -0.03em; }
+.overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.panel { display: grid; gap: 16px; align-content: start; }
+.panel-head { display: grid; gap: 2px; }
+.panel-head h3 { margin: 0; }
+.panel-value { font-size: 36px; font-weight: 650; letter-spacing: -0.03em; color: var(--navy); line-height: 1.1; }
+.panel-unit { font-size: 16px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+@media (max-width: 860px) { .overview-grid { grid-template-columns: 1fr; } }
+
+/* A tall segmented bar: one whole, split by status. 2px gaps between segments */
+.segments { display: flex; gap: 2px; height: 14px; }
+.segment { min-width: 3px; }
+.step-1 { background: #c9d3df; }
+.step-2 { background: #5d7ea6; }
+.step-3 { background: #0f2a4a; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: -6px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--muted); }
+.legend li { display: inline-flex; align-items: center; gap: 6px; }
+.legend .num { color: var(--ink); font-weight: 650; }
+.swatch { width: 10px; height: 10px; }
+
+/* A bar list: label, bar, figure; bars on one scale */
+.bar-list { display: grid; gap: 8px; }
+.bar-list ul, .float-bars { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bar-list li { display: grid; grid-template-columns: 140px minmax(0, 1fr) 96px; gap: 12px; align-items: center; font-size: 14px; }
+.bar-track, .float-track { height: 8px; background: var(--paper); }
+.bar-fill, .float-fill { display: block; height: 100%; background: var(--navy); min-width: 2px; }
+.bar-count { text-align: right; font-weight: 650; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.facts dt { font-size: 13px; color: var(--muted); }
+.facts dd { margin: 2px 0 0; font-size: 22px; font-weight: 650; color: var(--navy); }
+.note { padding: 10px 12px; background: var(--paper); border-left: 3px solid var(--edge); font-size: 13px; color: var(--muted); }
+
+/* The float profile: the bands the checks flag turn orange when over the limit */
+.float-bars li { display: grid; grid-template-columns: 150px minmax(0, 1fr) 56px 190px; gap: 12px; align-items: center; font-size: 14px; }
+.float-bars li.over .float-fill { background: var(--orange); }
+.float-bars li.over .float-count { color: var(--orange-dark); }
+.float-count { text-align: right; font-weight: 650; }
+.link-button { justify-self: start; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--navy); text-decoration: underline; text-decoration-color: var(--orange); text-underline-offset: 3px; cursor: pointer; }
+.float-bars li.over .link-button { color: var(--orange-dark); }
+@media (max-width: 640px) {
+  .bar-list li { grid-template-columns: 112px minmax(0, 1fr) 76px; }
+  .float-bars li { grid-template-columns: 112px minmax(0, 1fr) 48px; }
+  .float-bars .link-button { grid-column: 1 / -1; }
+}
+
+.zero-link { color: var(--orange-dark); font-weight: 800; } /* a missing link: nothing before, or nothing after */
+@media (max-width: 640px) {
+  /* Phones: ID, name, links and float fit; #, remaining, start, finish and status are in the CSV */
+  .activity-table th:nth-child(-n+2), .activity-table td:nth-child(-n+2),
+  .activity-table th:nth-child(n+6), .activity-table td:nth-child(n+6) { display: none; }
+  .name-cell { min-width: 0; }
+  .activity-table .code-inline { display: block; margin-bottom: 2px; font-size: 13px; color: var(--navy); overflow-wrap: anywhere; } /* the ID column is hidden: show it with the name */
 }

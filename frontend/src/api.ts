@@ -44,7 +44,8 @@ async function errorMessage(response: Response): Promise<string> {
   try {
     const data = await response.json()
     if (typeof data.detail === 'string') {
-      return data.detail.charAt(0).toUpperCase() + data.detail.slice(1)
+      const text = data.detail.charAt(0).toUpperCase() + data.detail.slice(1)
+      return /[.!?]$/.test(text) ? text : `${text}.` // a sentence, so it reads well after other words
     }
   } catch {
     // not JSON, like an HTML error page from a proxy

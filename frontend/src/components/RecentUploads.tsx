@@ -30,7 +30,7 @@ export function RecentUploads({ uploads, openId, onOpen }: Props) {
           <thead>
             <tr>
               <th scope="col" className="label">File</th>
-              <th scope="col" className="label">Activities</th>
+              <th scope="col" className="label">Checked</th>
               <th scope="col" className="label">Result</th>
               <th scope="col" className="label">Checked</th>
             </tr>
@@ -57,7 +57,7 @@ export function RecentUploads({ uploads, openId, onOpen }: Props) {
                     <StatusPill status="pass" label="All within limits" />
                   )}
                 </td>
-                <td className="num faint">{dateText(upload.uploaded_at)}</td>
+                <td className="num faint nowrap">{dateText(upload.uploaded_at)}</td>
               </tr>
             ))}
           </tbody>

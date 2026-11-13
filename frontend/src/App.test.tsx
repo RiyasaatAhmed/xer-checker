@@ -55,11 +55,11 @@ describe('App', () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const list = () => screen.getByRole('region', { name: /: \d+ activit/ })
     expect(await screen.findByRole('heading', { name: 'Missing links: 20 activities' })).toBeInTheDocument()
-    expect(within(list()).getByText('ContractNo_CAL01')).toBeInTheDocument()
+    expect(within(list()).getAllByText('ContractNo_CAL01').length).toBeGreaterThan(0)
 
     await user().click(screen.getByRole('button', { name: 'Show the 78 activities' }))
     expect(screen.getByRole('heading', { name: 'High float: 78 activities' })).toBeInTheDocument()
-    expect(within(list()).getByText('ContractNo_U350')).toBeInTheDocument()
+    expect(within(list()).getAllByText('ContractNo_U350').length).toBeGreaterThan(0)
   })
 
   it('filters the activity IDs and copies them all, one per line', async () => {
@@ -67,10 +67,10 @@ describe('App', () => {
     const u = user() // installs its own clipboard, which the test then watches
     const writeText = vi.spyOn(navigator.clipboard, 'writeText')
     await screen.findByRole('heading', { name: 'Missing links: 20 activities' })
-    await u.type(screen.getByRole('searchbox', { name: 'Filter by activity ID' }), 'cal03')
+    await u.type(screen.getByRole('searchbox', { name: 'Filter by activity ID, name or WBS' }), 'cal03')
     const list = screen.getByRole('region', { name: /: \d+ activit/ })
-    expect(within(list).queryByText('ContractNo_CAL01')).not.toBeInTheDocument()
-    expect(within(list).getByText('ContractNo_CAL03')).toBeInTheDocument()
+    expect(within(list).queryAllByText('ContractNo_CAL01')).toHaveLength(0)
+    expect(within(list).getAllByText('ContractNo_CAL03').length).toBeGreaterThan(0)
 
     await u.click(within(list).getByRole('button', { name: 'Copy IDs' }))
     expect(writeText).toHaveBeenCalledWith('ContractNo_CAL01\nContractNo_CAL03')
@@ -86,7 +86,7 @@ describe('App', () => {
 
   it("shows the backend's reason when a file can't be checked", async () => {
     await uploadWith(() => reply(422, { detail: "can't be checked: the file is empty" }))
-    expect(await screen.findByRole('alert')).toHaveTextContent("Can't be checked: the file is empty")
+    expect(await screen.findByRole('alert')).toHaveTextContent("Can't be checked: the file is empty.")
     expect(screen.getByRole('button', { name: 'Try another file' })).toBeInTheDocument()
   })
 
@@ -105,6 +105,37 @@ describe('App', () => {
     await user().click(within(recent).getByRole('link', { name: 'CSTv2.4.xer' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4.xer' })).toBeInTheDocument()
     expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}`)
+  })
+
+  it('shows the project dates and how the forecast sits against the deadline', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const dates = await screen.findByRole('region', { name: 'Project dates' })
+    expect(within(dates).getByText('CSTv2.4')).toBeInTheDocument()
+    expect(within(dates).getByText('20 Oct 2027')).toBeInTheDocument() // forecast finish
+    expect(within(dates).getByText('Forecast to finish 10 days before the deadline.')).toBeInTheDocument()
+  })
+
+  it('shows each flagged activity with its name, WBS, links and float, and sorts by float', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
+    expect(within(list).getByText('Calendar placeholder 1')).toBeInTheDocument()
+    expect(within(list).getAllByText('Utility Notifications & Meetings')).toHaveLength(2)
+    expect(within(list).getByLabelText('0 before, 1 after')).toBeInTheDocument()
+
+    await user().click(within(list).getByRole('button', { name: 'Float (d)' })) // largest first
+    const firstRow = within(list).getAllByRole('row')[1]
+    expect(firstRow).toHaveTextContent('ContractNo_CAL03')
+    expect(firstRow).toHaveTextContent('60.0')
+  })
+
+  it('counts what is in the file, and links a flagged float band to its activities', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const overview = await screen.findByRole('region', { name: 'The schedule, counted' })
+    expect(within(overview).getByText('194')).toBeInTheDocument() // links
+    expect(within(overview).getByText(/4 pairs of activities are linked twice/)).toBeInTheDocument()
+
+    await user().click(within(overview).getByRole('button', { name: 'High float: over the limit' }))
+    expect(screen.getByRole('heading', { name: 'High float: 78 activities' })).toBeInTheDocument()
   })
 
   it('opens the check in the address bar when the page loads', async () => {
