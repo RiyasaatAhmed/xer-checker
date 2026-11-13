@@ -13,7 +13,7 @@ Before you write or change any text in this repo, run the `plain-writing` skill 
 - error messages and anything the checker prints
 - test names
 - commit messages and PR descriptions
-- the AI prompt, `xer_checker/summary/prompt.md`
+- the AI prompt, `backend/xer_checker/summary/prompt.md`
 
 No exceptions, even for one line. The skill says how much checking a one-line text needs.
 
@@ -26,21 +26,32 @@ A checker for Primavera P6 schedule files (`.xer`). For each file, it:
 3. Draws one chart of the results.
 4. Writes a short summary. Gemini picks the words; code computes every number.
 
+## Folders
+
+| Folder | What it holds | Status |
+|---|---|---|
+| `backend/` | The checker: code, tests, `data/` and `results-from-kazinex/` | Works. The API comes next |
+| `frontend/` | The upload page | A placeholder page served by nginx |
+| `database/` | PostgreSQL | Empty, no tables |
+
+Each folder has a `Dockerfile`. `docker-compose.yml` runs all three. `.env` and `.env.example` stay at the repo root, and Docker Compose reads `.env` too.
+
 ## Commands
 
-Run them from the repo root: `checker.py` finds `data/` from the current folder.
+Run the Python commands from `backend/`: `checker.py` finds `data/` from the current folder. The `.venv` is at the repo root.
 
 | Command | What it does |
 |---|---|
-| `.venv/bin/python checker.py` | Checks every `.xer` in `data/`, prints the report and rewrites `chart.png`. Calls Gemini if a key is set. |
-| `.venv/bin/python checker.py FILE.xer` | Checks one file. No chart. |
-| `GEMINI_API_KEY= .venv/bin/python checker.py` | Runs with the AI off. |
-| `.venv/bin/python -m pytest -q` | Runs all tests. No key or internet needed. |
-| `uv pip install --python .venv/bin/python <package>` | Adds a package. The `.venv` has no `pip`. |
+| `docker compose up --build` | From the repo root: builds and starts all three services. |
+| `../.venv/bin/python checker.py` | Checks every `.xer` in `data/`, prints the report and rewrites `chart.png`. Calls Gemini if a key is set. |
+| `../.venv/bin/python checker.py FILE.xer` | Checks one file. No chart. |
+| `GEMINI_API_KEY= ../.venv/bin/python checker.py` | Runs with the AI off. |
+| `../.venv/bin/python -m pytest -q` | Runs all tests. No key or internet needed. |
+| `uv pip install --python ../.venv/bin/python <package>` | Adds a package. The `.venv` has no `pip`. Add it to `requirements.txt` too, for Docker. |
 
 ## How the code is organized
 
-`checker.py` only starts the program. Each file in `xer_checker/` has one job and one test file in `tests/`.
+In `backend/`, `checker.py` only starts the program. Each file in `xer_checker/` has one job and one test file in `tests/`.
 
 | File | Job |
 |---|---|
@@ -58,7 +69,7 @@ Run them from the repo root: `checker.py` finds `data/` from the current folder.
 
 ## Numbers that must not move
 
-`tests/test_baseline.py` locks these and compares them with Kazinex's reports in `results-from-kazinex/`. A change that moves one needs a reason the user agrees with.
+`backend/tests/test_baseline.py` locks these and compares them with Kazinex's reports in `backend/results-from-kazinex/`. A change that moves one needs a reason the user agrees with.
 
 | File | Checked | Missing links | Negative float | High float |
 |---|---|---|---|---|
@@ -77,5 +88,5 @@ Run them from the repo root: `checker.py` finds `data/` from the current folder.
 | Path | Why |
 |---|---|
 | `.env` | It holds the Gemini key. Never print its values. |
-| `data/` | Unchanged public copies of the two files. |
-| `results-from-kazinex/` | Kazinex's reports, the baseline the tests compare with. |
+| `backend/data/` | Unchanged public copies of the two files. |
+| `backend/results-from-kazinex/` | Kazinex's reports, the baseline the tests compare with. |
