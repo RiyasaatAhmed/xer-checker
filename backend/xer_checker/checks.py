@@ -1,4 +1,7 @@
-"""The three DCMA checks on unfinished work activities: missing links, negative float, high float."""
+"""Run the DCMA rules on unfinished work activities. Each rule is its own file in rules/."""
+
+from .activity import Activity
+from .rules import LIMITS, RULES
 
 # ---------- Constants ----------
 
@@ -8,12 +11,10 @@ FINISHED = "TK_Complete"  # status of a finished activity
 NOT_CHECKED_TYPES = ("TT_LOE", "TT_WBS", "TT_Mile", "TT_FinMile")
 DEFAULT_HOURS_PER_DAY = 8  # used when a calendar is missing or has no hours per day
 
-# DCMA rules, from the DCMA 14-Point Assessment: section 4 of DCMA-EA PAM 200.1 (Oct 2012),
+# The rules come from the DCMA 14-Point Assessment: section 4 of DCMA-EA PAM 200.1 (Oct 2012),
 # the last published version of the checklist (copy hosted by Mosaic Projects):
 #   https://mosaicprojects.com.au/PDF-Gen/DCMA-PAM-200-1.pdf
 #   https://www.mosaicprojects.com.au/WhitePapers/WP1088_DCMA-14-Point.pdf
-HIGH_FLOAT_DAYS = 44  # float above 44 working days is "high"
-LIMITS = {"Missing links": 5, "Negative float": 0, "High float": 5}  # above this %, DCMA flags the schedule
 
 
 # ---------- Small helpers, shared with the report, the chart and the summary ----------
@@ -39,7 +40,7 @@ def within_limit(check_name, pct):
 # ---------- The checks ----------
 
 def check(tables):
-    """Run the three checks on unfinished work activities.
+    """Run every rule on unfinished work activities.
 
     Returns (activities checked, {check name: [failing activity codes]}, problems):
       problems  [(line number, problem), ...] for data the checks can't use (bad links, float typed as text)
@@ -64,22 +65,23 @@ def check(tables):
     open_tasks = [t for t in tasks.values()
                   if t["status_code"] != FINISHED and t["task_type"] not in NOT_CHECKED_TYPES]
 
-    failures = {name: [] for name in LIMITS}  # one empty list per check
+    failures = {rule.NAME: [] for rule in RULES}  # one empty list per rule, in report order
     for t in open_tasks:
-        # Check 1, missing links: nothing before it or nothing after it.
-        if t["task_id"] not in has_pred or t["task_id"] not in has_succ:
-            failures["Missing links"].append(t["task_code"])
-
-        # Read the float. A blank is normal; text like "TBD" is a broken row.
-        hours = number(t["total_float_hr_cnt"]) if t["total_float_hr_cnt"] else None
-        if t["total_float_hr_cnt"] and hours is None:
-            problems.append((t["_line"], f"TASK total float {t['total_float_hr_cnt']!r} is not a number"))
-        if hours is None:
-            continue  # blank float: nothing to check
-        # Float is stored in hours; convert with the activity's own calendar.
-        days = hours / hours_per_day.get(t["clndr_id"], DEFAULT_HOURS_PER_DAY)
-        if days < 0:  # check 2: already behind the deadline
-            failures["Negative float"].append(t["task_code"])
-        if days > HIGH_FLOAT_DAYS:  # check 3: so much spare time can mean a missing link
-            failures["High float"].append(t["task_code"])
+        activity = Activity(t["task_code"], t["task_id"] in has_pred, t["task_id"] in has_succ,
+                            float_days(t, hours_per_day, problems))
+        for rule in RULES:  # each rule decides on its own; see rules/
+            if rule.fails(activity):
+                failures[rule.NAME].append(activity.code)
     return len(open_tasks), failures, problems
+
+
+def float_days(task, hours_per_day, problems):
+    """The activity's total float in working days, or None. Text like "TBD" is added to problems."""
+    text = task["total_float_hr_cnt"]
+    hours = number(text) if text else None  # a blank is normal
+    if text and hours is None:
+        problems.append((task["_line"], f"TASK total float {text!r} is not a number"))
+    if hours is None:
+        return None
+    # Float is stored in hours; convert with the activity's own calendar.
+    return hours / hours_per_day.get(task["clndr_id"], DEFAULT_HOURS_PER_DAY)

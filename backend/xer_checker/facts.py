@@ -1,6 +1,8 @@
 """Turn one file's results into the named numbers a summary may use. The AI never computes one."""
 
-from .checks import HIGH_FLOAT_DAYS, LIMITS, percent, within_limit
+from .checks import percent, within_limit
+from .rules import LIMITS
+from .rules.high_float import HIGH_FLOAT_DAYS
 
 
 def summary_facts(checked, failures, broken):

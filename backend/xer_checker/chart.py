@@ -7,7 +7,8 @@ import matplotlib
 matplotlib.use("Agg")  # draw straight to a file; no window
 import matplotlib.pyplot as plt  # noqa: E402  (must come after matplotlib.use)
 
-from .checks import LIMITS, percent  # noqa: E402
+from .checks import percent  # noqa: E402
+from .rules import LIMITS  # noqa: E402
 
 # ---------- Constants ----------
 

@@ -2,7 +2,8 @@
 
 import textwrap  # wraps the summary points to fit the terminal
 
-from .checks import LIMITS, percent, within_limit
+from .checks import percent, within_limit
+from .rules import LIMITS
 
 # ---------- Constants ----------
 
