@@ -11,11 +11,15 @@ The page where you upload a `.xer` file and see what needs attention. Vite, Reac
 | **Upload** | Drop a `.xer` file anywhere on the page, or use the button. A wrong file type or a file over 50 MB is refused at once, before it's sent |
 | **What needs attention** | First on the page: one numbered item per check over its limit, with what it means and the next step in P6 |
 | **The 3 checks** | A navy band, one column each, with the DCMA section, the figure and the limit. A check over its limit turns orange |
-| **Activities behind the number** | Filter the activity IDs, copy them all (one per line, ready for P6 or Excel), or download a CSV |
+| **Project dates** | The data date, planned start, forecast finish and deadline, and how many days the forecast sits before or after the deadline |
+| **Activities behind the number** | Each flagged activity's ID, name, WBS, predecessors and successors (a 0 is the missing link), float, remaining duration, start, finish and status. Sort any column, filter by ID, name or WBS, copy the IDs, or download a CSV |
+| **What's in the file** | The schedule counted: activities by status and type, links by type, leads and lags, constraints, and the float profile. A float band over its limit links to its activities |
 | **Summary and the file** | The written summary and who wrote it; broken rows with their line numbers |
 | **Recent checks** | Every saved check, newest first. Each has its own address (`/uploads/<id>`), so refresh, Back and a shared link all work |
 
 The empty screen shows a short looping demo of a check, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow).
+
+![What's in the file](overview.png)
 
 ![Upload screen](upload-screen.png)
 
@@ -60,7 +64,9 @@ All colors, type and shapes are tokens in [`src/theme.css`](src/theme.css), take
 | `src/format.ts` | Percents, counts, dates and CSV |
 | `src/components/ActionBrief.tsx` | What needs attention, numbered |
 | `src/components/RuleBand.tsx` | The 3 checks on the navy band |
-| `src/components/FlaggedActivities.tsx` | The activity IDs behind a check: filter, copy, CSV |
+| `src/components/FlaggedActivities.tsx` | The activities behind a check: sort, filter, copy, CSV. On phones: ID, name, links and float |
+| `src/components/ProjectStrip.tsx` | The project's key dates, and the forecast against the deadline |
+| `src/components/ScheduleOverview.tsx` | What's in the file, counted, with its charts |
 | `src/components/HeroDemo.tsx` | The Stageshow demo on the empty screen. Its film notes are in `REHEARSAL.md` |
 | `src/components/*.tsx` | One component per file: the summary, file issues, recent checks and the rest |
 | `src/kit/` | Stageshow's React kit (MIT), copied in. Its README says what changed |
