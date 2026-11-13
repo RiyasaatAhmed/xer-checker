@@ -1,0 +1,6 @@
+# Kept out of the image: secrets and local caches
+.env
+.venv
+__pycache__
+.pytest_cache
+*.pyc
