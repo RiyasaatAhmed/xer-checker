@@ -19,7 +19,9 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"  # open http://localhost:3000
+      - "3000:80"  # the app; open http://localhost:3000
+    depends_on:
+      - backend  # nginx passes /api to it
 
   database:
     build: ./database
