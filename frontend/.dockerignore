@@ -1,0 +1,5 @@
+# Kept out of the image: packages are installed inside it, and the build makes its own dist
+node_modules
+dist
+*.log
+.env*
