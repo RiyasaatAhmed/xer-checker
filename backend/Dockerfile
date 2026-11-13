@@ -1,5 +1,4 @@
-# The backend. For now it runs the checker once on every file in data/.
-# The API will replace the CMD line.
+# The backend: the API, on port 8000.
 FROM python:3.12-slim
 
 # Print output straight away, and write no .pyc files
@@ -17,5 +16,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY --chown=app . .
 USER app
 
-# Prints the report and saves chart.png inside the container
-CMD ["python", "checker.py"]
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
