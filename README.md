@@ -26,6 +26,25 @@ The command line draws the same results as one chart, for both files:
 - **Over the limit:** missing links in `CSTv2.4.xer` (15.0%), and high float in both files (58.6% and 46.6%).
 - **Under the bars:** each file's summary, and who wrote it ([The AI summary](#the-ai-summary)).
 
+## Features
+
+| Area | What it does |
+|---|---|
+| **Reading** | Reads `.xer` files (UTF-8 or Windows-1252, values that span lines). Flags broken rows with their line numbers. Says why a file can't be checked |
+| **Checks** | 3 DCMA checks, one file per rule: missing links, negative float, high float. Float is converted to days with each activity's own calendar |
+| **Schedule** | Reads each project's dates, every activity (name, WBS, float, duration, dates) and every link |
+| **Overview** | Counts what's in the file: status, types, links, leads, lags, constraints, float profile. Matched to Kazinex |
+| **Summary** | A short written summary. Gemini picks the words, code fills every number; code writes it if the AI is off or breaks a rule |
+| **API** | Upload a file, list saved checks, open one. Clear errors: 404, 413, 422 |
+| **Saving** | PostgreSQL in Docker (8 tables), SQLite without it. A result looks the same every time it's opened |
+| **Home page** | The demo and an upload button when there are no checks, else the list of recent checks. Drop a file anywhere |
+| **A check** | Project dates, what needs attention, the 3 checks, the activities behind each (sort, filter, copy IDs, CSV), what's in the file, the summary, file issues |
+| **Details** | Each check has its own link. Works on phones, in dark mode and with the keyboard |
+| **Proof** | Tests compare every number with Kazinex on each run: 129 backend, 27 frontend |
+| **Tooling** | `docker compose up` runs everything. `CLAUDE.md` and a writing skill keep the docs short |
+
+**Not yet:** login (the list isn't per user), leads, lags and constraints as pass or fail checks, splitting a file with several projects, checks that need a baseline.
+
 ## Results
 
 | File | Activities checked | Broken rows | Missing links | Negative float | High float |

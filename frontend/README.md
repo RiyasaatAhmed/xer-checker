@@ -8,6 +8,7 @@ The page where you upload a `.xer` file and see what needs attention. Vite, Reac
 
 | Part | What it does |
 |---|---|
+| **Home** | The demo and one upload button, or the list of recent checks. Nothing else |
 | **Upload** | Drop a `.xer` file anywhere on the page, or use the button. A wrong file type or a file over 50 MB is refused at once, before it's sent |
 | **What needs attention** | First on the page: one numbered item per check over its limit, with what it means and the next step in P6 |
 | **The 3 checks** | A navy band, one column each, with the DCMA section, the figure and the limit. A check over its limit turns orange |
@@ -17,7 +18,7 @@ The page where you upload a `.xer` file and see what needs attention. Vite, Reac
 | **Summary and the file** | The written summary and who wrote it; broken rows with their line numbers |
 | **Recent checks** | Every saved check, newest first. Each has its own address (`/uploads/<id>`), so refresh, Back and a shared link all work |
 
-The empty screen shows a short looping demo of a check, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow).
+**The home page is simple.** With no checks yet it shows a short looping demo, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow), and one upload button. Once there are checks it shows the list and the button. A check has an "All checks" link back.
 
 ![What's in the file](overview.png)
 
