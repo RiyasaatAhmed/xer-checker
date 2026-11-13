@@ -13,4 +13,4 @@ def test_health_check_answers_ok():
 
 
 def test_the_check_route_is_in_place():
-    assert "/api/checks" in app.openapi()["paths"]
+    assert "/api/uploads" in app.openapi()["paths"]

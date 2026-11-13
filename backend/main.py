@@ -6,7 +6,7 @@ Run it from backend/:
 
 from fastapi import FastAPI
 
-from modules.check.route import router as check_router
+from modules.uploads.route import router as uploads_router
 
 app = FastAPI(title="XER checker", description="Checks Primavera P6 .xer files against DCMA rules.")
 
@@ -17,4 +17,4 @@ def health_check():
     return {"status": "ok"}
 
 
-app.include_router(check_router)
+app.include_router(uploads_router)

@@ -3,7 +3,7 @@
 import tempfile  # a folder that's deleted after the check
 from pathlib import Path
 
-from modules.check.schema import CheckResult, RowNote, RuleResult
+from modules.uploads.schema import CheckResult, RowNote, RuleResult
 from xer_checker.checks import percent
 from xer_checker.cli import check_file
 from xer_checker.report import verdict

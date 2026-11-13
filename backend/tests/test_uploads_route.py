@@ -1,17 +1,17 @@
-"""The upload endpoint (modules/check/route.py): status codes and answers."""
+"""The upload endpoint (modules/uploads/route.py): status codes and answers."""
 
 from fastapi.testclient import TestClient
 from helpers import ROOT
 
 from main import app
-from modules.check import route
+from modules.uploads import route
 
 client = TestClient(app)
 
 
 def upload(name, content):
-    """POST one file to /api/checks."""
-    return client.post("/api/checks", files={"file": (name, content)})
+    """POST one file to /api/uploads."""
+    return client.post("/api/uploads", files={"file": (name, content)})
 
 
 def test_upload_gives_the_results():
@@ -33,4 +33,4 @@ def test_a_file_over_the_limit_gets_413(monkeypatch):
 
 
 def test_no_file_gets_422():
-    assert client.post("/api/checks").status_code == 422
+    assert client.post("/api/uploads").status_code == 422

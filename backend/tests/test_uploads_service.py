@@ -1,9 +1,9 @@
-"""Checking an uploaded file (modules/check/service.py): the same numbers as the command line."""
+"""Checking an uploaded file (modules/uploads/service.py): the same numbers as the command line."""
 
 import pytest
 from helpers import ROOT
 
-from modules.check.service import check_upload
+from modules.uploads.service import check_upload
 from xer_checker.reader import FileError
 
 
