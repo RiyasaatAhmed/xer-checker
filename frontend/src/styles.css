@@ -229,3 +229,6 @@ tr[aria-current] td { background: var(--paper); }
   .name-cell { min-width: 0; }
   .activity-table .code-inline { display: block; margin-bottom: 2px; font-size: 13px; color: var(--navy); overflow-wrap: anywhere; } /* the ID column is hidden: show it with the name */
 }
+
+/* Sections the page jumps to stop below the sticky header, not under it */
+#activities, #file-issues { scroll-margin-top: 88px; }
