@@ -13,6 +13,11 @@ PostgreSQL 17. It saves every upload and its results, so any result can be opene
 | `metric_results` | DCMA rule, per upload | The percent, with its working: numerator and denominator. Also the limit, the DCMA section and `pass`, `flag` or `not_applicable` |
 | `metric_result_activities` | activity behind a number | The activity ID, in the order the checker found it |
 | `reviews` | upload | The summary, `ai` or `code`, and the exact facts it was written from |
+| `schedule_projects` | P6 project in the file | Data date, planned start, deadline and forecast finish |
+| `activities` | activity in the file | Activity ID, name, WBS, type, status, float and remaining duration in days, start, finish, constraint, line |
+| `relationships` | link row in the file | Both activities, link type, lag, line, and whether it's counted: a pair linked twice counts its later row only |
+
+**P6 dates are kept as P6 writes them**, site-local with no time zone, so no date moves by a day.
 
 **Three rules:**
 

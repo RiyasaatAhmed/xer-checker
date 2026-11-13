@@ -45,6 +45,18 @@ The command line draws the same results as one chart, for both files:
 > [!NOTE]
 > DCMA treats a number over its limit as a flag: a reason to look closer, not a failed schedule.
 
+**What's in the files**, as the page shows it under "The schedule, counted". These are facts, not pass or fail:
+
+| | `CSTv2.4.xer` | `example_xer_file.xer` |
+|---|---|---|
+| Activities | 145, all not started | 435: 385 not started, 29 in progress, 21 complete |
+| Links, one per pair | 194: 166 finish to start (85.6%) | 551: 451 finish to start (81.9%) |
+| Leads and lags | 0 leads, 1 lag | 18 leads, 29 lags |
+| Constraints | 5 | 2 |
+| Forecast finish vs deadline | 20 Oct 2027; no deadline set | 6 May 2027, 10 days before the 16 May deadline |
+
+The link and constraint figures equal Kazinex's, to the last decimal. The demo file links 4 pairs of activities twice; each pair counts once, using its later row, as Kazinex does.
+
 ## Validation
 
 **Kazinex is our source of truth.** [Kazinex](https://www.kazinex.com/) is an independent P6 schedule checker. We ran both files through it. Its reports, in [`backend/results-from-kazinex/`](backend/results-from-kazinex/), are the baseline our results must agree with.
@@ -57,6 +69,8 @@ The command line draws the same results as one chart, for both files:
 | Kazinex flags every activity we flag | we flag an activity Kazinex doesn't |
 | Every extra activity Kazinex flags is one DCMA leaves out | Kazinex flags real work we missed |
 | Our float in days equals Kazinex's, for all 272 high-float activities it lists | float is read or converted wrong |
+
+[`test_overview.py`](backend/tests/test_overview.py) does the same for "What's in the files": links, the finish-to-start share, leads, lags, start-to-finish links and constraints, against Kazinex's Logic and Constraint sheets.
 
 **Before anything ships:**
 
@@ -196,6 +210,9 @@ curl -F "file=@backend/data/CSTv2.4.xer" http://localhost:8000/api/uploads
 - **`rules`:** one entry per DCMA rule, with its DCMA section, limit, count, percent, status (`pass`, `flag` or `n/a`) and the activity IDs.
 - **`broken_rows` and `notes`:** each with its line number.
 - **`summary` and `summary_author`:** the short points, and who wrote them.
+- **`projects`:** each P6 project's data date, planned start, forecast finish and deadline.
+- **`overview`:** what's in the file, counted: activities by status and type, links by type, leads, lags, constraints, and the float profile.
+- **`rules[].details`:** each flagged activity's name, WBS, predecessors and successors, float, remaining duration, start, finish and status.
 
 **It's read back from the database**, so a result looks the same now and later.
 
@@ -325,11 +342,14 @@ The backend's code is in `backend/`, one job per file, each with its own tests i
 | `main.py` | Create the API and add each module's routes | `test_main.py` |
 | `modules/uploads/route.py` | The 3 upload endpoints: answer 404, 413 or 422 on errors | `test_uploads_route.py` |
 | `modules/uploads/service.py` | Check the upload, save it with its results, read saved ones back (`schema.py`) | `test_uploads_service.py` |
-| `modules/uploads/model.py` | The 5 tables, described in the [database README](database/README.md) | `test_database.py` |
+| `modules/uploads/model.py` | The 8 tables, described in the [database README](database/README.md) | `test_database.py` |
+| `modules/uploads/snapshot.py` | Save the schedule's rows; read back the project dates, the overview and each activity's details | `test_uploads_service.py` |
 | `database/db.py` | Connect to PostgreSQL, or SQLite without Docker; create the tables | `test_database.py` |
 | `reader.py` | Read a `.xer` file into tables; say why a broken one can't be checked | `test_reader.py` |
 | `checks.py` | Pick the activities to check, work out their links and float, run every rule | `test_checks.py`, and `test_baseline.py` against Kazinex |
 | `activity.py` | What a rule sees about one activity | |
+| `schedule.py` | Read the projects, activities and links a scheduler needs to see: names, WBS, dates, float in days | `test_schedule.py` |
+| `overview.py` | Count what's in the schedule: status, types, links, leads and lags, constraints, float profile | `test_overview.py`, against Kazinex |
 | `rules/*.py` | One DCMA rule each | `test_rule_*.py` |
 | `facts.py` | Turn the results into the named numbers a summary may use | `test_facts.py` |
 | `summary/settings.py` | Read the Gemini settings from `.env`, and check them | `test_summary_settings.py` |
