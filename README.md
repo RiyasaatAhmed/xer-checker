@@ -1,6 +1,10 @@
 # XER checker
 
-Checks Primavera P6 schedule files (`.xer`). For each file, it:
+Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and see a dashboard of its results.
+
+![Dashboard](frontend/dashboard.png)
+
+For each file, it:
 
 1. **Flags broken rows**, with their line numbers.
 2. **Runs 3 DCMA checks** on unfinished work:
@@ -9,6 +13,9 @@ Checks Primavera P6 schedule files (`.xer`). For each file, it:
    - **High float:** more than 44 working days of spare time. Limit 5%.
 3. **Draws one chart** of the results.
 4. **Writes a short summary.** Gemini picks the words; code computes every number.
+5. **Saves the upload and its results**, so you can open them again.
+
+The command line draws the same results as one chart, for both files:
 
 ![Chart](backend/chart.png)
 
@@ -54,11 +61,10 @@ Checks Primavera P6 schedule files (`.xer`). For each file, it:
 **Before anything ships:**
 
 1. Add the feature.
-2. Run the tests from `backend/`. They need no key or internet, because Gemini's replies are faked.
+2. Run the tests. They need no key, internet or database: Gemini's replies and the backend are faked, and each test gets its own empty database.
    ```
-   cd backend
-   pip install -r requirements-dev.txt
-   pytest
+   cd backend && pip install -r requirements-dev.txt && pytest
+   cd frontend && npm install && npm test
    ```
 3. **Pass:** no number moved. **Fail:** a number changed, so we find the bug and fix it before it reaches a client.
 
@@ -84,17 +90,17 @@ Every extra activity Kazinex flags is one DCMA leaves out:
 
 ## Folders
 
-| Folder | What it holds | Status |
-|---|---|---|
-| [`backend/`](backend/) | The API and the checker: code, tests, the two files and Kazinex's reports | Works |
-| [`frontend/`](frontend/) | The page where you upload a file | A placeholder page. Comes after the backend |
-| [`database/`](database/) | PostgreSQL, to save results | Empty. Comes last |
+| Folder | What it holds |
+|---|---|
+| [`backend/`](backend/) | The API and the checker: code, tests, the two files and Kazinex's reports |
+| [`frontend/`](frontend/) | The page where you upload a file and see its dashboard. See its [README](frontend/README.md) |
+| [`database/`](database/) | PostgreSQL: every upload and its results. See its [README](database/README.md) |
 
 Each folder has its own `Dockerfile`. [`docker-compose.yml`](docker-compose.yml) runs all three.
 
 ## Run it
 
-**With Docker**, all three folders:
+**With Docker**, all three:
 
 ```
 docker compose up --build
@@ -102,44 +108,30 @@ docker compose up --build
 
 | Service | What you get |
 |---|---|
-| backend | The API at http://localhost:8000. Upload a file at http://localhost:8000/docs |
-| frontend | A placeholder page at http://localhost:3000 |
-| database | An empty PostgreSQL database at `localhost:5432` |
+| frontend | The app at http://localhost:3000: upload a file, see its dashboard |
+| backend | The API at http://localhost:8000. Try it at http://localhost:8000/docs |
+| database | PostgreSQL at `localhost:5432`, with every upload |
 
-**Without Docker**, from `backend/`:
+**Without Docker**, in two terminals. The backend then saves to a local SQLite file, `backend/xer_checker.db`:
 
 ```
 cd backend
-pip install -r requirements.txt      # the API, the chart, and the optional AI
+pip install -r requirements.txt      # the API, the database, the chart, and the optional AI
 uvicorn main:app --reload            # the API at http://localhost:8000
-python checker.py                    # or the command line: check both files in data/ and save chart.png
+```
+
+```
+cd frontend
+npm install
+npm run dev                          # the app at http://localhost:5173
+```
+
+**The command line**, from `backend/`, needs no server:
+
+```
+python checker.py                    # check both files in data/ and save chart.png
 python checker.py data/CSTv2.4.xer   # check one file; chart.png stays as it is
 ```
-
-## The API
-
-| Method | Path | What it does |
-|---|---|---|
-| `GET` | `/` | Answers `{"status": "ok"}` when the API is up |
-| `POST` | `/api/checks` | Checks one uploaded `.xer` file, sent as the form field `file` |
-| `GET` | `/docs` | A page to try each endpoint in the browser |
-
-```
-curl -F "file=@data/CSTv2.4.xer" http://localhost:8000/api/checks
-```
-
-**The answer** has the same results as the command line:
-
-- **`checked`:** unfinished work activities checked.
-- **`rules`:** one entry per DCMA rule, with its DCMA section, limit, count, percent, status (`pass`, `flag` or `n/a`) and the activity IDs.
-- **`broken_rows` and `notes`:** each with its line number.
-- **`summary` and `summary_author`:** the short points, and who wrote them.
-
-| Status | When |
-|---|---|
-| `200` | The file was checked |
-| `413` | The file is over 50 MB |
-| `422` | The file can't be checked, with the reason: `can't be checked: the file is empty` |
 
 **Broken rows.** The two real files have none. So `broken_test.xer` is a short excerpt of `CSTv2.4.xer`, damaged on purpose. From `backend/`:
 
@@ -182,6 +174,37 @@ broken_test.xer: 4 activities checked
 
 - **Nothing to check** (only finished, milestone, level-of-effort or WBS summary activities): shows n/a, not pass.
 - **A UTF-16 file, or one that starts with a byte-order mark** (a hidden marker some editors add): read normally.
+
+## The API
+
+| Method | Path | What it does |
+|---|---|---|
+| `POST` | `/api/uploads` | Checks one `.xer` file, sent as the form field `file`, and saves it |
+| `GET` | `/api/uploads` | The 20 newest uploads, failed ones included |
+| `GET` | `/api/uploads/{upload_id}` | One saved upload's results |
+| `GET` | `/` | Answers `{"status": "ok"}` when the API is up |
+| `GET` | `/docs` | A page to try each endpoint in the browser |
+
+```
+curl -F "file=@backend/data/CSTv2.4.xer" http://localhost:8000/api/uploads
+```
+
+**The answer** has the same results as the command line:
+
+- **`upload_id` and `uploaded_at`:** open it again with `GET /api/uploads/{upload_id}`.
+- **`checked`:** unfinished work activities checked.
+- **`rules`:** one entry per DCMA rule, with its DCMA section, limit, count, percent, status (`pass`, `flag` or `n/a`) and the activity IDs.
+- **`broken_rows` and `notes`:** each with its line number.
+- **`summary` and `summary_author`:** the short points, and who wrote them.
+
+**It's read back from the database**, so a result looks the same now and later.
+
+| Status | When |
+|---|---|
+| `200` | The file was checked and saved |
+| `404` | No checked upload has this ID |
+| `413` | The file is over 50 MB |
+| `422` | The file can't be checked, with the reason: `can't be checked: the file is empty`. It's saved as failed, with that reason |
 
 ## The checks
 
@@ -283,12 +306,13 @@ cp .env.example .env
 
 ## How the code is organized
 
-All code is in `backend/`, one job per file, each with its own tests in `tests/`. Steps pass plain data to each other, so each can be tested alone.
+The backend's code is in `backend/`, one job per file, each with its own tests in `tests/`. Steps pass plain data to each other, so each can be tested alone. The frontend's files are listed in [its README](frontend/README.md).
 
 | Folder or file | What it is |
 |---|---|
 | `main.py` | Starts the API |
-| `modules/` | One folder per API feature, each with `route.py`, `schema.py` and `service.py`. Now: `check/` |
+| `modules/` | One folder per API feature, each with `route.py`, `schema.py`, `service.py` and `model.py`. Now: `uploads/` |
+| `database/` | The database connection |
 | `checker.py` | Starts the command line |
 | `xer_checker/` | The checker itself, used by both |
 | `xer_checker/rules/` | One file per DCMA rule |
@@ -299,8 +323,10 @@ All code is in `backend/`, one job per file, each with its own tests in `tests/`
 | File | Its one job | Tests |
 |---|---|---|
 | `main.py` | Create the API and add each module's routes | `test_main.py` |
-| `modules/check/route.py` | `POST /api/checks`: read the upload, answer 413 or 422 on errors | `test_check_route.py` |
-| `modules/check/service.py` | Run the checker on the upload; shape the answer (`schema.py`) | `test_check_service.py` |
+| `modules/uploads/route.py` | The 3 upload endpoints: answer 404, 413 or 422 on errors | `test_uploads_route.py` |
+| `modules/uploads/service.py` | Check the upload, save it with its results, read saved ones back (`schema.py`) | `test_uploads_service.py` |
+| `modules/uploads/model.py` | The 5 tables, described in the [database README](database/README.md) | `test_database.py` |
+| `database/db.py` | Connect to PostgreSQL, or SQLite without Docker; create the tables | `test_database.py` |
 | `reader.py` | Read a `.xer` file into tables; say why a broken one can't be checked | `test_reader.py` |
 | `checks.py` | Pick the activities to check, work out their links and float, run every rule | `test_checks.py`, and `test_baseline.py` against Kazinex |
 | `activity.py` | What a rule sees about one activity | |
