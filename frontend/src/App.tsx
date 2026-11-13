@@ -1,72 +1,128 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { UploadError, getUpload, listUploads, uploadXer } from './api'
+import { Checking } from './components/Checking'
 import { Dashboard } from './components/Dashboard'
+import { DropOverlay } from './components/DropOverlay'
+import { EmptyState } from './components/EmptyState'
+import { ErrorNotice } from './components/ErrorNotice'
 import { RecentUploads } from './components/RecentUploads'
 import { UploadButton } from './components/UploadButton'
+import { useUploadRoute } from './route'
 import type { CheckResult, UploadSummary } from './types'
+import { fileProblem } from './validate'
 
-type State =
+// ---------- Constants ----------
+
+const APP_NAME = 'XER checker'
+const OPENING = 'Opening the saved check…'
+
+type View =
   | { step: 'empty' }
   | { step: 'loading'; text: string }
   | { step: 'done'; result: CheckResult }
   | { step: 'failed'; message: string }
 
-/** The page: one upload button, the results of the open file, and the recent uploads. */
+/** The page: upload a file, see what needs attention, open earlier checks again. */
 export function App() {
-  const [state, setState] = useState<State>({ step: 'empty' })
+  const [uploadId, go] = useUploadRoute()
+  const [state, setView] = useState<View>(() => (uploadId ? { step: 'loading', text: OPENING } : { step: 'empty' }))
   const [uploads, setUploads] = useState<UploadSummary[]>([])
+  const shownId = useRef<string | null>(null) // the upload on screen, so a fresh upload isn't fetched again
 
-  // The list is a convenience: if it can't load, the upload button still works.
+  // The list is a convenience: if it can't load, uploading still works.
   const refreshList = useCallback(() => {
     listUploads().then(setUploads, () => setUploads([]))
   }, [])
   useEffect(refreshList, [refreshList])
 
-  /** Show what `load` returns, or its error in plain words. */
-  async function show(text: string, load: () => Promise<CheckResult>) {
-    setState({ step: 'loading', text })
-    try {
-      setState({ step: 'done', result: await load() })
-    } catch (error) {
-      const message = error instanceof UploadError ? error.message : 'Something went wrong. Please try again.'
-      setState({ step: 'failed', message })
+  // Open the check named in the address bar: on load, on Back and Forward, and from the list.
+  useEffect(() => {
+    if (uploadId === null) {
+      shownId.current = null // Back to "/": the render below shows the empty screen
+      return
     }
-  }
+    if (shownId.current === uploadId) return
+    let cancelled = false
+    setView({ step: 'loading', text: OPENING })
+    getUpload(uploadId).then(
+      (result) => {
+        if (cancelled) return
+        shownId.current = result.upload_id
+        setView({ step: 'done', result })
+      },
+      (error) => {
+        if (!cancelled) setView({ step: 'failed', message: `Couldn’t open this check. ${messageOf(error)}` })
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [uploadId])
+
+  const title = state.step === 'done' && uploadId !== null ? `${state.result.file_name} · ${APP_NAME}` : APP_NAME
+  useEffect(() => {
+    document.title = title
+  }, [title])
 
   async function check(file: File) {
-    await show(`Checking ${file.name}…`, () => uploadXer(file))
+    const problem = fileProblem(file)
+    if (problem) {
+      go(null)
+      setView({ step: 'failed', message: problem })
+      return
+    }
+    setView({ step: 'loading', text: `Checking ${file.name}…` })
+    try {
+      const result = await uploadXer(file)
+      shownId.current = result.upload_id
+      setView({ step: 'done', result })
+      go(result.upload_id)
+      window.scrollTo({ top: 0 })
+    } catch (error) {
+      go(null)
+      setView({ step: 'failed', message: messageOf(error) })
+    }
     refreshList() // a failed upload is saved too, with its reason
   }
 
-  const openId = state.step === 'done' ? state.result.upload_id : null
+  function home(event: React.MouseEvent) {
+    event.preventDefault()
+    setView({ step: 'empty' })
+    go(null)
+  }
+
+  // On "/" a finished result gives way to the empty screen (Back from a check, or the wordmark).
+  const view = uploadId === null && state.step === 'done' ? ({ step: 'empty' } as View) : state
+  const busy = view.step === 'loading'
   return (
-    <div className="page">
+    <div className="app">
+      <DropOverlay onFile={check} />
       <header className="top">
-        <div>
-          <div className="brand">XER checker</div>
-          <div className="tagline">Checks a Primavera P6 schedule against DCMA rules</div>
+        <div className="top-inner">
+          <a href="/" className="wordmark" onClick={home}>
+            {APP_NAME}
+          </a>
+          <UploadButton busy={busy} onFile={check} />
         </div>
-        <UploadButton busy={state.step === 'loading'} onFile={check} />
       </header>
 
       <main className="main">
-        <div aria-live="polite">{state.step === 'loading' && <p className="status">{state.text}</p>}</div>
-        {state.step === 'failed' && (
-          <p className="error" role="alert">
-            {state.message}
-          </p>
-        )}
-        {state.step === 'empty' && (
-          <div className="empty">
-            <h1>Upload a P6 schedule</h1>
-            <p>Export the schedule from P6 as a .xer file, then upload it.</p>
-            <p>You’ll see missing links, negative float and high float, each against DCMA’s limit.</p>
-          </div>
-        )}
+        {view.step === 'failed' && <ErrorNotice message={view.message} onFile={check} />}
+        {view.step === 'loading' && <Checking text={view.text} />}
+        {(view.step === 'empty' || view.step === 'failed') && <EmptyState onFile={check} />}
         {/* key: each upload starts a fresh dashboard, with its own selected rule */}
-        {state.step === 'done' && <Dashboard key={state.result.upload_id} result={state.result} />}
-        <RecentUploads uploads={uploads} openId={openId} onOpen={(id) => show('Opening…', () => getUpload(id))} />
+        {view.step === 'done' && <Dashboard key={view.result.upload_id} result={view.result} />}
+        <RecentUploads uploads={uploads} openId={view.step === 'done' ? view.result.upload_id : null} onOpen={go} />
       </main>
+
+      <footer className="foot">
+        <p>Checks follow DCMA-EA PAM 200.1 (2012), section 4. A number over its limit is a reason to look closer, not a failed schedule.</p>
+      </footer>
     </div>
   )
+}
+
+/** A plain message for any error: the backend's own words when it sent them. */
+function messageOf(error: unknown): string {
+  return error instanceof UploadError ? error.message : 'Something went wrong. Please try again.'
 }
