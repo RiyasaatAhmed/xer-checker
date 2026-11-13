@@ -8,6 +8,12 @@ services:
     env_file:
       - path: .env
         required: false  # without it, the AI is off and code writes the summaries
+    environment:
+      # The same name, user and password as the database service below
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-xer_checker}:${POSTGRES_PASSWORD:-local-only}@database:5432/${POSTGRES_DB:-xer_checker}
+    depends_on:
+      database:
+        condition: service_healthy  # the API creates its tables at start, so the database must be ready
     ports:
       - "8000:8000"  # the API; open http://localhost:8000/docs
     healthcheck:  # ready once the API answers

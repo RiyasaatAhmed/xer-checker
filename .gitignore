@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 context/
 .env
+
+# The local database, used when DATABASE_URL is not set
+*.db
