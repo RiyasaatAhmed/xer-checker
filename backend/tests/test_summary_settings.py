@@ -2,7 +2,7 @@
 
 import pytest
 from dotenv import dotenv_values
-from helpers import ROOT
+from helpers import REPO_ROOT
 
 from xer_checker.summary import settings
 
@@ -27,7 +27,7 @@ def test_empty_thinking_level_means_the_models_own_default(monkeypatch):
 
 
 def test_env_example_documents_every_setting_and_holds_no_key():
-    example = dotenv_values(ROOT / ".env.example")
+    example = dotenv_values(REPO_ROOT / ".env.example")
     assert {"GEMINI_API_KEY", settings.MODEL_VAR, settings.THINKING_VAR} <= example.keys()
     assert example[settings.MODEL_VAR]  # a working model, so copying the file is enough
     assert example[settings.THINKING_VAR] in settings.THINKING_LEVELS

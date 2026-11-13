@@ -4,7 +4,8 @@ from pathlib import Path
 
 from xer_checker.summary import gemini, settings
 
-ROOT = Path(__file__).parent.parent  # the project folder, where data/ and broken_test.xer are
+ROOT = Path(__file__).parent.parent  # the backend folder, where data/ and broken_test.xer are
+REPO_ROOT = ROOT.parent  # the repo root, where .env.example is
 
 # ---------- Summaries ----------
 

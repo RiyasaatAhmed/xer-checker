@@ -13,7 +13,7 @@ from dotenv import load_dotenv  # copies the settings in .env into the environme
 # ---------- Constants ----------
 
 # Names of the environment variables, all documented in .env.example
-ENV_FILE = Path(__file__).resolve().parents[2] / ".env"  # next to checker.py; gitignored
+ENV_FILE = Path(__file__).resolve().parents[3] / ".env"  # the repo root, next to docker-compose.yml; gitignored
 API_KEY_VARS = ("GEMINI_API_KEY", "GOOGLE_API_KEY")  # can hold the key, checked in this order
 MODEL_VAR = "GEMINI_MODEL"  # the model that writes the summaries; required with a key
 THINKING_VAR = "GEMINI_THINKING_LEVEL"  # optional: how much the model thinks before answering
