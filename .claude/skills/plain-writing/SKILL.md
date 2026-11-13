@@ -58,7 +58,7 @@ A short paragraph is fine when it holds one idea.
 | **Error or CLI message** | What is wrong, where (file and line), and what to do next. |
 | **Test name** | The behavior as a phrase: `test_only_unfinished_work_is_checked`. |
 | **Commit message** | One line, under 72 characters, in the `type: what changed` form that `git log` uses. |
-| **AI prompt** (`xer_checker/summary/prompt.md`) | All of step 3. It changes what Gemini writes, so run the tests after. |
+| **AI prompt** (`backend/xer_checker/summary/prompt.md`) | All of step 3. It changes what Gemini writes, so run the tests after. |
 
 ## 5. Check it
 
@@ -82,7 +82,7 @@ A short paragraph is fine when it holds one idea.
 ## 6. Before you finish
 
 - **Facts:** no number, link, condition or claim changed meaning.
-- **Numbers:** every count in the README matches `tests/test_baseline.py`.
+- **Numbers:** every count in the README matches `backend/tests/test_baseline.py`.
 - **Length:** the sentence-length check prints nothing.
 - **Scan test:** read only the headings and the first word of each line. The reader still gets the point.
 - **Review:** for the README, show the change to the user before the next one.
