@@ -77,7 +77,6 @@ export function App() {
       shownId.current = result.upload_id
       setView({ step: 'done', result })
       go(result.upload_id)
-      window.scrollTo({ top: 0 })
     } catch (error) {
       go(null)
       setView({ step: 'failed', message: messageOf(error) })
@@ -94,6 +93,14 @@ export function App() {
   // On "/" a finished result gives way to the empty screen (Back from a check, or the wordmark).
   const view = uploadId === null && state.step === 'done' ? ({ step: 'empty' } as View) : state
   const busy = view.step === 'loading'
+
+  // A new page starts at its top: on a new address, and again once a check has drawn. Without it,
+  // a check opened from the list at the foot of the page keeps that scroll, and the browser's
+  // scroll anchoring holds the list in view while the check draws above it.
+  const shownCheck = view.step === 'done' ? view.result.upload_id : null
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [uploadId, shownCheck])
   return (
     <div className="app">
       <DropOverlay onFile={check} />

@@ -102,9 +102,11 @@ describe('App', () => {
     const recent = await screen.findByRole('region', { name: 'Recent checks' })
     expect(within(recent).getByText('Couldn’t be checked: the file is empty')).toBeInTheDocument()
 
+    vi.mocked(window.scrollTo).mockClear()
     await user().click(within(recent).getByRole('link', { name: 'CSTv2.4.xer' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4.xer' })).toBeInTheDocument()
     expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}`)
+    expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0 }) // the check opens at its top, not at the list
   })
 
   it('shows the project dates and how the forecast sits against the deadline', async () => {
