@@ -19,7 +19,8 @@ def test_without_database_url_it_uses_a_local_sqlite_file(monkeypatch):
 def test_init_db_creates_every_table_and_can_run_twice(db_session):
     db.init_db(db_session.get_bind())  # a second time: changes nothing
     tables = set(inspect(db_session.get_bind()).get_table_names())
-    assert tables == {"uploads", "file_issues", "metric_results", "metric_result_activities", "reviews"}
+    assert tables == {"uploads", "file_issues", "metric_results", "metric_result_activities", "reviews",
+                      "schedule_projects", "activities", "relationships"}
 
 
 def test_deleting_an_upload_deletes_its_rows(db_session):

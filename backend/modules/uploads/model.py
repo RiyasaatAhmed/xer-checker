@@ -5,6 +5,9 @@
   metric_results             one row per DCMA rule: the value and its working (numerator, denominator)
   metric_result_activities   the activities behind each number
   reviews                    the summary, who wrote it, and the exact facts it was written from
+  schedule_projects          the P6 projects in the file: data date, deadline, forecast finish
+  activities                 every activity: ID, name, WBS, status, float, duration, dates
+  relationships              every link row in the file, and whether it's counted (one per pair)
 
 Deleting an upload deletes everything from it (ON DELETE CASCADE).
 """
@@ -24,6 +27,11 @@ def now():
 def created_at_field():
     """A time column, saved with its time zone."""
     return Field(default_factory=now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+def site_time_field():
+    """A P6 date: site-local with no time zone, as P6 writes it. Converting would move dates by a day."""
+    return Field(default=None, sa_column=Column(DateTime(timezone=False), nullable=True))
 
 
 class Upload(SQLModel, table=True):
@@ -95,3 +103,53 @@ class Review(SQLModel, table=True):
     facts: dict = Field(sa_column=Column(JSON, nullable=False))  # the exact numbers it was written from
     points: list = Field(sa_column=Column(JSON, nullable=False))  # the points, numbers filled in
     created_at: datetime = created_at_field()
+
+
+class ScheduleProject(SQLModel, table=True):
+    """One P6 project in an uploaded file."""
+    __tablename__ = "schedule_projects"
+
+    id: int | None = Field(default=None, primary_key=True)
+    upload_id: uuid.UUID = Field(foreign_key="uploads.id", ondelete="CASCADE", index=True)
+    p6_id: str  # PROJECT.proj_id
+    name: str  # proj_short_name
+    data_date: datetime | None = site_time_field()  # the "as of" date
+    planned_start: datetime | None = site_time_field()
+    deadline: datetime | None = site_time_field()  # plan_end_date; often blank
+    forecast_finish: datetime | None = site_time_field()
+
+
+class Activity(SQLModel, table=True):
+    """One activity in an uploaded file, as read from TASK."""
+    __tablename__ = "activities"
+
+    id: int | None = Field(default=None, primary_key=True)
+    upload_id: uuid.UUID = Field(foreign_key="uploads.id", ondelete="CASCADE", index=True)
+    p6_task_id: str  # P6's internal key; links use it
+    activity_code: str  # the activity ID schedulers see
+    name: str
+    wbs: str  # the WBS element's name
+    task_type: str  # TT_Task, TT_Mile, ...
+    status: str  # TK_NotStart, TK_Active, TK_Complete
+    checked: bool  # one of the activities DCMA checks
+    float_days: float | None = None  # total float, in working days on its own calendar
+    duration_days: float | None = None  # remaining duration, in working days
+    start: datetime | None = site_time_field()  # actual start, else early start
+    finish: datetime | None = site_time_field()  # actual finish, else early finish
+    constraint_type: str  # cstr_type, blank when none
+    source_line: int  # its line in the file
+
+
+class Relationship(SQLModel, table=True):
+    """One link row in an uploaded file, as read from TASKPRED."""
+    __tablename__ = "relationships"
+    __table_args__ = (CheckConstraint("link_type IN ('PR_FS', 'PR_SS', 'PR_FF', 'PR_SF', '')", name="relationships_link_type"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    upload_id: uuid.UUID = Field(foreign_key="uploads.id", ondelete="CASCADE", index=True)
+    pred_p6_task_id: str  # the earlier activity
+    succ_p6_task_id: str  # the later activity
+    link_type: str
+    lag_hours: float  # below 0 is a lead, above 0 a lag
+    counted: bool  # False for a pair's earlier row when the file links the pair twice
+    source_line: int

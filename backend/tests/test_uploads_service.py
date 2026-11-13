@@ -75,3 +75,23 @@ def test_times_are_sent_as_utc(db_session):
     saved = check_upload(db_session, "CSTv2.4.xer", CST)
     assert saved.uploaded_at.utcoffset().total_seconds() == 0  # "...Z", not a time the browser reads as local
     assert list_uploads(db_session, 1)[0].uploaded_at.utcoffset().total_seconds() == 0
+
+
+def test_the_schedule_is_saved_and_shown_with_each_number(db_session):
+    saved = check_upload(db_session, "example_xer_file.xer", (ROOT / "data" / "example_xer_file.xer").read_bytes())
+    [project] = saved.projects
+    assert (project.name, project.deadline.date().isoformat()) == ("DEMO-001", "2027-05-16")
+    assert (saved.overview.activities, saved.overview.links, saved.overview.duplicate_links) == (435, 551, 4)
+    high = saved.rules[2]
+    assert [d.code for d in high.details] == high.activities  # one row per flagged activity, in order
+    assert (high.details[0].code, high.details[0].float_days, high.details[0].status) == ("MS10310", 51.21, "Not started")
+    assert get_upload(db_session, saved.upload_id) == saved  # read back the same
+
+
+def test_each_missing_link_shows_which_side_is_missing(db_session):
+    saved = check_upload(db_session, "CSTv2.4.xer", CST)
+    missing = saved.rules[0]
+    assert len(missing.details) == 20
+    assert all(d.predecessors == 0 or d.successors == 0 for d in missing.details)  # what the check flagged
+    high = saved.rules[2]
+    assert any(d.predecessors > 0 and d.successors > 0 for d in high.details)  # high float with both links

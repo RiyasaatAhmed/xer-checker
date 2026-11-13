@@ -12,6 +12,7 @@ from sqlmodel import col, select
 
 from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, Upload
 from modules.uploads.schema import CheckResult, RowNote, RuleResult, UploadSummary
+from modules.uploads.snapshot import read_schedule, save_schedule
 from xer_checker.checks import percent
 from xer_checker.cli import check_file
 from xer_checker.reader import FileError
@@ -79,6 +80,8 @@ def save_results(session, upload_id, result):
     written_by = "ai" if result.author.startswith(AI_AUTHOR) else "code"
     session.add(Review(upload_id=upload_id, written_by=written_by, author_note=result.author,
                        facts=result.facts, points=result.points))
+    if result.schedule is not None:
+        save_schedule(session, upload_id, result.schedule)
 
 
 # ---------- Read back ----------
@@ -93,23 +96,24 @@ def get_upload(session, upload_id):
     issues = session.exec(select(FileIssue).where(FileIssue.upload_id == upload_id)
                           .order_by(FileIssue.line_number, FileIssue.id)).all()
     review = session.exec(select(Review).where(Review.upload_id == upload_id)).one()
+    projects, schedule_overview, details = read_schedule(session, upload_id)
     return CheckResult(
         upload_id=upload.id, uploaded_at=as_utc(upload.created_at), file_name=upload.file_name,
-        checked=metrics[0].denominator, rules=[rule_result(session, metric) for metric in metrics],
+        checked=metrics[0].denominator, rules=[rule_result(session, metric, details) for metric in metrics],
         broken_rows=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "error"],
         notes=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "note"],
-        summary=review.points, summary_author=review.author_note)
+        summary=review.points, summary_author=review.author_note, projects=projects, overview=schedule_overview)
 
 
-def rule_result(session, metric):
-    """One saved rule result, with the activities behind it, in the order the checker found them."""
+def rule_result(session, metric, details):
+    """One saved rule result, with the activities behind it in the order the checker found them, and their details."""
     codes = session.exec(select(MetricResultActivity.activity_code)
                          .where(MetricResultActivity.metric_result_id == metric.id)
                          .order_by(MetricResultActivity.position)).all()
     return RuleResult(
         name=metric.name, dcma_section=metric.dcma_section, limit_percent=metric.limit_value,
         count=metric.numerator, percent=round(metric.value, 1), status=TO_STATUS[metric.verdict],
-        activities=list(codes))
+        activities=list(codes), details=[details[code] for code in codes if code in details])
 
 
 def list_uploads(session, limit):
