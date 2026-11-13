@@ -1,0 +1,100 @@
+/* The empty screen's demo. Everything is scoped under .hd. Corner bleed: the window sits
+   one gutter in from the top and left, and runs off the right and bottom. */
+
+/* ---- The look: CritPath's tokens mapped to the kit's ---- */
+.hd .ss-stage {
+  --ss-accent: #ff5a1f;
+  --ss-accent-soft: #ffe0cb;
+  --ss-accent-text: #b5440d;
+  --ss-font: 'Geist Variable', 'Geist', system-ui, sans-serif;
+  --ss-canvas: #fffcf7;
+  --ss-surface: #fffefa;
+  --ss-well: #f7f3ea;
+  --ss-line: #d9d1c2;
+  --ss-text-strong: #0f2a4a;
+  --ss-text: #665f55;
+  --ss-radius-sm: 0px;
+  --ss-radius-md: 0px;
+  --ss-radius-lg: 0px;
+  --ss-radius-window: 8px;
+  overflow: hidden;
+  background: var(--ss-well);
+}
+
+.hd .hd-window { position: absolute; box-shadow: var(--ss-shadow-hero); }
+.hd .hd-heading { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; color: var(--ss-text-strong); }
+.hd .hd-body { overflow: hidden; background: var(--ss-canvas); }
+.hd .hd-page { padding: 16px; display: grid; }
+
+/* ---- The drop area: lights up while the file is carried over it ---- */
+.hd .hd-drop {
+  display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 16px; margin-bottom: 12px;
+  border: 1px dashed #bfb6a7; background: var(--ss-surface);
+  font-size: 14px; font-weight: 600; color: var(--ss-text-strong);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.hd .hd-drop[data-over] { border-color: var(--ss-accent); background: #fff2ea; } /* 7% orange on the surface */
+.hd .hd-drop__icon { flex: none; color: var(--ss-accent); }
+
+/* ---- The dropped file: tinted while it's checked ---- */
+.hd .hd-file {
+  display: grid; grid-template-columns: 15px 96px minmax(0, 1fr); align-items: center; gap: 12px; /* fixed tracks: whole-pixel edges */
+  height: 48px; padding: 0 12px; margin-bottom: 12px; border: 1px solid #bfb6a7;
+  background: #fff3eb; /* 6% orange on the surface, while it's checked */
+  transition: background-color 0.6s ease;
+}
+.hd .hd-file[data-done] { background: var(--ss-surface); }
+.hd .hd-file__name { font-size: 14px; font-weight: 650; color: var(--ss-text-strong); white-space: nowrap; }
+.hd .hd-track { width: 160px; background: #ffdccb; } /* 18% orange */
+.hd .hd-track .ss-meter__fill { background: var(--ss-accent); transition-duration: 0.42s; }
+.hd .ss-badge { font-weight: 700; }
+
+/* ---- The 3 checks: name, a bar with the limit marked, the figure ---- */
+.hd .hd-checks { display: grid; }
+.hd .hd-check {
+  display: grid; grid-template-columns: 116px 56px minmax(0, 1fr); align-items: center; gap: 12px;
+  height: 40px; padding: 0 12px; border-bottom: 1px solid var(--ss-line);
+  font-size: 13px; color: var(--ss-text-strong);
+}
+.hd .hd-check__name { font-weight: 600; white-space: nowrap; }
+.hd .hd-check__meter { position: relative; height: 6px; background: #ede7db; }
+.hd .hd-check__fill { position: absolute; inset: 0 auto 0 0; background: #2f8f62; transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.hd .hd-check[data-over] .hd-check__fill { background: var(--ss-accent); }
+.hd .hd-check__limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #0f2a4a; }
+.hd .hd-check__value { justify-self: end; font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
+/* The bar takes the rest of the row and runs off the stage with the window: it reads cut, words don't */
+.hd .hd-check[data-over] .hd-check__value { color: var(--ss-accent-text); }
+
+/* ---- Recent checks: placeholder rows under the result ---- */
+.hd .hd-recent { padding-top: 16px; }
+.hd .hd-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ss-text); padding: 0 12px 6px; }
+.hd .hd-recent__row { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--ss-line); }
+
+/* ---- The P6 export's icon: a page with a folded corner and an orange XER band ---- */
+.hd .hd-xer {
+  position: relative; display: block; width: 44px; height: 56px; border-radius: 3px; background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.16), 0 2px 6px -2px rgba(0, 0, 0, 0.22);
+  clip-path: polygon(0 0, 70% 0, 100% 23%, 100% 100%, 0 100%);
+}
+.hd .hd-xer::before { content: ''; position: absolute; top: 0; right: 0; width: 30%; height: 23%; background: linear-gradient(225deg, transparent 50%, #e4e4e7 50%); }
+.hd .hd-xer__band {
+  position: absolute; left: 0; right: 0; bottom: 10px; padding: 2px 0; background: var(--ss-accent); color: #fff;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; line-height: 13px; text-align: center;
+}
+.hd .hd-xer[data-small] { flex-shrink: 0; width: 15px; height: 19px; border-radius: 2px; box-shadow: inset 0 0 0 1px #c9c9ce; clip-path: none; }
+.hd .hd-xer[data-small]::before { display: none; }
+.hd .hd-xer[data-small] .hd-xer__band { bottom: 4px; height: 5px; padding: 0; }
+
+/* ---- The drag image: the icon and its name on a selection pill ---- */
+.hd .hd-drag { position: absolute; top: 0; left: 0; z-index: 30; pointer-events: none; opacity: 0; will-change: transform; }
+.hd .hd-drag[data-show] { opacity: 0.85; }
+.hd .hd-drag__inner { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 112px; font-size: 12px; will-change: transform; }
+.hd .hd-drag[data-dropped] { opacity: 0; transition: opacity 0.22s ease-in; }
+.hd .hd-drag[data-dropped] .hd-drag__inner { transform: scale(0.5); transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
+.hd .hd-drag__name { padding: 1px 5px; border-radius: 4px; background: var(--ss-accent); color: #fff; white-space: nowrap; line-height: 1.35; }
+
+/* ---- Compact (a phone column): shorter rows, so the window stays wider than tall with all 3 checks whole ---- */
+.hd .hd-page[data-compact] { padding: 12px; }
+.hd .hd-page[data-compact] .hd-drop { height: 52px; margin-bottom: 10px; }
+.hd .hd-page[data-compact] .hd-file { height: 44px; margin-bottom: 10px; }
+.hd .hd-page[data-compact] .hd-check { height: 36px; grid-template-columns: 104px 52px minmax(0, 1fr); }
