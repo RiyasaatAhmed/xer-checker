@@ -37,6 +37,16 @@ def within_limit(check_name, pct):
     return pct <= LIMITS[check_name]
 
 
+def is_checked(task):
+    """True for unfinished work, as DCMA says: not finished, not level of effort, a WBS summary or a milestone."""
+    return task["status_code"] != FINISHED and task["task_type"] not in NOT_CHECKED_TYPES
+
+
+def hours_per_day_of(tables):
+    """{calendar ID: hours in its working day}, from the CALENDAR table. A blank or bad value means 8."""
+    return {c["clndr_id"]: number(c.get("day_hr_cnt", "")) or DEFAULT_HOURS_PER_DAY for c in tables.get("CALENDAR", [])}
+
+
 # ---------- The checks ----------
 
 def check(tables):
@@ -47,7 +57,7 @@ def check(tables):
     """
     problems = []
     # Lookups: calendar ID -> hours in its working day, and activity ID -> activity row.
-    hours_per_day = {c["clndr_id"]: number(c.get("day_hr_cnt", "")) or DEFAULT_HOURS_PER_DAY for c in tables.get("CALENDAR", [])}
+    hours_per_day = hours_per_day_of(tables)
     tasks = {t["task_id"]: t for t in tables.get("TASK", [])}
 
     # Links (TASKPRED): record which activities have a predecessor and which have a successor.
@@ -60,10 +70,7 @@ def check(tables):
         has_pred.add(succ)  # the later activity now has something before it
         has_succ.add(pred)  # the earlier activity now has something after it
 
-    # As DCMA says: check unfinished work only. Skip finished activities, level of effort,
-    # WBS summaries and milestones.
-    open_tasks = [t for t in tasks.values()
-                  if t["status_code"] != FINISHED and t["task_type"] not in NOT_CHECKED_TYPES]
+    open_tasks = [t for t in tasks.values() if is_checked(t)]  # unfinished work only, as DCMA says
 
     failures = {rule.NAME: [] for rule in RULES}  # one empty list per rule, in report order
     for t in open_tasks:
