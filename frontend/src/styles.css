@@ -337,12 +337,12 @@ th { position: sticky; top: 0; background: color-mix(in srgb, var(--sunken) 45%,
 
 /* ---------- The list of schedules: a strip per row ---------- */
 
-.mini { display: inline-flex; gap: 6px; align-items: center; }
-.mini-set { display: inline-flex; gap: 1px; }
-.mini-cell { width: 8px; height: 14px; border-radius: 2px; background: var(--ok-soft); box-shadow: inset 0 0 0 1px var(--ok); }
-.mini-cell.flag { background: var(--flag); box-shadow: none; }
-.mini-cell.n\/a { background: var(--sunken); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.recent-checks { display: inline-flex; align-items: center; gap: 10px; }
+.mini { display: inline-flex; gap: 12px; align-items: center; }
+.mini-set { display: inline-flex; gap: 4px; align-items: center; }
+.mini-cell { box-sizing: border-box; flex: none; width: 10px; height: 18px; border: 1px solid var(--ok); border-radius: 3px; background: var(--ok-soft); }
+.mini-cell.flag { border-color: var(--flag); background: var(--flag-soft); }
+.mini-cell.n\/a { border-color: var(--line-strong); border-style: dashed; background: var(--sunken); }
+.recent-checks { display: inline-flex; align-items: center; gap: 16px; }
 .flagcount { color: var(--flag-ink); font-weight: 650; font-size: 13px; white-space: nowrap; }
 .okcount { color: var(--ok-ink); font-size: 13px; white-space: nowrap; }
 td.late { color: var(--flag-ink); font-weight: 600; }
@@ -365,17 +365,19 @@ td.late { color: var(--flag-ink); font-weight: 600; }
 
 .tip {
   position: fixed; left: 0; top: 0; z-index: 100; max-width: 280px; padding: 7px 11px; border-radius: 8px;
-  background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 500; line-height: 1.45; letter-spacing: -0.005em; white-space: pre-line;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 12%, transparent), 0 12px 32px -10px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #2a2a2f 0%, #17171a 55%, #0e0e10 100%); color: #fafafa;
+  font-size: 12px; font-weight: 500; line-height: 1.45; letter-spacing: -0.005em; white-space: pre-line;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.35);
   opacity: 0; visibility: hidden; pointer-events: none;
   transform: translateY(5px) scale(0.96); transform-origin: var(--arrow, 50%) 100%;
   transition: opacity 0.14s ease, transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.16s;
 }
 .tip[data-side='bottom'] { transform: translateY(-5px) scale(0.96); transform-origin: var(--arrow, 50%) 0; }
 .tip[data-open] { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
-.tip-arrow { position: absolute; left: var(--arrow, 50%); width: 8px; height: 8px; border-radius: 1px; background: var(--ink); transform: translateX(-50%) rotate(45deg); }
-.tip[data-side='top'] .tip-arrow { bottom: -3px; }
-.tip[data-side='bottom'] .tip-arrow { top: -3px; }
+.tip-arrow { position: absolute; left: var(--arrow, 50%); width: 8px; height: 8px; border-radius: 1px; transform: translateX(-50%) rotate(45deg); }
+.tip[data-side='top'] .tip-arrow { bottom: -5px; background: #0e0e10; border: 1px solid rgba(255, 255, 255, 0.12); border-top: 0; border-left: 0; }
+.tip[data-side='bottom'] .tip-arrow { top: -5px; background: #2a2a2f; border: 1px solid rgba(255, 255, 255, 0.12); border-bottom: 0; border-right: 0; }
 [data-tip] { cursor: default; }
 button[data-tip], a[data-tip] { cursor: pointer; }
 
