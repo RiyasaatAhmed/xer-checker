@@ -89,7 +89,7 @@ export function HeroDemo() {
       initial={initial}
       poster={poster}
       script={script}
-      accent="#3b5bdb"
+      accent="#fafafa"
       cursor={{ at: OUTSIDE }}
       className="hd"
     >
@@ -119,7 +119,7 @@ export function HeroDemo() {
                   ))}
                 </div>
                 <div className="hd-recent">
-                  <div className="hd-label">Recent checks</div>
+                  <div className="hd-label">Recent schedules</div>
                   {RECENT.map((w, i) => (
                     <div key={i} className="hd-recent__row">
                       <Bar w={w} h={7} tone={3} />

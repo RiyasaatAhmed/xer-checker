@@ -1,18 +1,37 @@
 /* The empty screen's demo. Everything is scoped under .hd. Corner bleed: the window sits
    one gutter in from the top and left, and runs off the right and bottom. */
 
-/* ---- The look: CritPath's tokens mapped to the kit's ---- */
+/* ---- The look: the app's own tokens (theme.css, black and zinc), mapped to the kit's ---- */
 .hd .ss-stage {
-  --ss-accent: #3b5bdb;
-  --ss-accent-soft: #e8edfc;
-  --ss-accent-text: #2f4bb8;
-  --ss-font: 'Geist Variable', 'Geist', system-ui, sans-serif;
-  --ss-canvas: #f4f5f7;
-  --ss-surface: #ffffff;
-  --ss-well: #edf0f3;
-  --ss-line: #e2e5ea;
-  --ss-text-strong: #151a22;
-  --ss-text: #5c6675;
+  --ss-accent: #fafafa;
+  --ss-accent-soft: #27272a;
+  --ss-accent-text: #fafafa;
+  --ss-font: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --ss-canvas: #09090b;
+  --ss-surface: #09090b;
+  --ss-chrome: #09090b;
+  --ss-raised: #18181b;
+  --ss-well: #0d0d10;
+  --ss-fill: #27272a;
+  --ss-ink-1: rgba(255, 255, 255, 0.04);
+  --ss-ink-2: rgba(255, 255, 255, 0.07);
+  --ss-ink-3: rgba(255, 255, 255, 0.1);
+  --ss-ink-4: rgba(255, 255, 255, 0.14);
+  --ss-ink-5: rgba(255, 255, 255, 0.2);
+  --ss-line: #27272a;
+  --ss-line-faint: #1f1f23;
+  --ss-text-strong: #fafafa;
+  --ss-text: #a1a1aa;
+  --ss-text-faint: #71717a;
+  --ss-icon: #a1a1aa;
+  --ss-icon-faint: #52525b;
+  --ss-success: #24c25e;
+  --ss-success-soft: rgba(36, 194, 94, 0.18);
+  --ss-success-text: #5fd68a;
+  --ss-danger: #d9706f; /* the app's softened red */
+  --ss-danger-soft: rgba(217, 112, 111, 0.1);
+  --ss-danger-text: #e8a3a1;
+  --ss-shadow-hero: 0 0 0 1px #27272a, 0 30px 60px -20px rgba(0, 0, 0, 0.85);
   --ss-radius-sm: 4px;
   --ss-radius-md: 6px;
   --ss-radius-lg: 8px;
@@ -29,23 +48,23 @@
 /* ---- The drop area: lights up while the file is carried over it ---- */
 .hd .hd-drop {
   display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 16px; margin-bottom: 12px;
-  border: 1px dashed #cbd2db; background: var(--ss-surface);
+  border: 1px dashed #3f3f46; background: var(--ss-surface);
   font-size: 14px; font-weight: 600; color: var(--ss-text-strong);
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-.hd .hd-drop[data-over] { border-color: var(--ss-accent); background: #eef2fe; } /* 7% orange on the surface */
+.hd .hd-drop[data-over] { border-color: var(--ss-accent); background: #18181b; } /* a light lift on the surface */
 .hd .hd-drop__icon { flex: none; color: var(--ss-accent); }
 
 /* ---- The dropped file: tinted while it's checked ---- */
 .hd .hd-file {
   display: grid; grid-template-columns: 15px 96px minmax(0, 1fr); align-items: center; gap: 12px; /* fixed tracks: whole-pixel edges */
-  height: 48px; padding: 0 12px; margin-bottom: 12px; border: 1px solid #cbd2db;
-  background: #f1f4fe; /* a tint of the accent, while it's checked */
+  height: 48px; padding: 0 12px; margin-bottom: 12px; border: 1px solid #3f3f46;
+  background: #18181b; /* a light lift, while it's checked */
   transition: background-color 0.6s ease;
 }
 .hd .hd-file[data-done] { background: var(--ss-surface); }
 .hd .hd-file__name { font-size: 14px; font-weight: 650; color: var(--ss-text-strong); white-space: nowrap; }
-.hd .hd-track { width: 160px; background: #d6defa; } /* a tint of the accent */
+.hd .hd-track { width: 160px; background: #27272a; }
 .hd .hd-track .ss-meter__fill { background: var(--ss-accent); transition-duration: 0.42s; }
 .hd .ss-badge { font-weight: 700; }
 
@@ -57,31 +76,31 @@
   font-size: 13px; color: var(--ss-text-strong);
 }
 .hd .hd-check__name { font-weight: 600; white-space: nowrap; }
-.hd .hd-check__meter { position: relative; height: 6px; background: #e2e5ea; }
-.hd .hd-check__fill { position: absolute; inset: 0 auto 0 0; background: #12a150; transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.hd .hd-check[data-over] .hd-check__fill { background: #d92d20; }
-.hd .hd-check__limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #151a22; }
+.hd .hd-check__meter { position: relative; height: 6px; background: #27272a; }
+.hd .hd-check__fill { position: absolute; inset: 0 auto 0 0; background: #24c25e; transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.hd .hd-check[data-over] .hd-check__fill { background: #d9706f; }
+.hd .hd-check__limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #fafafa; }
 .hd .hd-check__value { justify-self: end; font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
 /* The bar takes the rest of the row and runs off the stage with the window: it reads cut, words don't */
-.hd .hd-check[data-over] .hd-check__value { color: #b42318; }
+.hd .hd-check[data-over] .hd-check__value { color: #e8a3a1; }
 
 /* ---- Recent checks: placeholder rows under the result ---- */
 .hd .hd-recent { padding-top: 16px; }
-.hd .hd-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ss-text); padding: 0 12px 6px; }
+.hd .hd-label { font-size: 12px; font-weight: 500; color: var(--ss-text); padding: 0 12px 6px; }
 .hd .hd-recent__row { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--ss-line); }
 
-/* ---- The P6 export's icon: a page with a folded corner and an orange XER band ---- */
+/* ---- The P6 export's icon: a page with a folded corner and a dark XER band ---- */
 .hd .hd-xer {
-  position: relative; display: block; width: 44px; height: 56px; border-radius: 3px; background: #fff;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.16), 0 2px 6px -2px rgba(0, 0, 0, 0.22);
+  position: relative; display: block; width: 44px; height: 56px; border-radius: 3px; background: #e4e4e7;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.2), 0 2px 6px -2px rgba(0, 0, 0, 0.6);
   clip-path: polygon(0 0, 70% 0, 100% 23%, 100% 100%, 0 100%);
 }
-.hd .hd-xer::before { content: ''; position: absolute; top: 0; right: 0; width: 30%; height: 23%; background: linear-gradient(225deg, transparent 50%, #e4e4e7 50%); }
+.hd .hd-xer::before { content: ''; position: absolute; top: 0; right: 0; width: 30%; height: 23%; background: linear-gradient(225deg, transparent 50%, #a1a1aa 50%); }
 .hd .hd-xer__band {
-  position: absolute; left: 0; right: 0; bottom: 10px; padding: 2px 0; background: var(--ss-accent); color: #fff;
+  position: absolute; left: 0; right: 0; bottom: 10px; padding: 2px 0; background: #18181b; color: #fafafa;
   font-size: 11px; font-weight: 700; letter-spacing: 0.04em; line-height: 13px; text-align: center;
 }
-.hd .hd-xer[data-small] { flex-shrink: 0; width: 15px; height: 19px; border-radius: 2px; box-shadow: inset 0 0 0 1px #c9c9ce; clip-path: none; }
+.hd .hd-xer[data-small] { flex-shrink: 0; width: 15px; height: 19px; border-radius: 2px; box-shadow: inset 0 0 0 1px #52525b; clip-path: none; }
 .hd .hd-xer[data-small]::before { display: none; }
 .hd .hd-xer[data-small] .hd-xer__band { bottom: 4px; height: 5px; padding: 0; }
 
@@ -91,7 +110,7 @@
 .hd .hd-drag__inner { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 112px; font-size: 12px; will-change: transform; }
 .hd .hd-drag[data-dropped] { opacity: 0; transition: opacity 0.22s ease-in; }
 .hd .hd-drag[data-dropped] .hd-drag__inner { transform: scale(0.5); transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
-.hd .hd-drag__name { padding: 1px 5px; border-radius: 4px; background: var(--ss-accent); color: #fff; white-space: nowrap; line-height: 1.35; }
+.hd .hd-drag__name { padding: 1px 5px; border-radius: 4px; background: var(--ss-accent); color: #09090b; white-space: nowrap; line-height: 1.35; }
 
 /* ---- Compact (a phone column): shorter rows, so the window stays wider than tall with all 3 checks whole ---- */
 .hd .hd-page[data-compact] { padding: 12px; }
