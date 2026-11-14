@@ -4,7 +4,7 @@ from collections import Counter
 
 from sqlmodel import col, select
 
-from modules.uploads.model import Activity, MetricResult, Relationship, Upload, as_utc
+from modules.uploads.model import MetricResult, Upload, as_utc
 from modules.uploads.schema import FixFirst, OpenEnd, Previous, Repeat
 from xer_checker.causes import open_ends
 from xer_checker.rules import BY_METRIC, rule_id
@@ -28,21 +28,19 @@ def previous_of(session, upload):
     return Previous(upload_id=earlier.id, uploaded_at=as_utc(earlier.created_at), values=values)
 
 
-def fix_first(session, upload_id, flag_counts):
+def fix_first(activities, links, flag_counts):
     """The open ends that may clear many flags, and the activities that fail the most checks.
 
-    flag_counts: {activity code: how many checks flag it}.
+    activities, links: one upload's saved rows. flag_counts: {activity code: how many checks flag it}.
     """
     repeat = [(code, n) for code, n in Counter(flag_counts).most_common() if n >= MIN_FAILS][:SHOWN]
-    activities = session.exec(select(Activity).where(Activity.upload_id == upload_id)).all()
     by_code = {}
     for a in activities:  # an ID repeated across 2 P6 projects keeps the first
         by_code.setdefault(a.activity_code, a)
     code_of = {a.p6_task_id: a.activity_code for a in activities}
-    links = session.exec(select(Relationship).where(Relationship.upload_id == upload_id, Relationship.counted)).all()
     ends = open_ends({a.p6_task_id for a in activities if a.checked},
                      {a.p6_task_id for a in activities if flag_counts.get(a.activity_code)},
-                     [(l.pred_p6_task_id, l.succ_p6_task_id) for l in links])[:SHOWN]
+                     [(l.pred_p6_task_id, l.succ_p6_task_id) for l in links if l.counted])[:SHOWN]
     by_id = {a.p6_task_id: a for a in activities}
     return FixFirst(
         open_ends=[OpenEnd(code=code_of[i], name=by_id[i].name, wbs=by_id[i].wbs, clears=n) for i, n in ends],

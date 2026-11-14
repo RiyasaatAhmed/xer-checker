@@ -12,7 +12,7 @@ from sqlmodel import col, select
 from modules.uploads.insights import fix_first, previous_of
 from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, ScheduleProject, Upload, as_utc
 from modules.uploads.schema import CheckActivities, CheckResult, CheckStatus, RowNote, RuleResult, UploadSummary
-from modules.uploads.snapshot import bulk_insert, kinded, read_overview, read_rows, read_structure, save_schedule
+from modules.uploads.snapshot import bulk_insert, kinded, load_schedule, read_overview, read_rows, read_structure, save_schedule
 from xer_checker.checks import percent
 from xer_checker.cli import check_file
 from xer_checker.kinds import kinds_of
@@ -103,10 +103,11 @@ def get_upload(session, upload_id):
     issues = session.exec(select(FileIssue).where(FileIssue.upload_id == upload_id)
                           .order_by(FileIssue.line_number, FileIssue.id)).all()
     review = session.exec(select(Review).where(Review.upload_id == upload_id)).one()
-    projects, schedule_overview = read_overview(session, upload_id)
+    activities, links = load_schedule(session, upload_id)  # the largest tables: read once, shared below
+    projects, schedule_overview = read_overview(session, upload_id, activities, links)
     flags = flags_by_code(session, metrics)
     rules = [rule_result(metric) for metric in metrics]
-    groups, months = read_structure(session, upload_id, flags, [rule.group for rule in rules])
+    groups, months = read_structure(session, upload_id, activities, flags, [rule.group for rule in rules])
     return CheckResult(
         upload_id=upload.id, uploaded_at=as_utc(upload.created_at), file_name=upload.file_name,
         checked=metrics[0].denominator, rules=rules,
@@ -114,7 +115,7 @@ def get_upload(session, upload_id):
         notes=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "note"],
         summary=review.points, summary_author=review.author_note, projects=projects, overview=schedule_overview,
         structure=groups, months=months, previous=previous_of(session, upload),
-        fix_first=fix_first(session, upload_id, {code: len(numbers) for code, numbers in flags.items()}))
+        fix_first=fix_first(activities, links, {code: len(numbers) for code, numbers in flags.items()}))
 
 
 def get_check(session, upload_id, check_id):
@@ -130,7 +131,7 @@ def get_check(session, upload_id, check_id):
     codes = list(session.exec(select(MetricResultActivity.activity_code).where(MetricResultActivity.metric_result_id == metric.id)
                               .order_by(MetricResultActivity.position)).all())
     flags = flags_by_code(session, metrics)
-    rows = read_rows(session, upload_id)
+    rows = read_rows(*load_schedule(session, upload_id))
     return CheckActivities(id=check_id, activities=codes,
                            details=[kinded(rows[c], check_id, len(flags.get(c, ()))) for c in codes if c in rows])
 

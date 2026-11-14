@@ -42,28 +42,29 @@ def bulk_insert(session, model, rows):
         session.execute(insert(model), rows)
 
 
-def read_overview(session, upload_id):
+def load_schedule(session, upload_id):
+    """(activities in file order, every link row) of one upload. Read once per request, then shared by the readers below.
+
+    An upload saved before the schedule was kept has neither.
+    """
+    activities = session.exec(select(Activity).where(Activity.upload_id == upload_id).order_by(Activity.source_line)).all()
+    links = session.exec(select(Relationship).where(Relationship.upload_id == upload_id)).all()
+    return activities, links
+
+
+def read_overview(session, upload_id, activities, links):
     """(projects, overview) for one upload, from its saved rows. An upload saved before the schedule was kept has none."""
-    projects = session.exec(select(ScheduleProject).where(ScheduleProject.upload_id == upload_id)
-                            .order_by(ScheduleProject.id)).all()
-    activities = session.exec(select(Activity).where(Activity.upload_id == upload_id)).all()
     if not activities:
         return [], None
-    links = session.exec(select(Relationship).where(Relationship.upload_id == upload_id)).all()
+    projects = session.exec(select(ScheduleProject).where(ScheduleProject.upload_id == upload_id)
+                            .order_by(ScheduleProject.id)).all()
     counted = [l for l in links if l.counted]
     return [project_info(p) for p in projects], Overview(**overview(activities, counted, len(links) - len(counted)))
 
 
-def read_rows(session, upload_id):
-    """{activity code: ActivityRow} for one upload: every activity, with its link counts and a few neighbors.
-
-    An upload saved before the schedule was kept has no rows: the answer is empty.
-    """
-    activities = session.exec(select(Activity).where(Activity.upload_id == upload_id)
-                              .order_by(Activity.source_line)).all()
-    if not activities:
-        return {}
-    links = session.exec(select(Relationship).where(Relationship.upload_id == upload_id, Relationship.counted)).all()
+def read_rows(activities, links):
+    """{activity code: ActivityRow}: every activity, with its link counts and a few neighbors. Empty with no activities."""
+    links = [l for l in links if l.counted]
     before = Counter(l.succ_p6_task_id for l in links)  # links into each activity
     after = Counter(l.pred_p6_task_id for l in links)  # links out of each activity
     by_id = {a.p6_task_id: a for a in activities}
@@ -77,12 +78,6 @@ def read_rows(session, upload_id):
             a, before[a.p6_task_id], after[a.p6_task_id],
             neighbors(ins.get(a.p6_task_id, []), by_id, "pred_p6_task_id"), neighbors(outs.get(a.p6_task_id, []), by_id, "succ_p6_task_id")))
     return details
-
-
-def read_schedule(session, upload_id):
-    """(projects, overview, {activity code: ActivityRow}) for one upload, from its saved rows."""
-    projects, schedule_overview = read_overview(session, upload_id)
-    return projects, schedule_overview, read_rows(session, upload_id)
 
 
 def kinded(row, rule_id, fails):
@@ -102,12 +97,12 @@ def neighbors(links, by_id, side):
             for l in links[:NEIGHBORS_SHOWN] if getattr(l, side) in by_id]
 
 
-def read_structure(session, upload_id, flags, rule_groups):
+def read_structure(session, upload_id, activities, flags, rule_groups):
     """(the WBS tree with counts, dates and heat rolled up, its month axis). Empty for an upload saved before the tree was kept."""
     nodes = session.exec(select(WbsNode).where(WbsNode.upload_id == upload_id)).all()
     if not nodes:
         return [], []
-    activities = [wbs_activity(a) for a in session.exec(select(Activity).where(Activity.upload_id == upload_id)).all()]
+    activities = [wbs_activity(a) for a in activities]
     nodes = [SimpleNamespace(p6_id=n.p6_wbs_id, parent_id=n.parent_p6_wbs_id, name=n.name, seq=n.seq) for n in nodes]
     months = month_axis(activities)
     groups = structure(nodes, activities, flags, len(rule_groups), rule_groups, months)
