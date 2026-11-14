@@ -137,8 +137,6 @@ def read_text(path):
         raw = path.read_bytes()
     except OSError as error:  # missing, a folder, no permission
         raise FileError(f"can't open the file ({(error.strerror or str(error)).lower()})") from None
-    if not raw.strip():
-        raise FileError("the file is empty")
     if raw.startswith(UTF16_MARKS):  # re-saved as UTF-16: read it as UTF-16
         text = raw.decode("utf-16", errors="replace")
     else:  # UTF-8 if valid, otherwise Windows-1252
@@ -146,6 +144,8 @@ def read_text(path):
             text = raw.decode(ENCODINGS[0])
         except UnicodeDecodeError:
             text = raw.decode(ENCODINGS[1], errors="replace")
+    if not text.strip():  # checked after decoding: a file holding only a byte-order mark is empty too
+        raise FileError("the file is empty")
     start = text.lstrip()[:MAX_TEXT_SHOWN]  # how the file begins
     if start.startswith("<"):  # P6 can also export XML
         raise FileError("it's an XML file, not an XER export: export the schedule from P6 as XER")

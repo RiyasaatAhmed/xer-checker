@@ -25,6 +25,12 @@ def test_empty_file(tmp_path):
     assert reason(save(tmp_path, "")) == "the file is empty"
 
 
+def test_a_file_holding_only_a_byte_order_mark_is_empty(tmp_path):
+    for mark in (b"\xef\xbb\xbf", b"\xff\xfe"):  # UTF-8, then UTF-16
+        (tmp_path / "mark.xer").write_bytes(mark)
+        assert reason(tmp_path / "mark.xer") == "the file is empty"
+
+
 def test_xml_export(tmp_path):
     assert reason(save(tmp_path, '<?xml version="1.0"?>\n<APIBusinessObjects/>\n')).startswith("it's an XML file")
 
