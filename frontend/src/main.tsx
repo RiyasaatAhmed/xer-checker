@@ -1,5 +1,4 @@
-import '@fontsource-variable/geist' // the site's font, bundled: no call to a font service
-import '@fontsource-variable/geist-mono'
+import '@fontsource-variable/inter' // the portfolio's font, bundled: no call to a font service
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'

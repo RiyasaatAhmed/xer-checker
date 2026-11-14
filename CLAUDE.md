@@ -118,7 +118,7 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 - The upload answer holds no activities. A check's activities come from `GET /api/uploads/{id}/checks/{check id}`, loaded when it is opened.
 - A new column on an existing table must be optional (nullable): `add_missing_columns` in `database/db.py` adds it on start. A required column needs Alembic first.
 - Frontend: one component per file in `src/components/`. Status shows an icon and a word, never color alone.
-- Frontend look: every color, font and shape is a token in `frontend/src/theme.css`. One accent (blue), red only for flagged, green only for within the limit, 8px corners, no uppercase labels. A status always has an icon and a word. One exception: the float bar colors float by how close to critical it is (`--float-*`), and the heat cells use `--heat-*`.
+- Frontend look: every color, font and shape is a token in `frontend/src/theme.css`. The portfolio's zinc palette and Inter, one near-black accent, red only for flagged, green only for within the limit, 8px corners, no uppercase labels. A status always has an icon and a word. Blue appears once, for the forecast finish (`--info`). One exception: the float bar colors float by how close to critical it is (`--float-*`), and the heat cells use `--heat-*`.
 - Frontend words around the numbers live in `frontend/src/rules.ts`: what a check means, and what to do in P6. The numbers always come from the API.
 - `frontend/src/kit/` is Stageshow's kit, copied in: don't edit it, except as its README records.
 - To change `HeroDemo.tsx`, use the `stageshow` skill. Restore it with `npx skills experimental_install`. Film it with `--gate` at both widths until it ends `rehearsal passed`, then update `REHEARSAL.md`.
