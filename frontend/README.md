@@ -2,15 +2,15 @@
 
 The page where you upload a `.xer` file and see where its problems are. Vite, React and TypeScript, in a calm, neutral tool design: little text, mostly pictures.
 
-![Dashboard](dashboard.png)
+![A report: the verdict for example_xer_file.xer](dashboard.png)
 
 ## What a scheduler gets
 
 | Part | What it does |
 |---|---|
-| **Home** | The demo and one upload button, or the list of recent schedules with a strip of checks each. Nothing else |
+| **Home** | The demo and one upload button before the first upload. After it, a drop area and the saved files. Each file is a row that opens on its 5 headline checks, with a one-click report and delete |
 | **Upload** | Drop a `.xer` file anywhere on the page, or use the button. A wrong file type or a file over 50 MB is refused at once, before it's sent |
-| **Verdict** | First on the page: how many checks are over the limit, the worst three, finish against deadline, and what changed since the last upload |
+| **Verdict** | First on the page: whether the file reads cleanly, and how many checks are over the limit. Then the driving path, finish against deadline, and progress. Every check over the limit follows, as Serious or Minor |
 | **The checks** | One cell per check in sets, then a bullet row for each failing check: its value, limit tick, how many times over, and the change. Passing checks and checks that can't run fold into a line each. Click one to list its activities |
 | **Float** | One bar from late to spare time, coloured by how close to critical the work is |
 | **Where** | The WBS tree as rows, worst first, counting the picked check, a set of checks or all flags. Cells show the months flagged work starts, with the span and finished share. The data date, forecast finish and deadline are labelled on the axis. A second view is a matrix of groups against sets of checks. Click a group to list its activities |
@@ -19,15 +19,16 @@ The page where you upload a `.xer` file and see where its problems are. Vite, Re
 | **File profile** | One small card: five counts (activities, links, leads, lags, constraints) and two bars (status, and what the checks leave out) |
 | **Summary and broken rows** | The summary is folded away. Broken rows show only when the file has some |
 
-| **Recent schedules** | Every saved schedule, newest first, repeat uploads of one file together. Each has its own address (`/uploads/<id>`). So does each check in it (`/uploads/<id>/checks/<check>`). Refresh, Back and a shared link all work |
+| **Recent schedules** | Every saved schedule, newest first. Each has its own address (`/uploads/<id>`). So does each check in it (`/uploads/<id>/checks/<check>`). Refresh, Back and a shared link all work |
 
-**The home page is simple.** With no checks yet it shows a short looping demo, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow), and one upload button. Once there are checks it shows the list and the button. A schedule has an "All schedules" link back.
+**The home page is simple.** With no checks yet it shows a short looping demo, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow), and one upload button. Once there are checks it shows the drop area and the saved files. A schedule has an "All schedules" link back.
+
+![Home: the saved files, the newest open on its 5 headline checks](home.png)
 
 ![Schedule map](map.png)
 
 ![Activities](activities.png)
 
-![Upload screen](upload-screen.png)
 
 ## Run it
 

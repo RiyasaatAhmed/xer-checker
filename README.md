@@ -8,7 +8,9 @@ Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and se
 
 **The empty state:** before the first upload, the home page plays this demo. It shows the real results for `CSTv2.4.xer`.
 
-![Dashboard](frontend/dashboard.png)
+**A report:** the verdict comes first. It says whether the file reads cleanly, how many checks are over the limit, and the finish against the deadline.
+
+![A report: the verdict for example_xer_file.xer](frontend/dashboard.png)
 
 For each file, it:
 
@@ -29,9 +31,10 @@ The command line draws the same results as one chart, for both files:
 
 **How to read the chart:**
 
+- **Bars shown:** the 6 checks furthest over their limit, in either file.
 - **Each bar:** the share of a file's unfinished activities a check caught.
 - **Dashed line:** the DCMA limit.
-- **Over the limit:** missing links in `CSTv2.4.xer` (15.0%), and high float in both files (58.6% and 46.6%).
+- **Biggest problems:** no resources in `CSTv2.4.xer` (88.7%), and high float in both files (58.6% and 46.6%).
 - **Under the bars:** each file's summary, and who wrote it ([The AI summary](#the-ai-summary)).
 
 ## Features
