@@ -15,10 +15,10 @@
   --accent-ink: #18181b;
   --accent-soft: #27272a;
   --info: #60a5fa;
-  --flag: #ef5350;
-  --flag-soft: rgba(239, 83, 80, 0.18);
-  --flag-line: rgba(239, 83, 80, 0.45);
-  --flag-ink: #f87171;
+  --flag: #d9706f;
+  --flag-soft: rgba(217, 112, 111, 0.1);
+  --flag-line: rgba(217, 112, 111, 0.28);
+  --flag-ink: #e8a3a1;
   --ok: #24c25e;
   --ok-soft: rgba(36, 194, 94, 0.18);
   --ok-line: rgba(36, 194, 94, 0.45);
@@ -27,19 +27,19 @@
   --slate: #71717a;
   --slate-soft: #3f3f46;
   --slate-deep: #d4d4d8;
-  --float-neg: #f87171;
+  --float-neg: #d9706f;
   --float-zero: #f0a23b;
   --float-near: #b97d2a;
   --float-near2: #6d5223;
   --float-fine: #3f3f46;
   --float-fine2: #71717a;
-  --heat-1: #4a2326;
-  --heat-2: #7b2f31;
-  --heat-3: #b8433f;
-  --heat-4: #f2645d;
+  --heat-1: #2c1c1f;
+  --heat-2: #4b2c30;
+  --heat-3: #7f4a4d;
+  --heat-4: #b9696b;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 34px -18px rgba(0, 0, 0, 0.8);
-  --heat-4-ink: #09090b; /* text on the darkest heat cell */
+  --heat-4-ink: #0b0b0e; /* text on the darkest heat cell */
   --violet: #9d83ff;
   --scroll: #3f3f46;
   --radius: 8px;
@@ -68,10 +68,10 @@
   --accent-ink: #fafafa;
   --accent-soft: #f4f4f5;
   --info: #3b82f6; /* the forecast finish on the map: the one blue, from the portfolio's gradient */
-  --flag: #ef4444; /* flagged by a check (destructive) */
-  --flag-soft: rgba(239, 68, 68, 0.12);
-  --flag-line: rgba(239, 68, 68, 0.4);
-  --flag-ink: #c52020; /* flagged, as text (error) */
+  --flag: #d65d5d; /* flagged by a check (destructive) */
+  --flag-soft: rgba(214, 93, 93, 0.1);
+  --flag-line: rgba(214, 93, 93, 0.3);
+  --flag-ink: #b04545; /* flagged, as text (error) */
   --ok: #1a9948; /* within its limit (success) */
   --ok-soft: rgba(26, 153, 72, 0.14);
   --ok-line: rgba(26, 153, 72, 0.4);
@@ -80,16 +80,16 @@
   --slate: #71717a; /* neutral data: bars, work periods */
   --slate-soft: #d4d4d8; /* the "fine" part of a bar */
   --slate-deep: #3f3f46;
-  --float-neg: #c52020;
+  --float-neg: #c85050;
   --float-zero: #e8890c;
   --float-near: #f2b56b;
   --float-near2: #f8d7a6;
   --float-fine: #d4d4d8;
   --float-fine2: #71717a;
-  --heat-1: #fbd9d6;
-  --heat-2: #f4a8a3;
-  --heat-3: #e5574f;
-  --heat-4: #b42318;
+  --heat-1: #fbe9e8;
+  --heat-2: #f3c9c8;
+  --heat-3: #e29c9b;
+  --heat-4: #bc5959;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   --heat-4-ink: #ffffff;

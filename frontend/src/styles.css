@@ -166,7 +166,7 @@ th { position: sticky; top: 0; background: color-mix(in srgb, var(--sunken) 45%,
 .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
 
 .t-red { background: var(--flag); } .t-amber { background: var(--warn); } .t-violet { background: var(--violet); }
-.t-r1 { background: #f4a8a3; } .t-r2 { background: #e5574f; } .t-r3 { background: #b42318; }
+.t-r1 { background: color-mix(in srgb, var(--flag) 40%, var(--bg)); } .t-r2 { background: var(--flag); } .t-r3 { background: var(--flag-ink); }
 .t-s1 { background: var(--slate-soft); } .t-s2 { background: var(--slate); } .t-s3 { background: var(--slate-deep); }
 
 /* The activities, grouped: a header per WBS group, then one line per activity with its logic inline */
@@ -237,7 +237,7 @@ th { position: sticky; top: 0; background: color-mix(in srgb, var(--sunken) 45%,
 .strip-set { display: grid; gap: 4px; justify-items: start; }
 .strip-cells { display: flex; gap: 3px; }
 .cell { display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 5px; cursor: pointer; }
-.cell.flag { background: var(--flag); color: #fff; }
+.cell.flag { background: var(--flag-soft); color: var(--flag-ink); border-color: var(--flag-line); }
 .cell.pass { background: var(--ok-soft); color: var(--ok-ink); }
 .cell.n\/a { background: var(--sunken); color: var(--faint); border-style: dashed; border-color: var(--line-strong); }
 .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
@@ -322,7 +322,7 @@ th { position: sticky; top: 0; background: color-mix(in srgb, var(--sunken) 45%,
 .mcell.h0 { background: var(--sunken); color: var(--faint); }
 .mcell.h1 { background: var(--heat-1); color: var(--ink); }
 .mcell.h2 { background: var(--heat-2); color: var(--ink); }
-.mcell.h3 { background: var(--heat-3); color: #fff; }
+.mcell.h3 { background: var(--heat-3); color: var(--ink); }
 .mcell.h4 { background: var(--heat-4); color: var(--heat-4-ink); }
 
 /* ---------- Fix first ---------- */
@@ -401,13 +401,13 @@ html { background: var(--bg); scrollbar-color: var(--scroll) transparent; }
 .cell { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); transition: transform 0.12s ease, box-shadow 0.12s ease; }
 @media (hover: hover) { .cell:hover { transform: translateY(-1px) scale(1.08); } }
 .cell.pass { border-color: var(--ok-line); box-shadow: none; }
-.cell.flag { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 14px -4px var(--flag); }
+.cell.flag { box-shadow: none; }
 .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
 
 .crow { transition: background-color 0.15s ease; }
 .crow[aria-pressed='true'] { background: linear-gradient(90deg, var(--accent-soft), transparent 70%); box-shadow: inset 3px 0 0 var(--accent); }
 .crow-fill { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 70%, var(--bg)), var(--ok)); }
-.crow.flag .crow-fill { background: linear-gradient(90deg, color-mix(in srgb, var(--flag) 70%, var(--bg)), var(--flag)); box-shadow: 0 0 12px -3px var(--flag); }
+.crow.flag .crow-fill { background: linear-gradient(90deg, color-mix(in srgb, var(--flag) 70%, var(--bg)), var(--flag)); }
 .crow-limit { box-shadow: 0 0 0 2px var(--surface); }
 .crow-bar { box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.18); }
 .smap-row.selected { background: linear-gradient(90deg, var(--accent-soft), transparent 70%); box-shadow: inset 3px 0 0 var(--accent); }
