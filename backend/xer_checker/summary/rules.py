@@ -130,7 +130,7 @@ def style_problems(n, sentence, own_words):
 
 def flags_left_out(sentences, facts):
     """A check that's over its limit can't be left out of the summary."""
-    covered = {item.get("about") for item in sentences if isinstance(item, dict)}
+    covered = {item.get("about") for item in sentences if isinstance(item, dict) and isinstance(item.get("about"), str)}
     return [f"no sentence is about {check}, which is over its limit" for check in check_names(facts)
             if facts[check + LIMIT_SUFFIX].startswith(OVER) and check not in covered]
 
