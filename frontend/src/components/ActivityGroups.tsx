@@ -86,7 +86,7 @@ export function ActivityGroups({ groups, categories, categoryOf, resetKey, domai
       <span className="faint num">{g.rows.length.toLocaleString()}</span>
       {categories.length > 1 && (
         <span className="kindbar" aria-hidden="true" style={{ width: `${Math.max(16, (120 * g.rows.length) / biggest)}px` }}>
-          {categories.map((c) => (g.kinds[c.key] ?? 0) > 0 && <span key={c.key} className={`segment t-${c.tone}`} style={{ flexGrow: g.kinds[c.key] }} title={`${c.label}: ${g.kinds[c.key]}`} />)}
+          {categories.map((c) => (g.kinds[c.key] ?? 0) > 0 && <span key={c.key} className={`segment t-${c.tone}`} style={{ flexGrow: g.kinds[c.key] }} data-tip={`${c.label}: ${g.kinds[c.key]}`} />)}
         </span>
       )}
     </button>
@@ -114,15 +114,15 @@ export function ActivityGroups({ groups, categories, categoryOf, resetKey, domai
           <div className="arow">
             <span className="who">
               <span className="who-top">
-                <span className={`sdot ${STATUS_TONE[r.status] ?? 'step-1'}`} title={r.status} role="img" aria-label={r.status} />
+                <span className={`sdot ${STATUS_TONE[r.status] ?? 'step-1'}`} data-tip={r.status} role="img" aria-label={r.status} />
                 <span className="id mono">{r.code}</span>
                 <span className="name">{r.name}</span>
-                {(r.fails ?? 1) > 1 && <span className="fails" title="Flagged by more than one check">fails {r.fails}</span>}
+                {(r.fails ?? 1) > 1 && <span className="fails" data-tip="Flagged by more than one check">fails {r.fails}</span>}
               </span>
               {r.wbs !== it.group.name && <span className="wbs">{r.wbs}</span>}
             </span>
             <LogicChain row={r} tone={categoryOf(r).tone} />
-            <span className="afloat num" title={rangeText(r.start, r.finish)}>
+            <span className="afloat num" data-tip={rangeText(r.start, r.finish)}>
               <span className="float-cell">
                 {r.float_days !== null && r.float_days > 0 && <span className="fbar" aria-hidden="true" style={{ width: `${(FLOAT_BAR_PX * r.float_days) / longest}px` }} />}
                 <span className={(r.float_days ?? 0) < 0 ? 'neg' : undefined}>{daysText(r.float_days)} d</span>

@@ -3,6 +3,7 @@ import { UploadError, getUpload, listUploads, uploadXer } from './api'
 import { Checking } from './components/Checking'
 import { Dashboard } from './components/Dashboard'
 import { DropOverlay } from './components/DropOverlay'
+import { TooltipLayer } from './components/Tooltip'
 import { ErrorNotice } from './components/ErrorNotice'
 import { Home } from './components/Home'
 import { UploadButton } from './components/UploadButton'
@@ -104,6 +105,7 @@ export function App() {
   return (
     <div className="app">
       <DropOverlay onFile={check} />
+      <TooltipLayer />
       <header className="top">
         <div className="top-inner">
           <a href="/" className="wordmark" onClick={home}>

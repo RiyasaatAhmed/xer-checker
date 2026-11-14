@@ -1,10 +1,61 @@
-/* The look: a calm, neutral tool. Slate greys, one blue for actions, red only for what's flagged,
-   green for what's fine. Colors are tokens; dark mode redefines them. */
-
-/* The look, taken from the portfolio's design system (shadcn and Astryx tokens): neutral zinc on white,
-   border-only cards, a near-black primary, tinted status pills, Inter. Colors are tokens; dark mode redefines them. */
+/* The look, taken from the portfolio's design system (shadcn and Astryx tokens): black, neutral zinc,
+   border-only cards, a near-white primary, tinted status pills, Inter. Dark is the default, as on the
+   portfolio. The light set applies under data-theme="light". Colors are tokens. */
 
 :root {
+  --bg: #09090b;
+  --surface: #09090b;
+  --sunken: #27272a;
+  --line: #27272a;
+  --line-strong: #27272a;
+  --ink: #fafafa;
+  --muted: #a1a1aa;
+  --faint: #85858f;
+  --accent: #fafafa;
+  --accent-ink: #18181b;
+  --accent-soft: #27272a;
+  --info: #60a5fa;
+  --flag: #ef5350;
+  --flag-soft: rgba(239, 83, 80, 0.18);
+  --flag-line: rgba(239, 83, 80, 0.45);
+  --flag-ink: #f87171;
+  --ok: #24c25e;
+  --ok-soft: rgba(36, 194, 94, 0.18);
+  --ok-line: rgba(36, 194, 94, 0.45);
+  --ok-ink: #5fd68a;
+  --warn: #e7b008;
+  --slate: #71717a;
+  --slate-soft: #3f3f46;
+  --slate-deep: #d4d4d8;
+  --float-neg: #f87171;
+  --float-zero: #f0a23b;
+  --float-near: #b97d2a;
+  --float-near2: #6d5223;
+  --float-fine: #3f3f46;
+  --float-fine2: #71717a;
+  --heat-1: #4a2326;
+  --heat-2: #7b2f31;
+  --heat-3: #b8433f;
+  --heat-4: #f2645d;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 34px -18px rgba(0, 0, 0, 0.8);
+  --heat-4-ink: #09090b; /* text on the darkest heat cell */
+  --violet: #9d83ff;
+  --scroll: #3f3f46;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme='light'] {
   --bg: #ffffff; /* the page */
   --surface: #ffffff; /* cards and tables: set apart by their border, not by a different white */
   --sunken: #f4f4f5; /* tracks, hovered rows, quiet fills (muted) */
@@ -29,72 +80,22 @@
   --slate: #71717a; /* neutral data: bars, work periods */
   --slate-soft: #d4d4d8; /* the "fine" part of a bar */
   --slate-deep: #3f3f46;
-  /* Float, colored by how close to critical it is, not by which check flags it. The one use of color
-     outside "red for flagged". Over 44 days is outlined, not filled: it is spare time, not danger. */
   --float-neg: #c52020;
   --float-zero: #e8890c;
   --float-near: #f2b56b;
   --float-near2: #f8d7a6;
   --float-fine: #d4d4d8;
   --float-fine2: #71717a;
-  /* Heat: how many flagged activities, light to dark */
   --heat-1: #fbd9d6;
   --heat-2: #f4a8a3;
   --heat-3: #e5574f;
   --heat-4: #b42318;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --radius: 8px;
-  --radius-sm: 6px;
-  --sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --heat-4-ink: #ffffff;
+  --violet: #7048e8;
+  --scroll: #d4d4d8;
   color-scheme: light;
-  font-family: var(--sans);
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ink);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #09090b;
-    --surface: #09090b;
-    --sunken: #27272a;
-    --line: #27272a;
-    --line-strong: #27272a;
-    --ink: #fafafa;
-    --muted: #a1a1aa;
-    --faint: #85858f;
-    --accent: #fafafa;
-    --accent-ink: #18181b;
-    --accent-soft: #27272a;
-    --info: #60a5fa;
-    --flag: #ef5350;
-    --flag-soft: rgba(239, 83, 80, 0.18);
-    --flag-line: rgba(239, 83, 80, 0.45);
-    --flag-ink: #f87171;
-    --ok: #24c25e;
-    --ok-soft: rgba(36, 194, 94, 0.18);
-    --ok-line: rgba(36, 194, 94, 0.45);
-    --ok-ink: #5fd68a;
-    --warn: #e7b008;
-    --slate: #71717a;
-    --slate-soft: #3f3f46;
-    --slate-deep: #d4d4d8;
-    --float-neg: #f87171;
-    --float-zero: #f0a23b;
-    --float-near: #b97d2a;
-    --float-near2: #6d5223;
-    --float-fine: #3f3f46;
-    --float-fine2: #71717a;
-    --heat-1: #4a2326;
-    --heat-2: #7b2f31;
-    --heat-3: #b8433f;
-    --heat-4: #f2645d;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-    color-scheme: dark;
-  }
 }
 
 * { box-sizing: border-box; }

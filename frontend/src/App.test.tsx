@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -9,6 +9,9 @@ vi.mock('./components/HeroDemo', () => ({ HeroDemo: () => null }))
 
 beforeEach(() => window.history.replaceState(null, '', '/'))
 afterEach(() => vi.unstubAllGlobals())
+
+/** The elements under `root` that carry this tooltip text. */
+const tipped = (root: HTMLElement, text: string) => Array.from(root.querySelectorAll<HTMLElement>('[data-tip]')).filter((e) => e.getAttribute('data-tip') === text)
 
 const user = () => userEvent.setup({ applyAccept: false }) // so a wrong file type reaches the app's own check
 
@@ -189,7 +192,7 @@ describe('App', () => {
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
     expect(await within(list).findByText('Calendar placeholder 1')).toBeInTheDocument()
     expect(within(list).getAllByText('Utility Notifications & Meetings')).toHaveLength(2)
-    expect(within(list).getAllByTitle('22 Jan – 20 Feb 2026')).toHaveLength(2) // the dates, on hover; the mini timeline shows them
+    expect(tipped(list, '22 Jan – 20 Feb 2026')).toHaveLength(2) // the dates, on hover; the mini timeline shows them
     expect(within(list).getByText('fails 3')).toBeInTheDocument() // CAL03 is flagged by 3 checks
     const codes = () => within(list).getAllByText(/^ContractNo_CAL\d+$/).map((e) => e.textContent)
     expect(codes()).toEqual(['ContractNo_CAL03', 'ContractNo_CAL01']) // worst first: most checks failed
@@ -246,7 +249,7 @@ describe('App', () => {
     await user().click(within(map).getByRole('button', { name: 'By set of checks' }))
     const matrix = within(map).getByRole('table', { name: /by WBS group and set of checks/ })
     expect(within(matrix).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Group', 'Logic', 'Constraints', 'Float', 'Duration']) // Resources and Execution cannot run
-    expect(within(matrix).getByTitle('Placeholder, Logic: 20 of 20 flagged')).toHaveTextContent('20')
+    expect(tipped(matrix, 'Placeholder, Logic: 20 of 20 flagged')[0]).toHaveTextContent('20')
   })
 
   it('names the one fix that clears the most flags', async () => {
@@ -273,7 +276,7 @@ describe('App', () => {
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
     expect(await within(list).findByLabelText('Nothing before it')).toBeInTheDocument() // ContractNo_CAL01 has nothing before it
     expect(within(list).getByLabelText('Nothing after it')).toBeInTheDocument() // ContractNo_CAL03 has nothing after it
-    expect(within(list).getByTitle('Next activity (FS +16 h)')).toHaveTextContent('ContractNo_C100') // a neighbor, with its link and lag
+    expect(tipped(list, 'Next activity (FS +16 h)')[0]).toHaveTextContent('ContractNo_C100') // a neighbor, with its link and lag
     expect(within(list).getByText('Calendar placeholder 1')).toBeInTheDocument() // the name is on the line: no click needed
   })
 
@@ -332,5 +335,38 @@ describe('App', () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4.xer' })).toBeInTheDocument()
+  })
+
+  it('shows a tooltip on hover after a short delay, with the tooltip layer describing the element, and hides it on Escape', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const board = await screen.findByRole('region', { name: 'Checks' })
+    const cell = within(board).getByRole('button', { name: 'Missing links: over the limit' })
+    const tip = screen.getByRole('tooltip', { hidden: true })
+    expect(tip).not.toHaveAttribute('data-open')
+
+    const u = user()
+    await u.hover(cell)
+    await waitFor(() => expect(tip).toHaveAttribute('data-open'))
+    expect(tip).toHaveTextContent('Missing links: over the limit')
+    expect(cell).toHaveAttribute('aria-describedby', tip.id)
+
+    await u.keyboard('{Escape}')
+    expect(tip).not.toHaveAttribute('data-open')
+    expect(cell).not.toHaveAttribute('aria-describedby')
+  })
+
+  it('keeps a tooltip while the pointer is on it, and shows the next one at once after one closes', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const board = await screen.findByRole('region', { name: 'Checks' })
+    const [first, second] = within(board).getAllByRole('button', { name: /: (over the limit|within the limit)$/ })
+    const tip = screen.getByRole('tooltip', { hidden: true })
+    const u = user()
+    await u.hover(first)
+    await waitFor(() => expect(tip).toHaveAttribute('data-open'))
+    await u.hover(tip) // onto the bubble: it stays
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(tip).toHaveAttribute('data-open')
+    await u.hover(second) // already warm: no 250 ms wait
+    await waitFor(() => expect(tip).toHaveTextContent(second.getAttribute('data-tip') as string), { timeout: 150 })
   })
 })

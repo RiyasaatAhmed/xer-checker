@@ -19,20 +19,20 @@ export function WbsMatrix({ rows, rules, selectedId, group, indent, onSelect, on
       <div className="matrix-head" role="row" style={{ display: 'contents' }}>
         <span className="label" role="columnheader">Group</span>
         {sets.map((name) => (
-          <button key={name} type="button" className="matrix-col" role="columnheader" aria-pressed={group === name} onClick={() => onGroup(group === name ? null : name)} title={`Show the ${name} checks`}>
+          <button key={name} type="button" className="matrix-col" role="columnheader" aria-pressed={group === name} onClick={() => onGroup(group === name ? null : name)} data-tip={`Show the ${name} checks`}>
             {name}
           </button>
         ))}
       </div>
       {rows.map((g) => (
         <div key={g.id} className={`matrix-row${selectedId === g.id ? ' selected' : ''}`} role="row" style={{ display: 'contents' }}>
-          <button type="button" className="matrix-name" role="rowheader" style={{ paddingLeft: `${indent(g) * 16}px` }} onClick={() => onSelect(selectedId === g.id ? null : g.id)} title={`${g.name}: ${g.checked} checked`}>
+          <button type="button" className="matrix-name" role="rowheader" style={{ paddingLeft: `${indent(g) * 16}px` }} onClick={() => onSelect(selectedId === g.id ? null : g.id)} data-tip={`${g.name}: ${g.checked} checked`}>
             {g.name}
           </button>
           {sets.map((name) => {
             const n = g.by_group?.[name] ?? 0
             return (
-              <span key={name} role="cell" className={`mcell h${shade(g.checked ? n / g.checked : 0)}`} title={`${g.name}, ${name}: ${n} of ${g.checked} flagged`}>
+              <span key={name} role="cell" className={`mcell h${shade(g.checked ? n / g.checked : 0)}`} data-tip={`${g.name}, ${name}: ${n} of ${g.checked} flagged`}>
                 {n > 0 ? n.toLocaleString() : ''}
               </span>
             )

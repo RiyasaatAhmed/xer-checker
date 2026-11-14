@@ -27,12 +27,12 @@ export function FileProfile({ overview: o }: Props) {
     <section className="card profile" aria-label="File profile">
       <p className="stats">
         {stats.map((s) => (
-          <span key={s.label} title={s.title}>
+          <span key={s.label} data-tip={s.title}>
             <b className="num">{s.value.toLocaleString()}</b> {s.label}
           </span>
         ))}
         {o.duplicate_links > 0 && (
-          <span className="info" title={`${o.duplicate_links} pairs of activities are linked twice. Each pair counts once, by its later link, as Kazinex does.`} aria-label={`${o.duplicate_links} pairs of activities are linked twice`}>
+          <span className="info" data-tip={`${o.duplicate_links} pairs of activities are linked twice. Each pair counts once, by its later link, as Kazinex does.`} aria-label={`${o.duplicate_links} pairs of activities are linked twice`}>
             <Info size={14} aria-hidden />
           </span>
         )}
@@ -65,7 +65,7 @@ function Stack({ title, total, parts }: { title: string; total: number; parts: P
       <div className="label">{title}</div>
       <div className="segments" role="img" aria-label={parts.map((p) => `${p.label} ${p.count}`).join(', ')}>
         {parts.filter((p) => p.count > 0).map((p) => (
-          <span key={p.key} className={`segment ${p.tone}`} style={{ flexGrow: p.count }} title={`${p.label}: ${p.count} of ${total}`} />
+          <span key={p.key} className={`segment ${p.tone}`} style={{ flexGrow: p.count }} data-tip={`${p.label}: ${p.count} of ${total}`} />
         ))}
       </div>
       <ul className="legend">

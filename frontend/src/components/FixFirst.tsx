@@ -16,7 +16,7 @@ export function FixFirst({ fixes }: { fixes: Fixes }) {
             </h3>
             <ul className="fixlist">
               {fixes.open_ends.map((e) => (
-                <li key={e.code} title={`${e.name}, ${e.wbs}`}>
+                <li key={e.code} data-tip={`${e.name}, ${e.wbs}`}>
                   <span className="mono id">{e.code}</span> has nothing after it.{' '}
                   <b className="num">{countText(e.clears, 'flagged activity', 'flagged activities')}</b> lead only into it.
                 </li>
@@ -31,7 +31,7 @@ export function FixFirst({ fixes }: { fixes: Fixes }) {
             </h3>
             <ul className="fixlist">
               {fixes.repeat_offenders.map((r) => (
-                <li key={r.code} title={`${r.name}, ${r.wbs}`}>
+                <li key={r.code} data-tip={`${r.name}, ${r.wbs}`}>
                   <span className="mono id">{r.code}</span> fails <b className="num">{r.fails}</b> checks.
                 </li>
               ))}

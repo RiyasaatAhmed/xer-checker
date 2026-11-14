@@ -34,9 +34,9 @@ export function FloatStrip({ overview: o, onShow }: Props) {
       </div>
       <div className="fbands" role="img" aria-label={bands.map((b) => `${b.label} days ${b.count}`).join(', ')}>
         {bands.filter((b) => b.count > 0).map((b) => (
-          <span key={b.key} className={`fband ${LOOK[b.key] ?? 'f-fine'}`} style={{ flexGrow: b.count }} title={`${b.label} days: ${b.count.toLocaleString()} of ${total.toLocaleString()}`} />
+          <span key={b.key} className={`fband ${LOOK[b.key] ?? 'f-fine'}`} style={{ flexGrow: b.count }} data-tip={`${b.label} days: ${b.count.toLocaleString()} of ${total.toLocaleString()}`} />
         ))}
-        <span className="flimit" style={{ left: `${100 - HIGH_FLOAT_LIMIT}%` }} title={`DCMA limit: ${HIGH_FLOAT_LIMIT}% over 44 days`} />
+        <span className="flimit" style={{ left: `${100 - HIGH_FLOAT_LIMIT}%` }} data-tip={`DCMA limit: ${HIGH_FLOAT_LIMIT}% over 44 days`} />
       </div>
       <ul className="legend">
         {bands.map((b) => {
@@ -50,7 +50,7 @@ export function FloatStrip({ overview: o, onShow }: Props) {
           return (
             <li key={b.key} className={b.count === 0 ? 'zero' : undefined}>
               {check ? (
-                <button type="button" className="legend-button" onClick={() => onShow(check)} title="Show these activities">
+                <button type="button" className="legend-button" onClick={() => onShow(check)} data-tip="Show these activities">
                   {inner}
                 </button>
               ) : (

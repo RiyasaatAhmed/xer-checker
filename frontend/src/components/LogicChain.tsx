@@ -23,7 +23,7 @@ export function LogicChain({ row, tone }: { row: ActivityRow; tone: string }) {
 function Side({ items, total, none }: { items: Neighbor[]; total: number; none: string }) {
   if (total === 0) {
     return (
-      <span className="chain-none" aria-label={none} title={none}>
+      <span className="chain-none" aria-label={none} data-tip={none}>
         none
       </span>
     )
@@ -31,12 +31,12 @@ function Side({ items, total, none }: { items: Neighbor[]; total: number; none: 
   return (
     <span className="chain-side">
       {items.slice(0, CHIPS).map((n) => (
-        <span key={n.code} className="chain-chip mono" title={`${n.name} (${linkText(n)})`}>
+        <span key={n.code} className="chain-chip mono" data-tip={`${n.name} (${linkText(n)})`}>
           {n.code}
         </span>
       ))}
       {total > CHIPS && (
-        <span className="chain-more" title={items.slice(CHIPS).map((n) => `${n.code}: ${n.name} (${linkText(n)})`).join('\n') || undefined}>
+        <span className="chain-more" data-tip={items.slice(CHIPS).map((n) => `${n.code}: ${n.name} (${linkText(n)})`).join('\n') || undefined}>
           +{total - CHIPS}
         </span>
       )}

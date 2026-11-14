@@ -36,7 +36,7 @@ export function HealthStrip({ rules, selected, group, onPick, onGroup }: Props) 
                       className={`cell ${r.status}`}
                       aria-pressed={selected === r.id}
                       aria-label={`${r.name}: ${WORDS[r.status]}`}
-                      title={`${r.name}: ${WORDS[r.status]}`}
+                      data-tip={`${r.name}: ${WORDS[r.status]}`}
                       onClick={() => onPick(r.id)}
                     >
                       <Icon size={12} strokeWidth={3} aria-hidden />
@@ -44,7 +44,7 @@ export function HealthStrip({ rules, selected, group, onPick, onGroup }: Props) 
                   )
                 })}
               </div>
-              <button type="button" className={`strip-name${over > 0 ? ' has' : ''}`} aria-pressed={group === name} onClick={() => onGroup(group === name ? null : name)} title={`Show only the ${name} checks`}>
+              <button type="button" className={`strip-name${over > 0 ? ' has' : ''}`} aria-pressed={group === name} onClick={() => onGroup(group === name ? null : name)} data-tip={`Show only the ${name} checks`}>
                 {name}
                 {over > 0 && <span className="num"> {over}</span>}
               </button>

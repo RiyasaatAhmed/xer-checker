@@ -37,7 +37,7 @@ export function CheckRow({ rule, trend, selected, onSelect, lowestFloat, quiet =
       aria-pressed={selected}
       aria-label={`${rule.name}, ${percentText(rule.percent)}, ${WORDS[rule.status].toLowerCase()}${over !== null ? `, ${over.toFixed(1)} times the limit` : ''}`}
       onClick={() => onSelect(rule.id)}
-      title={`${rule.dcma_section ? `DCMA ${rule.dcma_section}: ` : 'Not a DCMA check: '}${ruleText(rule.id).short}`}
+      data-tip={`${rule.dcma_section ? `DCMA ${rule.dcma_section}: ` : 'Not a DCMA check: '}${ruleText(rule.id).short}`}
     >
       <span className="crow-name">
         <Icon size={15} strokeWidth={2.5} aria-hidden />

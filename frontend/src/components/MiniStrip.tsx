@@ -11,7 +11,7 @@ export function MiniStrip({ checks }: { checks: CheckStatus[] }) {
       {sets.map((name) => (
         <span key={name} className="mini-set">
           {checks.filter((c) => c.group === name).map((c) => (
-            <span key={c.id} className={`mini-cell ${c.status}`} title={`${c.name}: ${c.status === 'flag' ? 'over the limit' : c.status === 'pass' ? 'within the limit' : "can't be checked"}`} />
+            <span key={c.id} className={`mini-cell ${c.status}`} data-tip={`${c.name}: ${c.status === 'flag' ? 'over the limit' : c.status === 'pass' ? 'within the limit' : "can't be checked"}`} />
           ))}
         </span>
       ))}

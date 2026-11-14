@@ -128,10 +128,10 @@ function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, ids: allIds,
         </h2>
         {rows.length > 0 && (
           <div className="toolbar">
-            <button type="button" className="icon-button" aria-label={copied ? 'Copied' : 'Copy IDs'} title="Copy the IDs, one per line, to paste into P6" onClick={copy}>
+            <button type="button" className="icon-button" aria-label={copied ? 'Copied' : 'Copy IDs'} data-tip="Copy the IDs, one per line, to paste into P6" onClick={copy}>
               {copied ? <Check size={15} strokeWidth={2.5} aria-hidden /> : <Copy size={15} aria-hidden />}
             </button>
-            <button type="button" className="icon-button" aria-label="Download CSV" title="Download every column as CSV" onClick={download}>
+            <button type="button" className="icon-button" aria-label="Download CSV" data-tip="Download every column as CSV" onClick={download}>
               <Download size={15} aria-hidden />
             </button>
           </div>
@@ -170,7 +170,7 @@ function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, ids: allIds,
             <ul className="kinds" aria-label="Kinds">
               {categories.map((c) => (
                 <li key={c.key}>
-                  <button type="button" className="kind" aria-pressed={only === c.key} onClick={() => setOnly(only === c.key ? null : c.key)} title="Show only these">
+                  <button type="button" className="kind" aria-pressed={only === c.key} onClick={() => setOnly(only === c.key ? null : c.key)} data-tip="Show only these">
                     <span className={`swatch t-${c.tone}`} aria-hidden="true" />
                     {c.label} <span className="num">{(kindCounts[c.key] ?? 0).toLocaleString()}</span>
                   </button>

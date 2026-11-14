@@ -88,7 +88,7 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
             <button type="button" aria-pressed={view === 'time'} onClick={() => setView('time')}>By time</button>
             <button type="button" aria-pressed={view === 'sets'} onClick={() => setView('sets')}>By set of checks</button>
           </span>
-          <button type="button" className="button secondary small" aria-pressed={worstFirst} onClick={() => setWorstFirst(!worstFirst)} title="Sort the groups by their share flagged">
+          <button type="button" className="button secondary small" aria-pressed={worstFirst} onClick={() => setWorstFirst(!worstFirst)} data-tip="Sort the groups by their share flagged">
             Worst first
           </button>
           {parents.length > 0 && (
@@ -140,7 +140,7 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
                   ) : (
                     <span className="smap-toggle" aria-hidden="true" />
                   )}
-                  <button type="button" className="smap-pick" aria-pressed={selectedId === g.id} onClick={() => onSelect(selectedId === g.id ? null : g.id)} title={`${g.name}: ${flagged} of ${g.checked} flagged. Click to list its activities.`}>
+                  <button type="button" className="smap-pick" aria-pressed={selectedId === g.id} onClick={() => onSelect(selectedId === g.id ? null : g.id)} data-tip={`${g.name}: ${flagged} of ${g.checked} flagged. Click to list its activities.`}>
                     {g.name}
                   </button>
                 </span>
@@ -165,7 +165,7 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
                   {domain && <span className="smap-past" style={{ width: `${dataAt}%` }} aria-hidden="true" />}
                   {domain && markers.map((m) => <span key={m.key} className={`smap-marker m-${m.key}`} style={{ left: `${percentAt(domain, m.date)}%` }} aria-hidden="true" />)}
                   {span && (
-                    <span className="smap-span" style={{ left: `${span.left}%`, width: `${span.width}%` }} title={`${dayText(g.start as string)} to ${dayText(g.finish as string)}. ${Math.round(100 * done)}% of its activities are finished.`}>
+                    <span className="smap-span" style={{ left: `${span.left}%`, width: `${span.width}%` }} data-tip={`${dayText(g.start as string)} to ${dayText(g.finish as string)}. ${Math.round(100 * done)}% of its activities are finished.`}>
                       <span className="smap-done" style={{ width: `${100 * done}%` }} />
                     </span>
                   )}
@@ -174,7 +174,7 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
                         if (count === 0) return null
                         const left = percentAt(domain, monthStarts[m])
                         const right = percentAt(domain, monthStarts[m + 1] ?? `${months[m]}-28T00:00:00`)
-                        return <span key={months[m]} className={`smap-cell h${Math.max(1, Math.ceil((4 * count) / hottest))}`} style={{ left: `${left}%`, width: `${Math.max(0.6, right - left)}%` }} title={`${months[m]}: ${countText(count, 'flagged activity', 'flagged activities')} start`} />
+                        return <span key={months[m]} className={`smap-cell h${Math.max(1, Math.ceil((4 * count) / hottest))}`} style={{ left: `${left}%`, width: `${Math.max(0.6, right - left)}%` }} data-tip={`${months[m]}: ${countText(count, 'flagged activity', 'flagged activities')} start`} />
                       })
                     : span && flagged > 0 && <span className={`smap-bar${share >= MANY_FLAGGED ? ' many' : ''}`} style={{ left: `${span.left}%`, width: `${span.width}%` }} aria-hidden="true" />}
                 </span>
