@@ -12,7 +12,7 @@ from sqlmodel import col, select
 
 from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, Upload
 from modules.uploads.schema import CheckResult, RowNote, RuleResult, UploadSummary
-from modules.uploads.snapshot import read_schedule, save_schedule
+from modules.uploads.snapshot import read_schedule, read_structure, save_schedule
 from xer_checker.checks import percent
 from xer_checker.cli import check_file
 from xer_checker.reader import FileError
@@ -97,12 +97,23 @@ def get_upload(session, upload_id):
                           .order_by(FileIssue.line_number, FileIssue.id)).all()
     review = session.exec(select(Review).where(Review.upload_id == upload_id)).one()
     projects, schedule_overview, details = read_schedule(session, upload_id)
+    rules = [rule_result(session, metric, details) for metric in metrics]
     return CheckResult(
         upload_id=upload.id, uploaded_at=as_utc(upload.created_at), file_name=upload.file_name,
-        checked=metrics[0].denominator, rules=[rule_result(session, metric, details) for metric in metrics],
+        checked=metrics[0].denominator, rules=rules,
         broken_rows=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "error"],
         notes=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "note"],
-        summary=review.points, summary_author=review.author_note, projects=projects, overview=schedule_overview)
+        summary=review.points, summary_author=review.author_note, projects=projects, overview=schedule_overview,
+        structure=read_structure(session, upload_id, flags_by_code(rules), len(rules)))
+
+
+def flags_by_code(rules):
+    """{activity code: the numbers of the rules that flag it}, for the WBS roll-up."""
+    flags = {}
+    for number, rule in enumerate(rules):
+        for code in rule.activities:
+            flags.setdefault(code, set()).add(number)
+    return flags
 
 
 def rule_result(session, metric, details):

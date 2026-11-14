@@ -7,6 +7,14 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+class Neighbor(BaseModel):
+    """An activity next to another in the logic: one link away."""
+    code: str
+    name: str
+    link_type: str = Field(description="PR_FS, PR_SS, PR_FF or PR_SF")
+    lag_hours: float = Field(description="Below 0 is a lead, above 0 a lag")
+
+
 class ActivityRow(BaseModel):
     """One activity behind a number, as a scheduler finds it in P6."""
     code: str = Field(description="The activity ID")
@@ -17,6 +25,8 @@ class ActivityRow(BaseModel):
     duration_days: float | None = Field(description="Remaining duration in working days")
     predecessors: int = Field(default=0, description="Links into it: 0 means nothing comes before it")
     successors: int = Field(default=0, description="Links out of it: 0 means nothing comes after it")
+    before: list[Neighbor] = Field(default=[], description="Up to 4 of the activities linked before it")
+    after: list[Neighbor] = Field(default=[], description="Up to 4 of the activities linked after it")
     start: datetime | None = Field(description="Actual start, else early start; site-local, no time zone")
     finish: datetime | None = Field(description="Actual finish, else early finish; site-local, no time zone")
 
@@ -46,6 +56,19 @@ class ProjectInfo(BaseModel):
     planned_start: datetime | None
     deadline: datetime | None = Field(description="The 'must finish by' date; often blank")
     forecast_finish: datetime | None = Field(description="P6's calculated finish")
+
+
+class WbsGroup(BaseModel):
+    """One WBS group with its subtree's numbers: where the problems are, and when the work happens."""
+    id: str
+    parent_id: str | None = Field(description="The group it sits in; None for the root")
+    name: str
+    depth: int = Field(description="0 for the root")
+    checked: int = Field(description="Activities DCMA checks, in this group and the groups inside it")
+    flagged: int = Field(description="How many of those any DCMA rule flags")
+    by_rule: list[int] = Field(description="Flagged, per rule, in the order of CheckResult.rules")
+    start: datetime | None = Field(description="Earliest start in the group; site-local, no time zone")
+    finish: datetime | None = Field(description="Latest finish in the group")
 
 
 class Part(BaseModel):
@@ -92,6 +115,7 @@ class CheckResult(BaseModel):
     summary_author: str = Field(description="Gemini, or code and why")
     projects: list[ProjectInfo] = Field(default=[], description="The P6 projects in the file")
     overview: Overview | None = Field(default=None, description="None for an upload saved before the schedule was kept")
+    structure: list[WbsGroup] = Field(default=[], description="The WBS tree, in tree order. Empty for an upload saved before it was kept")
 
 
 class UploadSummary(BaseModel):

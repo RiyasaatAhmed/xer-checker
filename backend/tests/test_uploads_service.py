@@ -95,3 +95,14 @@ def test_each_missing_link_shows_which_side_is_missing(db_session):
     assert all(d.predecessors == 0 or d.successors == 0 for d in missing.details)  # what the check flagged
     high = saved.rules[2]
     assert any(d.predecessors > 0 and d.successors > 0 for d in high.details)  # high float with both links
+
+
+def test_the_wbs_tree_and_each_activitys_neighbors_are_saved_and_sent(db_session):
+    saved = check_upload(db_session, "example_xer_file.xer", (ROOT / "data" / "example_xer_file.xer").read_bytes())
+    [root, *groups] = saved.structure
+    assert (root.depth, root.checked, root.by_rule) == (0, 365, [6, 0, 170])
+    assert root.flagged == 170 + 6 - sum(1 for d in saved.rules[0].details if d.code in set(saved.rules[2].activities))  # flagged by any rule, once
+    assert any(g.name == "Work Package 49552" and g.flagged > 50 for g in groups)  # most of the flags sit in one group
+    row = next(d for d in saved.rules[0].details if d.successors == 0 and d.predecessors > 0)  # a missing link: nothing after
+    assert row.after == [] and len(row.before) == min(row.predecessors, 4)
+    assert get_upload(db_session, saved.upload_id) == saved
