@@ -1,6 +1,7 @@
-# Kept out of the image: secrets and local caches
+# Kept out of the image: secrets, local caches and the local database
 .env
 .venv
 __pycache__
 .pytest_cache
+*.db
 *.pyc
