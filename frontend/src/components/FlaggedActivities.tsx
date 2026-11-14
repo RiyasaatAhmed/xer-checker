@@ -105,7 +105,11 @@ function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, ids: allIds,
   const domain = useMemo(() => domainOf([...rows.flatMap((r) => [r.start, r.finish]), dataDate]), [rows, dataDate])
 
   async function copy() {
-    await navigator.clipboard.writeText(allIds.join('\n')) // one ID per line, ready to paste
+    try {
+      await navigator.clipboard.writeText(allIds.join('\n')) // one ID per line, ready to paste
+    } catch {
+      return // the browser refused, as it does on a plain-HTTP address: no check mark
+    }
     setCopied(true)
     window.setTimeout(() => setCopied(false), COPIED_MS)
   }
@@ -117,7 +121,7 @@ function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, ids: allIds,
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
     link.download = `${fileName.replace(/\.xer$/i, '')} - ${rule.name}.csv`
     link.click()
-    URL.revokeObjectURL(link.href)
+    window.setTimeout(() => URL.revokeObjectURL(link.href)) // after the click: revoking at once can cancel the download
   }
 
   return (
