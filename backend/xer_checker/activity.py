@@ -17,5 +17,6 @@ class Activity:
     out_of_sequence: bool = False  # in progress while a finish to start predecessor is not finished
     duration_days: float | None = None  # remaining duration in working days; None when blank
     constraint_type: str = ""  # cstr_type, blank when none
-    invalid_date: bool = False  # an actual date after the data date, or a forecast date before it
+    secondary_constraint_type: str = ""  # cstr_type2: P6 allows a second constraint, which can be hard too
+    invalid_date: bool = False  # an actual date after the data date, or a forecast start or finish before it
     has_resource: bool = False  # at least one resource is assigned

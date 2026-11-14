@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Calendar, CalendarCheck, CalendarX, Check, Flag, Minus, Route, TriangleAlert } from 'lucide-react'
 import { SMALL_SAMPLE, changes, tally } from '../board'
-import { countText, dayText, daysBetween, percentText, plural } from '../format'
+import { countText, dayText, daysBetween, plural } from '../format'
 import { progressOf, trustOf } from '../glance'
 import type { CheckResult, ProjectInfo } from '../types'
 import { FinishGap } from './FinishGap'
@@ -153,14 +153,14 @@ function Driving({ result }: { result: CheckResult }) {
   )
 }
 
-/** How far along the work is: the share complete and the count in progress. */
+/** How far along the work is, counted in activities: a share of a count would read as % complete by duration, which it isn't. */
 function Progress({ result }: { result: CheckResult }) {
   const progress = progressOf(result.overview)
   return (
     <p className="verdict-dates">
       {progress && (
         <span>
-          <b className="num">{percentText(progress.percent)}</b> complete · <b className="num">{progress.active.toLocaleString()}</b> in progress
+          <b className="num">{progress.complete.toLocaleString()}</b> of {countText(result.overview?.activities ?? 0, 'activity', 'activities')} complete · <b className="num">{progress.active.toLocaleString()}</b> in progress
         </span>
       )}
       <span>{countText(result.checked, 'activity', 'activities')} checked</span>

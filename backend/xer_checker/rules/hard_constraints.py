@@ -19,5 +19,5 @@ HARD = ("CS_MSO", "CS_MEO", "CS_MSOB", "CS_MEOB", "CS_MANDSTART", "CS_MANDFIN") 
 
 
 def fails(activity):
-    """True when the activity has a hard constraint."""
-    return activity.constraint_type in HARD
+    """True when the activity has a hard constraint, as its first or its second constraint."""
+    return activity.constraint_type in HARD or activity.secondary_constraint_type in HARD

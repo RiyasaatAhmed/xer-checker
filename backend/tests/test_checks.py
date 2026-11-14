@@ -149,6 +149,18 @@ def test_work_not_started_cannot_be_forecast_before_the_data_date():
     assert check(tables)[1]["Invalid dates"] == ["A1"]
 
 
+def test_unfinished_work_cannot_be_forecast_to_finish_before_the_data_date():
+    tables = schedule([dated("1", proj_id="P", status_code="TK_Active", act_start_date="2026-06-01 08:00", early_end_date="2026-07-01 17:00"),
+                       dated("2", proj_id="P", status_code="TK_Active", act_start_date="2026-06-01 08:00", early_end_date="2026-07-10 17:00")])
+    tables["PROJECT"] = [{"proj_id": "P", "last_recalc_date": "2026-07-03 08:00"}]
+    assert check(tables)[1]["Invalid dates"] == ["A1"]
+
+
+def test_a_hard_second_constraint_is_counted():
+    tables = schedule([dated("1", cstr_type="CS_MSOA", cstr_type2="CS_MEOB"), dated("2", cstr_type="CS_MSOA")])
+    assert check(tables)[1]["Hard constraints"] == ["A1"]
+
+
 def test_a_check_the_file_cant_support_gets_no_result():
     _, failures, _ = check(schedule([dated("1", remain_drtn_hr_cnt="16", cstr_type="CS_MEO")]))  # no PROJECT, no TASKRSRC
     assert failures["Invalid dates"] == [] and failures["Resources"] == []

@@ -93,6 +93,7 @@ def check(tables):
             has_lead=task_id in extra.leads, has_lag=task_id in extra.lags, has_odd_link=task_id in extra.odd,
             has_duplicate_link=task_id in extra.duplicates, out_of_sequence=task_id in extra.out_of_sequence,
             duration_days=remaining / per_day if remaining is not None else None, constraint_type=t.get("cstr_type", ""),
+            secondary_constraint_type=t.get("cstr_type2", ""),
             invalid_date=invalid_date(t, dates_of.get(t.get("proj_id"))), has_resource=task_id in with_resource)
         for rule in RULES:  # each rule decides on its own; see rules/
             if rule.NAME not in skipped and rule.fails(activity):
@@ -132,14 +133,20 @@ class LinkFacts:
 
 
 def invalid_date(task, data_date):
-    """True when an actual date is after the data date, or work not started has a forecast start before it."""
+    """True when an actual date is after the data date, or a forecast date is before it.
+
+    Forecast dates: work not started can't start before the data date, and unfinished work can't finish before it.
+    """
     if data_date is None:
         return False
     started = date(task.get("act_start_date"))
     if started and started > data_date:
         return True
-    forecast = date(task.get("early_start_date"))
-    return task["status_code"] == NOT_STARTED and forecast is not None and forecast < data_date
+    forecast_start = date(task.get("early_start_date"))
+    if task["status_code"] == NOT_STARTED and forecast_start is not None and forecast_start < data_date:
+        return True
+    forecast_finish = date(task.get("early_end_date"))
+    return task["status_code"] in (NOT_STARTED, ACTIVE) and forecast_finish is not None and forecast_finish < data_date
 
 
 def float_days(task, hours_per_day, problems):

@@ -88,7 +88,7 @@ describe('first scan', () => {
     const verdict = await open(noDeadline)
     expect(verdict).toHaveTextContent('Finish 20 Oct 2027')
     expect(verdict).toHaveTextContent('No must-finish date in the file')
-    expect(verdict).toHaveTextContent('0.0% complete · 0 in progress')
+    expect(verdict).toHaveTextContent('0 of 145 activities complete · 0 in progress') // a count, not a % that reads like % complete by duration
   })
 
   it('shows the data date and its age in the header', async () => {
