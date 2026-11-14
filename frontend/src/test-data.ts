@@ -54,6 +54,13 @@ export const CST_RESULT: CheckResult = {
   ],
 }
 
+/** The same check, but with `n` activities missing a link, all in one group: for paging. */
+export function manyMissing(n: number): CheckResult {
+  const codes = Array.from({ length: n }, (_, i) => `A${i + 1}`)
+  const details = codes.map((code) => row(code, `Activity ${code}`, 10, 0, 1))
+  return { ...CST_RESULT, rules: [{ ...CST_RESULT.rules[0], count: n, activities: codes, details }, ...CST_RESULT.rules.slice(1)] }
+}
+
 // The upload list after one good upload and one that failed.
 export const UPLOAD_LIST: UploadSummary[] = [
   { upload_id: CST_RESULT.upload_id, uploaded_at: CST_RESULT.uploaded_at, file_name: 'CSTv2.4.xer', status: 'ready', failure_reason: null, checked: 133, flags: 2 },

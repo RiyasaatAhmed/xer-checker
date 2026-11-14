@@ -1,17 +1,6 @@
 import { ArrowRight } from 'lucide-react'
-import { daysText } from '../format'
+import { daysText, linkText } from '../format'
 import type { ActivityRow, Neighbor } from '../types'
-
-// ---------- Constants ----------
-
-const LINK_TYPE: Record<string, string> = { PR_FS: 'FS', PR_SS: 'SS', PR_FF: 'FF', PR_SF: 'SF' } // finish to start, ...
-
-/** "FS", or "FS +16 h" / "FS −8 h" when the link has a lag or a lead. */
-function linkText(n: Neighbor): string {
-  const type = LINK_TYPE[n.link_type] ?? n.link_type
-  if (n.lag_hours === 0) return type
-  return `${type} ${n.lag_hours > 0 ? '+' : '−'}${Math.abs(n.lag_hours)} h`
-}
 
 /** One activity and its neighbors: what comes before it, it, and what comes after.
  *  A side with nothing on it is the missing link, drawn as an empty orange box. */

@@ -1,22 +1,19 @@
-import { Check, Copy, Download, LayoutGrid, List, Search, X } from 'lucide-react'
+import { Check, Copy, Download, Rows3, Search, Table2, X } from 'lucide-react'
 import { useState } from 'react'
 import { compare, type Column, type Row } from '../activitySort'
 import { categorize } from '../categories'
 import { countText, csvText } from '../format'
 import { topGroupOfName, topLevel } from '../tree'
 import type { ActivityRow, RuleResult, WbsGroup } from '../types'
-import { ActivityDots, type DotGroup } from './ActivityDots'
-import { ActivityInspector } from './ActivityInspector'
+import { ActivityGroups, type RowGroup } from './ActivityGroups'
 import { ActivityTable } from './ActivityTable'
 
 // ---------- Constants ----------
 
 const COPIED_MS = 2000 // how long the check mark shows on the copy button
 const OTHER = { id: '', name: 'Other' } // activities whose WBS group isn't under a top-level group
-const BIG = 1500 // above this many activities, the dots shrink so the grid stays short
-const DOT_PX = { normal: 12, small: 9 }
 
-type View = 'dots' | 'list'
+type View = 'groups' | 'table'
 
 interface Props {
   rule: RuleResult
@@ -26,15 +23,14 @@ interface Props {
   onClearWbs?: () => void
 }
 
-/** The activities behind one check. A grid of dots by default, so any number stays short to scan; a list when you want to sort. */
+/** The activities behind one check, grouped by WBS group with each activity's logic on its line. A table when you want to sort. */
 export function FlaggedActivities({ rule, fileName, groups, wbs, onClearWbs }: Props) {
   const [filter, setFilter] = useState('')
   const [copied, setCopied] = useState(false)
   const hasDetails = Boolean(rule.details?.length)
-  const [view, setView] = useState<View>(hasDetails ? 'dots' : 'list')
+  const [view, setView] = useState<View>(hasDetails ? 'groups' : 'table')
   const [sort, setSort] = useState<{ by: Column; up: boolean }>({ by: 'n', up: true })
   const [logicOf, setLogicOf] = useState<string | null>(null) // the list row whose logic diagram is open
-  const [picked, setPicked] = useState<string | null>(null) // the dot picked
   const [only, setOnly] = useState<string | null>(null) // show one kind only
 
   // Older uploads have IDs only: show them as rows with the rest blank.
@@ -47,8 +43,7 @@ export function FlaggedActivities({ rule, fileName, groups, wbs, onClearWbs }: P
   const shown = inContext.filter((r) => !only || of(r) === only)
   const sorted = [...shown].sort((a, b) => compare(a, b, sort.by) * (sort.up ? 1 : -1))
   const categoryOf = (r: ActivityRow) => categories.find((c) => c.key === of(r)) ?? categories[0]
-  const dotGroups = groupRows(shown, groups)
-  const open = shown.find((r) => r.code === picked)
+  const rowGroups = groupRows(sorted, groups)
 
   async function copy() {
     await navigator.clipboard.writeText(rule.activities.join('\n')) // one ID per line, ready to paste
@@ -80,11 +75,11 @@ export function FlaggedActivities({ rule, fileName, groups, wbs, onClearWbs }: P
           <div className="toolbar">
             {hasDetails && (
               <div className="seg" role="group" aria-label="View">
-                <button type="button" aria-pressed={view === 'dots'} onClick={() => setView('dots')}>
-                  <LayoutGrid size={14} aria-hidden /> Dots
+                <button type="button" aria-pressed={view === 'groups'} onClick={() => setView('groups')}>
+                  <Rows3 size={14} aria-hidden /> Groups
                 </button>
-                <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
-                  <List size={14} aria-hidden /> List
+                <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>
+                  <Table2 size={14} aria-hidden /> Table
                 </button>
               </div>
             )}
@@ -130,15 +125,12 @@ export function FlaggedActivities({ rule, fileName, groups, wbs, onClearWbs }: P
             </ul>
           )}
 
-          {view === 'dots' && hasDetails ? (
-            <>
-              {shown.length === 0 ? (
-                <p className="hint empty-filter">Nothing matches.</p>
-              ) : (
-                <ActivityDots groups={dotGroups} size={rows.length > BIG ? DOT_PX.small : DOT_PX.normal} categoryOf={categoryOf} selected={picked} onSelect={setPicked} />
-              )}
-              {open ? <ActivityInspector row={open} onClose={() => setPicked(null)} /> : <p className="hint small">Select a square to see its logic.</p>}
-            </>
+          {view === 'groups' && hasDetails ? (
+            shown.length === 0 ? (
+              <p className="hint empty-filter">Nothing matches.</p>
+            ) : (
+              <ActivityGroups groups={rowGroups} categories={categories} categoryOf={categoryOf} />
+            )
           ) : (
             <ActivityTable rows={sorted} hasDetails={hasDetails} sort={sort} onSort={sortBy} logicOf={logicOf} onLogic={setLogicOf} />
           )}
@@ -149,7 +141,7 @@ export function FlaggedActivities({ rule, fileName, groups, wbs, onClearWbs }: P
 }
 
 /** The rows under their top-level WBS group, in the map's order. Rows outside every group go last, under "Other". */
-function groupRows(rows: Row[], groups: WbsGroup[]): DotGroup[] {
+function groupRows(rows: Row[], groups: WbsGroup[]): RowGroup[] {
   const top = topLevel(groups)
   const owner = topGroupOfName(groups)
   const buckets = new Map<string, Row[]>(top.map((g) => [g.id, []]))

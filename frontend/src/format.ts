@@ -1,5 +1,9 @@
 // Small text helpers, shared by the components.
 
+import type { Neighbor } from './types'
+
+const LINK_TYPE: Record<string, string> = { PR_FS: 'FS', PR_SS: 'SS', PR_FF: 'FF', PR_SF: 'SF' } // finish to start, ...
+
 /** 15 -> "15.0%". */
 export function percentText(value: number): string {
   return `${value.toFixed(1)}%`
@@ -49,4 +53,11 @@ export function rangeText(start: string | null, end: string | null): string {
   const day = (d: Date, year: boolean) =>
     d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}) })
   return a.getFullYear() === b.getFullYear() ? `${day(a, false)} – ${day(b, true)}` : `${day(a, true)} – ${day(b, true)}`
+}
+
+/** "FS", or "FS +16 h" / "FS −8 h" when the link has a lag or a lead. */
+export function linkText(n: Neighbor): string {
+  const type = LINK_TYPE[n.link_type] ?? n.link_type
+  if (n.lag_hours === 0) return type
+  return `${type} ${n.lag_hours > 0 ? '+' : '−'}${Math.abs(n.lag_hours)} h`
 }
