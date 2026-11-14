@@ -38,9 +38,9 @@ The command line draws the same results as one chart, for both files:
 | **API** | Upload a file, list saved checks, open one. Clear errors: 404, 413, 422 |
 | **Saving** | PostgreSQL in Docker (8 tables), SQLite without it. A result looks the same every time it's opened |
 | **Home page** | The demo and an upload button when there are no checks, else the list of recent checks. Drop a file anywhere |
-| **Schedule map** | One picture of the WBS tree: a row per group, how many of its activities are flagged, and when its work happens. The project's data date, forecast finish and deadline are marked on the same time axis. Open a group to see what's inside, or click it to list its activities |
-| **Logic diagram** | Click any flagged activity's links: what comes before it, it, and what comes after. A missing link is an empty orange box |
-| **A check** | Project dates, what needs attention (one line per check), the 3 checks and the map. Then the activities behind each (sort, filter, copy IDs, CSV), 5 counts and 2 bars, the summary and file issues |
+| **Schedule map** | One picture of the WBS tree: a row per group, how many of its activities are flagged, and when its work happens. The data date, forecast finish and deadline are labelled on the same axis. Open a group, or click it to list its activities |
+| **Logic diagram** | Click any flagged activity's links: what comes before it, it, and what comes after. A missing link is an empty red box |
+| **A check** | The 3 checks first, each a value against its limit. Then the schedule map, the activities behind each check (sort, filter, copy IDs, CSV), a small file profile, and the summary folded away. Broken rows show only when there are some |
 | **Details** | Each check has its own link. Works on phones, in dark mode and with the keyboard |
 | **Proof** | Tests compare every number with Kazinex on each run: 134 backend, 35 frontend |
 | **Tooling** | `docker compose up` runs everything. `CLAUDE.md` and a writing skill keep the docs short |
@@ -128,7 +128,7 @@ Every extra activity Kazinex flags is one DCMA leaves out:
 | Folder | What it holds |
 |---|---|
 | [`backend/`](backend/) | The API and the checker: code, tests, the two files and Kazinex's reports |
-| [`frontend/`](frontend/) | The page where you upload a file and see what needs attention, styled after [thecritpath.com](https://thecritpath.com/). See its [README](frontend/README.md) |
+| [`frontend/`](frontend/) | The page where you upload a file and see where its problems are. See its [README](frontend/README.md) |
 | [`database/`](database/) | PostgreSQL: every upload and its results. See its [README](database/README.md) |
 
 Each folder has its own `Dockerfile`. [`docker-compose.yml`](docker-compose.yml) runs all three.

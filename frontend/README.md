@@ -1,6 +1,6 @@
 # Frontend
 
-The page where you upload a `.xer` file and see what needs attention. Vite, React and TypeScript, styled after [thecritpath.com](https://thecritpath.com/).
+The page where you upload a `.xer` file and see where its problems are. Vite, React and TypeScript, in a calm, neutral tool design: little text, mostly pictures.
 
 ![Dashboard](dashboard.png)
 
@@ -10,13 +10,12 @@ The page where you upload a `.xer` file and see what needs attention. Vite, Reac
 |---|---|
 | **Home** | The demo and one upload button, or the list of recent checks. Nothing else |
 | **Upload** | Drop a `.xer` file anywhere on the page, or use the button. A wrong file type or a file over 50 MB is refused at once, before it's sent |
-| **What needs attention** | First on the page: one numbered item per check over its limit, with what it means and the next step in P6 |
-| **The 3 checks** | A navy band, one column each, with the DCMA section, the figure and the limit. A check over its limit turns orange |
-| **Project dates** | The data date, planned start, forecast finish and deadline, and how many days the forecast sits before or after the deadline |
-| **Schedule map** | The WBS tree as rows: orange for flagged activities, grey for fine, and a bar for when its work happens. The data date, forecast finish and deadline are marked. Open a group, or click it to list its activities |
-| **Activities behind the number** | Each flagged activity's ID, name, WBS, predecessors and successors (a 0 is the missing link), float, remaining duration, start, finish and status. Sort any column, filter by ID, name or WBS, copy the IDs, or download a CSV |
-| **What's in the file** | Five counts (activities, links, leads, lags, constraints) and two bars (status, float). A float band over its limit links to its activities |
-| **Summary and the file** | The written summary and who wrote it; broken rows with their line numbers |
+| **The 3 checks** | First on the page. Each is a value against its DCMA limit, on one 0 to 100% scale so they compare, with an icon for over or within. Click one to list its activities |
+| **Schedule map** | The WBS tree as rows: red for flagged activities, grey for fine, and a bar for when its work happens. The data date, forecast finish and deadline are labelled on the axis, with a chip for how far the forecast is from the deadline. Open a group, or click it to list its activities |
+| **Activities** | Each flagged activity's ID, name, WBS, links before and after (a 0 is the missing link), float as a small bar, and dates. Sort, filter, copy the IDs, or download every column as CSV. Click the links for the logic diagram: before, this activity, after |
+| **File profile** | One small card: five counts (activities, links, leads, lags, constraints) and two bars (status, float). A float band over its limit links to its activities |
+| **Summary and broken rows** | The summary is folded away. Broken rows show only when the file has some |
+
 | **Recent checks** | Every saved check, newest first. Each has its own address (`/uploads/<id>`), so refresh, Back and a shared link all work |
 
 **The home page is simple.** With no checks yet it shows a short looping demo, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow), and one upload button. Once there are checks it shows the list and the button. A check has an "All checks" link back.
@@ -42,17 +41,19 @@ The page sends `/api` calls to the backend at http://localhost:8000. Start it fi
 
 ## The look
 
-All colors, type and shapes are tokens in [`src/theme.css`](src/theme.css), taken from thecritpath.com's own CSS:
+All colors, type and shapes are tokens in [`src/theme.css`](src/theme.css). The design is neutral and quiet, so the data stands out.
 
 | Token | Value | Used for |
 |---|---|---|
-| `--cream`, `--paper`, `--card` | `#fffcf7`, `#f7f3ea`, `#fffefa` | The page, quiet bands, cards |
-| `--navy` | `#0f2a4a` | Headings and the checks band |
-| `--orange` | `#ff5a1f` | The one accent: actions, and checks over their limit |
-| `--green` | `#2f8f62` | Within the limit |
+| `--bg`, `--surface`, `--sunken` | `#f4f5f7`, `#ffffff`, `#edf0f3` | The page, cards, tracks |
+| `--ink`, `--muted` | `#151a22`, `#5c6675` | Text |
+| `--accent` | `#3b5bdb` | Actions, links, the selected check |
+| `--flag` | `#d92d20` | Flagged by a DCMA check. Nothing else is red |
+| `--ok` | `#12a150` | Within the limit |
+| `--slate` | `#7d8da3` | Neutral bars and work periods |
 | Fonts | Geist, Geist Mono | Bundled with the app, so no call to a font service |
 
-**Rules:** square corners, mono capitals for small labels, and a status always shows an icon and a word, never color alone. Dark mode has its own tokens.
+**Rules:** one accent, red only for flagged, 8px corners, no uppercase labels. A status always shows an icon and a word, never color alone. Dark mode has its own tokens.
 
 ## Files
 
@@ -64,14 +65,12 @@ All colors, type and shapes are tokens in [`src/theme.css`](src/theme.css), take
 | `src/validate.ts` | Refuses a wrong file type or size before upload |
 | `src/rules.ts` | What each check means, and what to do in P6 |
 | `src/format.ts` | Percents, counts, dates and CSV |
-| `src/components/ActionBrief.tsx` | What needs attention, numbered |
-| `src/components/RuleBand.tsx` | The 3 checks on the navy band |
+| `src/components/Health.tsx` | The 3 checks: a value against its limit |
 | `src/components/FlaggedActivities.tsx` | The activities behind a check: sort, filter, copy, CSV. On phones: ID, name, links and float |
-| `src/components/ProjectStrip.tsx` | The project's key dates, and the forecast against the deadline |
-| `src/components/ScheduleMap.tsx` | The WBS tree as rows: flagged of checked, and a timeline with the project's key dates |
+| `src/components/ScheduleMap.tsx` | The WBS tree as rows: flagged of checked, and a timeline with the key dates labelled |
 | `src/components/LogicDiagram.tsx` | One activity with what comes before and after it |
 | `src/timeline.ts`, `src/tree.ts` | The date axis, and the WBS tree helpers (tested on their own) |
-| `src/components/ScheduleOverview.tsx` | What's in the file: five counts and two bars |
+| `src/components/FileProfile.tsx` | What's in the file: five counts and two bars |
 | `src/components/HeroDemo.tsx` | The Stageshow demo on the empty screen. Its film notes are in `REHEARSAL.md` |
 | `src/components/*.tsx` | One component per file: the summary, file issues, recent checks and the rest |
 | `src/kit/` | Stageshow's React kit (MIT), copied in. Its README says what changed |
