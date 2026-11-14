@@ -82,7 +82,7 @@ describe('App', () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const list = () => screen.getByRole('region', { name: /: \d+ activit/ })
     expect(await screen.findByRole('region', { name: 'Missing links: 20 activities' })).toBeInTheDocument()
-    expect(within(list()).getAllByText('ContractNo_CAL01').length).toBeGreaterThan(0)
+    expect(within(list()).getByRole('button', { name: /ContractNo_CAL01/ })).toBeInTheDocument() // a dot
 
     await user().click(within(screen.getByRole('region', { name: 'DCMA checks' })).getByRole('button', { name: /High float/ }))
     expect(screen.getByRole('region', { name: 'High float: 78 activities' })).toBeInTheDocument()
@@ -96,8 +96,8 @@ describe('App', () => {
     await screen.findByRole('region', { name: 'Missing links: 20 activities' })
     await u.type(screen.getByRole('searchbox', { name: 'Filter by activity ID, name or WBS' }), 'cal03')
     const list = screen.getByRole('region', { name: /: \d+ activit/ })
-    expect(within(list).queryAllByText('ContractNo_CAL01')).toHaveLength(0)
-    expect(within(list).getAllByText('ContractNo_CAL03').length).toBeGreaterThan(0)
+    expect(within(list).queryByRole('button', { name: /ContractNo_CAL01/ })).not.toBeInTheDocument()
+    expect(within(list).getByRole('button', { name: /ContractNo_CAL03/ })).toBeInTheDocument()
 
     await u.click(within(list).getByRole('button', { name: 'Copy IDs' }))
     expect(writeText).toHaveBeenCalledWith('ContractNo_CAL01\nContractNo_CAL03')
@@ -148,6 +148,7 @@ describe('App', () => {
   it('shows each flagged activity with its name, WBS, links, float and dates, and sorts by float', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
+    await user().click(within(list).getByRole('button', { name: 'List' })) // the table view
     expect(within(list).getByText('Calendar placeholder 1')).toBeInTheDocument()
     expect(within(list).getAllByText('Utility Notifications & Meetings')).toHaveLength(2)
     expect(within(list).getAllByText('22 Jan – 20 Feb 2026')).toHaveLength(2)
@@ -190,16 +191,31 @@ describe('App', () => {
     expect(within(list).queryByText(/Utility Notifications & Meetings: /)).not.toBeInTheDocument()
   })
 
-  it('shows the logic around an activity, with an empty box where a link is missing', async () => {
+  it('picks a dot to see the activity and its logic, with an empty box where a link is missing', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
-    await user().click(within(list).getByRole('button', { name: /ContractNo_CAL01: 0 before, 1 after/ }))
-    const logic = within(list).getByLabelText('Logic around ContractNo_CAL01')
+    await user().click(within(list).getByRole('button', { name: /ContractNo_CAL01/ }))
+    const picked = within(list).getByRole('region', { name: 'Activity ContractNo_CAL01' })
+    const logic = within(picked).getByLabelText('Logic around ContractNo_CAL01')
     expect(within(logic).getByText('Nothing before it')).toBeInTheDocument() // the missing link
     expect(within(logic).getByText('Next activity')).toBeInTheDocument()
     expect(within(logic).getByText('FS +16 h')).toBeInTheDocument() // a lag
+    expect(within(picked).getByText('Float 12.0 days')).toBeInTheDocument()
   })
 
+  it('draws one dot per activity under its top-level group, and tells the kinds apart', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
+    expect(within(list).getByRole('region', { name: 'Utility: 2' })).toBeInTheDocument() // both sit under Utility
+    const before = within(list).getByRole('button', { name: /Nothing before 1/ })
+    const after = within(list).getByRole('button', { name: /Nothing after 1/ })
+    await user().click(after) // show only the activities with nothing after them
+    expect(within(list).queryByRole('button', { name: /ContractNo_CAL01/ })).not.toBeInTheDocument()
+    expect(within(list).getByRole('button', { name: /ContractNo_CAL03/ })).toBeInTheDocument()
+    await user().click(after) // click again: every kind
+    expect(within(list).getByRole('button', { name: /ContractNo_CAL01/ })).toBeInTheDocument()
+    expect(before).toHaveAttribute('aria-pressed', 'false')
+  })
   it('folds the summary away, so the picture comes first', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const summary = (await screen.findByText('Summary')).closest('details')!

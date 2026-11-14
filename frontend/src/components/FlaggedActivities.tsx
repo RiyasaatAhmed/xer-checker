@@ -1,46 +1,54 @@
-import { ArrowDown, ArrowUp, Check, Copy, Download, Network, Search, X } from 'lucide-react'
+import { Check, Copy, Download, LayoutGrid, List, Search, X } from 'lucide-react'
 import { useState } from 'react'
-import { countText, csvText, daysText, rangeText } from '../format'
-import type { ActivityRow, RuleResult } from '../types'
-import { LogicDiagram } from './LogicDiagram'
+import { compare, type Column, type Row } from '../activitySort'
+import { categorize } from '../categories'
+import { countText, csvText } from '../format'
+import { topGroupOfName, topLevel } from '../tree'
+import type { ActivityRow, RuleResult, WbsGroup } from '../types'
+import { ActivityDots, type DotGroup } from './ActivityDots'
+import { ActivityInspector } from './ActivityInspector'
+import { ActivityTable } from './ActivityTable'
 
 // ---------- Constants ----------
 
 const COPIED_MS = 2000 // how long the check mark shows on the copy button
-const FLOAT_BAR_PX = 56 // the longest float bar
+const OTHER = { id: '', name: 'Other' } // activities whose WBS group isn't under a top-level group
+const BIG = 1500 // above this many activities, the dots shrink so the grid stays short
+const DOT_PX = { normal: 12, small: 9 }
 
-type Column = 'n' | 'code' | 'links' | 'float' | 'start'
-type Row = ActivityRow & { n: number } // n: its place in the checker's list
-const COLUMNS: { key: Column; label: string; right?: boolean }[] = [
-  { key: 'code', label: 'Activity' },
-  { key: 'links', label: 'Links', right: true },
-  { key: 'float', label: 'Float (days)', right: true },
-  { key: 'start', label: 'Dates' },
-]
+type View = 'dots' | 'list'
 
 interface Props {
   rule: RuleResult
   fileName: string // names the CSV download
+  groups: WbsGroup[] // the WBS tree: activities are grouped under its top-level groups
   wbs?: { names: Set<string>; label: string } | null // only the activities in this WBS group, picked on the map
   onClearWbs?: () => void
 }
 
-/** The activities behind one check: sort, filter, copy their IDs for P6, or download them with every column. */
-export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
+/** The activities behind one check. A grid of dots by default, so any number stays short to scan; a list when you want to sort. */
+export function FlaggedActivities({ rule, fileName, groups, wbs, onClearWbs }: Props) {
   const [filter, setFilter] = useState('')
   const [copied, setCopied] = useState(false)
+  const hasDetails = Boolean(rule.details?.length)
+  const [view, setView] = useState<View>(hasDetails ? 'dots' : 'list')
   const [sort, setSort] = useState<{ by: Column; up: boolean }>({ by: 'n', up: true })
-  const [logicOf, setLogicOf] = useState<string | null>(null) // the activity whose logic diagram is open
+  const [logicOf, setLogicOf] = useState<string | null>(null) // the list row whose logic diagram is open
+  const [picked, setPicked] = useState<string | null>(null) // the dot picked
+  const [only, setOnly] = useState<string | null>(null) // show one kind only
 
   // Older uploads have IDs only: show them as rows with the rest blank.
   const rows: Row[] = (rule.details?.length ? rule.details : rule.activities.map(blankRow)).map((row, i) => ({ ...row, n: i + 1 }))
-  const hasDetails = Boolean(rule.details?.length)
+  const { categories, of } = categorize(rule.name, rows)
   const query = filter.trim().toLowerCase()
-  const shown = rows
+  const inContext = rows
     .filter((r) => !wbs || !hasDetails || wbs.names.has(r.wbs)) // a group picked on the map
     .filter((r) => [r.code, r.name, r.wbs].some((text) => text.toLowerCase().includes(query)))
-    .sort((a, b) => compare(a, b, sort.by) * (sort.up ? 1 : -1))
-  const longest = Math.max(1, ...shown.map((r) => Math.max(0, r.float_days ?? 0)))
+  const shown = inContext.filter((r) => !only || of(r) === only)
+  const sorted = [...shown].sort((a, b) => compare(a, b, sort.by) * (sort.up ? 1 : -1))
+  const categoryOf = (r: ActivityRow) => categories.find((c) => c.key === of(r)) ?? categories[0]
+  const dotGroups = groupRows(shown, groups)
+  const open = shown.find((r) => r.code === picked)
 
   async function copy() {
     await navigator.clipboard.writeText(rule.activities.join('\n')) // one ID per line, ready to paste
@@ -70,6 +78,16 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
         </h2>
         {rows.length > 0 && (
           <div className="toolbar">
+            {hasDetails && (
+              <div className="seg" role="group" aria-label="View">
+                <button type="button" aria-pressed={view === 'dots'} onClick={() => setView('dots')}>
+                  <LayoutGrid size={14} aria-hidden /> Dots
+                </button>
+                <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
+                  <List size={14} aria-hidden /> List
+                </button>
+              </div>
+            )}
             <button type="button" className="icon-button" aria-label={copied ? 'Copied' : 'Copy IDs'} title="Copy the IDs, one per line, to paste into P6" onClick={copy}>
               {copied ? <Check size={15} strokeWidth={2.5} aria-hidden /> : <Copy size={15} aria-hidden />}
             </button>
@@ -99,90 +117,47 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
             )}
           </div>
 
-          <div className="table-scroll">
-            <table className="activity-table">
-              <thead>
-                <tr>
-                  {COLUMNS.filter((c) => hasDetails || c.key === 'code').map((c) => (
-                    <th key={c.key} scope="col" className={c.right ? 'right' : undefined} aria-sort={sort.by === c.key ? (sort.up ? 'ascending' : 'descending') : undefined}>
-                      <button type="button" className="sort" onClick={() => sortBy(c.key)}>
-                        {c.label}
-                        {sort.by === c.key && (sort.up ? <ArrowUp size={12} aria-hidden /> : <ArrowDown size={12} aria-hidden />)}
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {shown.flatMap((r) => [
-                  <tr key={r.n} className={logicOf === r.code ? 'sel' : undefined}>
-                    <td>
-                      <span className="who">
-                        <span className="who-top">
-                          <span className="id mono">{r.code}</span>
-                          {hasDetails && <span className="name">{r.name}</span>}
-                        </span>
-                        {hasDetails && <span className="wbs">{r.wbs}</span>}
-                      </span>
-                    </td>
-                    {hasDetails && (
-                      <>
-                        <td className="right nowrap num">
-                          <button
-                            type="button"
-                            className="logic-toggle"
-                            aria-expanded={logicOf === r.code}
-                            aria-label={`${r.code}: ${r.predecessors} before, ${r.successors} after. Show its logic`}
-                            title="Links before / after. A 0 is a missing link. Click for its logic."
-                            onClick={() => setLogicOf(logicOf === r.code ? null : r.code)}
-                          >
-                            <span className={r.predecessors === 0 ? 'zero-link' : undefined}>{r.predecessors}</span>
-                            {' / '}
-                            <span className={r.successors === 0 ? 'zero-link' : undefined}>{r.successors}</span>
-                            <Network size={13} aria-hidden />
-                          </button>
-                        </td>
-                        <td className={`float-cell num${(r.float_days ?? 0) < 0 ? ' neg' : ''}`}>
-                          {r.float_days !== null && r.float_days > 0 && <span className="fbar" aria-hidden="true" style={{ width: `${(FLOAT_BAR_PX * r.float_days) / longest}px` }} />}
-                          {daysText(r.float_days)}
-                        </td>
-                        <td className="nowrap num">{rangeText(r.start, r.finish)}</td>
-                      </>
-                    )}
-                  </tr>,
-                  logicOf === r.code && (
-                    <tr key={`${r.n}-logic`} className="logic-row">
-                      <td colSpan={COLUMNS.length}>
-                        <LogicDiagram row={r} />
-                      </td>
-                    </tr>
-                  ),
-                ])}
-              </tbody>
-            </table>
-            {shown.length === 0 && <p className="hint empty-filter">Nothing matches.</p>}
-          </div>
+          {hasDetails && (categories.length > 1 || rule.name === 'Missing links') && (
+            <ul className="kinds" aria-label="Kinds">
+              {categories.map((c) => (
+                <li key={c.key}>
+                  <button type="button" className="kind" aria-pressed={only === c.key} onClick={() => setOnly(only === c.key ? null : c.key)} title="Show only these">
+                    <span className={`swatch t-${c.tone}`} aria-hidden="true" />
+                    {c.label} <span className="num">{inContext.filter((r) => of(r) === c.key).length.toLocaleString()}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {view === 'dots' && hasDetails ? (
+            <>
+              {shown.length === 0 ? (
+                <p className="hint empty-filter">Nothing matches.</p>
+              ) : (
+                <ActivityDots groups={dotGroups} size={rows.length > BIG ? DOT_PX.small : DOT_PX.normal} categoryOf={categoryOf} selected={picked} onSelect={setPicked} />
+              )}
+              {open ? <ActivityInspector row={open} onClose={() => setPicked(null)} /> : <p className="hint small">Select a square to see its logic.</p>}
+            </>
+          ) : (
+            <ActivityTable rows={sorted} hasDetails={hasDetails} sort={sort} onSort={sortBy} logicOf={logicOf} onLogic={setLogicOf} />
+          )}
         </>
       )}
     </section>
   )
 }
 
-function blankRow(code: string): ActivityRow {
-  return { code, name: '', wbs: '', status: '', float_days: null, duration_days: null, start: null, finish: null, predecessors: 0, successors: 0, before: [], after: [] }
+/** The rows under their top-level WBS group, in the map's order. Rows outside every group go last, under "Other". */
+function groupRows(rows: Row[], groups: WbsGroup[]): DotGroup[] {
+  const top = topLevel(groups)
+  const owner = topGroupOfName(groups)
+  const buckets = new Map<string, Row[]>(top.map((g) => [g.id, []]))
+  buckets.set(OTHER.id, [])
+  for (const r of rows) buckets.get(owner.get(r.wbs) ?? OTHER.id)?.push(r)
+  return [...top, OTHER].map((g) => ({ id: g.id, name: g.name, rows: buckets.get(g.id) ?? [] })).filter((g) => g.rows.length > 0)
 }
 
-/** Sort order for one column. A blank float sorts as the lowest. */
-function compare(a: Row, b: Row, by: Column): number {
-  const value = (r: Row): number | string => {
-    switch (by) {
-      case 'n': return r.n
-      case 'code': return r.code
-      case 'links': return Math.min(r.predecessors, r.successors) // the side with fewest links first
-      case 'float': return r.float_days ?? Number.NEGATIVE_INFINITY
-      case 'start': return r.start ?? ''
-    }
-  }
-  const x = value(a), y = value(b)
-  return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true })
+function blankRow(code: string): ActivityRow {
+  return { code, name: '', wbs: '', status: '', float_days: null, duration_days: null, start: null, finish: null, predecessors: 0, successors: 0, before: [], after: [] }
 }

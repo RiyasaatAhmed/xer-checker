@@ -44,3 +44,10 @@ export function namesIn(groups: WbsGroup[], id: string): Set<string> {
   if (start) walk(start)
   return names
 }
+
+/** Which top-level group each WBS name sits under: {WBS name: top-level group ID}. */
+export function topGroupOfName(groups: WbsGroup[]): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const top of topLevel(groups)) for (const name of namesIn(groups, top.id)) if (!map.has(name)) map.set(name, top.id)
+  return map
+}

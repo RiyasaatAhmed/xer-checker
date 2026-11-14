@@ -71,6 +71,7 @@ export function Dashboard({ result }: { result: CheckResult }) {
           key={rule.name}
           rule={rule}
           fileName={result.file_name}
+          groups={groups}
           wbs={group ? { names: namesIn(groups, group.id), label: group.name } : null}
           onClearWbs={() => setGroupId(null)}
         />

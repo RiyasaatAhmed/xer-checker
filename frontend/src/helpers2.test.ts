@@ -39,3 +39,11 @@ describe('tree', () => {
     expect(namesIn(TREE, 'missing').size).toBe(0)
   })
 })
+
+describe('topGroupOfName', () => {
+  it('maps every WBS name to the top-level group it sits under', async () => {
+    const { topGroupOfName } = await import('./tree')
+    const map = topGroupOfName(TREE)
+    expect([map.get('A'), map.get('A1'), map.get('B'), map.get('Project')]).toEqual(['a', 'a', 'b', undefined])
+  })
+})
