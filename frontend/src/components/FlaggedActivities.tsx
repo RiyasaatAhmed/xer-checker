@@ -5,6 +5,7 @@ import { UploadError, getCheck } from '../api'
 import { worstSort } from '../board'
 import { categorize } from '../categories'
 import { countText, csvText } from '../format'
+import { ruleText } from '../rules'
 import { domainOf } from '../timeline'
 import { topGroupOfName, topLevel } from '../tree'
 import type { ActivityRow, RuleResult, WbsGroup } from '../types'
@@ -143,6 +144,12 @@ function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, initialFilte
           </div>
         )}
       </div>
+
+      {rows.length > 0 && (
+        <p className="todo">
+          <span className="todo-label">What to do:</span> {ruleText(rule.id).action}
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <p className="hint">No activity breaks this rule.</p>

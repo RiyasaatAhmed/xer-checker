@@ -1,7 +1,7 @@
 // The logic behind the check board: which checks are loud, in what order, and what changed.
 // Pure functions on the backend's answer, so each can be tested alone.
 
-import { countText } from './format'
+import { percentText } from './format'
 import type { Previous, RuleResult, RuleStatus, UploadSummary } from './types'
 
 // ---------- Constants ----------
@@ -9,7 +9,7 @@ import type { Previous, RuleResult, RuleStatus, UploadSummary } from './types'
 export const SHOW_ALL_UP_TO = 6 // with this many checks or fewer, every check is a row
 export const ROWS_SHOWN = 8 // failing checks shown before "show more"
 const SAME = 0.05 // a change smaller than this (in percent points) is "no change"
-export const MAX_WORST = 3 // checks named in the verdict
+export const MAX_WORST = 3 // failing checks the verdict writes out as sentences; the rest are chips
 export const SERIOUS = 2 // a check of this severity or more is serious: 1 minor, 2 serious, 3 critical
 export const SMALL_SAMPLE = 30 // with fewer activities checked, a share says "1 of 4", not "25.0%"
 export const TIMES_SHOWN = 10 // every check bar ends at this many times its limit, so bars compare down the board
@@ -37,10 +37,14 @@ export function isSerious(rule: { severity?: number }): boolean {
   return (rule.severity ?? 1) >= SERIOUS
 }
 
-/** How bad a failing check is, with its unit: "9.3x limit", or "1 activity" when its limit is 0. */
-export function overText(rule: RuleResult): string {
+/** A failing check against its limit: { share: "46.6%", against: "9.3x the 5% limit" }, or "none allowed" for a limit of 0.
+ *  A small file shows the share as "1 of 4". */
+export function limitParts(rule: RuleResult, checked: number): { share: string; against: string } {
+  if (rule.measure !== 'percent') return { share: '', against: `limit ${rule.limit_percent}` }
+  const share = checked > 0 && checked < SMALL_SAMPLE ? `${rule.count.toLocaleString()} of ${checked.toLocaleString()}` : percentText(rule.percent)
   const over = ratio(rule)
-  return over !== null ? `${over.toFixed(1)}x limit` : countText(rule.count, 'activity', 'activities')
+  if (over !== null) return { share, against: `${over.toFixed(1)}x the ${rule.limit_percent}% limit` }
+  return { share, against: rule.limit_percent > 0 ? `limit ${rule.limit_percent}%` : 'none allowed' }
 }
 
 /** Where a value sits on a check bar, in % of its width: every bar ends at TIMES_SHOWN times its own limit. */

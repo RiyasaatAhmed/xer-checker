@@ -23,11 +23,42 @@ const WITH_PATH: CheckResult = { ...CST_RESULT, overview: { ...CST_RESULT.overvi
 const BROKEN: CheckResult = { ...CST_RESULT, checked: 4, broken_rows: [{ line: 12, message: "TASK total float 'TBD' is not a number" }], notes: [{ line: 17, message: 'TASK row ends early' }] }
 
 describe('first scan', () => {
-  it('says the file read cleanly, then how many failing checks are serious', async () => {
+  it('says the file read cleanly, then every check over the limit under Serious or Minor, with what each tier asks', async () => {
     const verdict = await open()
     expect(verdict).toHaveTextContent('File reads cleanly · 145 activities read')
-    expect(verdict).toHaveTextContent('2 serious · 1 minor')
-    expect(verdict).toHaveTextContent('Worst: Missing links 3.0x limit · High float 11.7x limit · Long durations 3.5x limit')
+    const over = within(verdict).getByRole('group', { name: 'Checks over the limit' })
+    expect(within(over).getByRole('heading', { name: 'Serious 2 · fix these before trusting the dates' })).toBeInTheDocument()
+    expect(within(over).getByRole('heading', { name: 'Minor 1 · tidy these at the next update' })).toBeInTheDocument()
+  })
+
+  it('writes each of the worst checks as a sentence: the count, what is wrong, its size against the limit, and why it matters', async () => {
+    const verdict = await open()
+    const line = within(verdict).getByRole('button', { name: /^20 activities are missing a link/ })
+    expect(line).toHaveTextContent('15.0% · 3.0x the 5% limit')
+    expect(line).toHaveTextContent('Work with an open end can slip without moving the finish date.')
+    await userEvent.setup().click(line)
+    expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}/checks/missing-links`)
+  })
+
+  it('writes one activity in the singular, and a limit of 0 as none allowed', async () => {
+    const one = { ...CST_RESULT, rules: [...CST_RESULT.rules, { ...CST_RESULT.rules[0], id: 'out-of-sequence', name: 'Out-of-sequence work', severity: 2, dcma_section: '', limit_percent: 0, count: 1, percent: 0.8 }] }
+    const verdict = await open(one)
+    expect(within(verdict).getByRole('button', { name: /^1 activity started before a predecessor finished/ })).toHaveTextContent('0.8% · none allowed')
+  })
+
+  it('shows the checks past the worst 3 as chips that name their unit, and opens one on a click', async () => {
+    const many = { ...CST_RESULT, rules: CST_RESULT.rules.map((r) => (r.id === 'lags' ? { ...r, status: 'flag' as const, count: 9, percent: 6.8 } : r)) }
+    const verdict = await open(many)
+    const chip = within(verdict).getByRole('button', { name: 'Lags 9 activities' })
+    expect(chip).toHaveAttribute('data-tip', '9 activities have a lag on a link into them. 6.8% · 1.4x the 5% limit')
+    await userEvent.setup().click(chip)
+    expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}/checks/lags`)
+  })
+
+  it('says what to do in P6 above the activities of a check', async () => {
+    await open()
+    const list = await screen.findByRole('region', { name: 'Missing links: 20 activities' })
+    expect(await within(list).findByText('Add the missing link in P6, then re-export.')).toBeInTheDocument()
   })
 
   it('leads with partial results when rows are broken, and opens them under the verdict', async () => {

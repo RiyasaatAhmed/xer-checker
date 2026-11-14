@@ -91,9 +91,9 @@ html { scrollbar-width: thin; }
 
 /* ---------- The activities behind a check ---------- */
 
-.activities { display: grid; gap: 12px; }
+.activities { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; } /* minmax: a wide child can't push the card past a phone's width */
 .toolbar { display: flex; align-items: center; gap: 8px; }
-.search { flex: 1; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--muted); }
+.search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--muted); }
 .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--bg), 0 0 0 3px var(--accent); }
 .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); }
 .chip-row { margin: 0; }

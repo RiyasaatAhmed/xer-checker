@@ -15,15 +15,12 @@
 .verdict-trust.ok svg { color: var(--ok-ink); }
 .verdict-trust.bad { color: var(--flag-ink); font-weight: 600; }
 .verdict-trust .link-inline { color: inherit; font-weight: inherit; text-align: left; }
-.verdict-tiers { font-size: 14px; color: var(--muted); }
-.verdict-tiers b { color: var(--ink); }
-.verdict-tiers .serious, .verdict-tiers .serious b { color: var(--flag-ink); font-weight: 650; }
 .verdict-driving { display: flex; align-items: baseline; gap: 6px; font-size: 14px; color: var(--ink); }
 .verdict-driving svg { flex: none; align-self: center; color: var(--muted); }
 .verdict-driving.late, .verdict-driving.late svg { color: var(--flag-ink); }
 .verdict-driving.none { color: var(--muted); }
 .verdict-line.neutral { color: var(--ink); }
-.verdict-worst, .verdict-change, .verdict-dates { font-size: 14px; }
+.verdict-change, .verdict-dates { font-size: 14px; }
 .verdict-dates b { color: var(--ink); }
 
 /* ---------- Broken rows, folded under the verdict ---------- */
@@ -75,3 +72,51 @@
 .summary-line { font-size: 14px; color: var(--ink); }
 .crow-note { display: block; }
 @media (max-width: 760px) { .crow-nobar { grid-area: bar; height: 0; } } /* phones: a row with no bar keeps the bar's place, at no height */
+
+/* ---------- Verdict: every check over the limit, worst first ---------- */
+
+.over { grid-column: 1 / -1; display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--line); }
+.over-tier { display: grid; gap: 4px; }
+.over-title { display: flex; align-items: baseline; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.over-tier.serious .over-title { color: var(--flag-ink); }
+.over-advice { font-weight: 400; color: var(--muted); }
+.over-lines, .over-chips { margin: 0; padding: 0; list-style: none; }
+.over-lines { display: grid; gap: 2px; }
+
+/* A sentence: icon, count, what is wrong, size against the limit, arrow. Why it matters sits under the words. */
+.over-line {
+  display: grid; grid-template-columns: 16px max-content minmax(0, 1fr) max-content 16px;
+  grid-template-areas: 'icon count text size go' '. . why why .'; column-gap: 12px; row-gap: 1px; align-items: baseline;
+  width: 100%; padding: 7px 8px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+@media (hover: hover) { .over-line:hover { background: var(--sunken); } .over-line:hover .over-go { color: var(--ink); transform: translateX(2px); } }
+.over-icon { grid-area: icon; align-self: center; color: var(--flag-ink); }
+.over-count { grid-area: count; min-width: calc(var(--digits, 3) * 1ch); text-align: right; font-size: 20px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); }
+.over-line.serious .over-count { color: var(--flag-ink); }
+.over-text { grid-area: text; font-size: 15px; font-weight: 500; color: var(--ink); }
+.over-size { grid-area: size; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.over-size b { font-weight: 600; color: var(--ink); }
+.over-go { grid-area: go; align-self: center; color: var(--muted); transition: transform 0.15s ease, color 0.15s ease; }
+.over-why { grid-area: why; font-size: 13px; color: var(--muted); }
+
+/* The rest, as chips: a name and its count, with the sentence on hover */
+.over-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 8px 0; }
+.over-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: none; font-size: 13px; white-space: nowrap; cursor: pointer; transition: border-color 0.15s ease; }
+.over-chip svg { flex: none; color: var(--flag-ink); }
+.over-chip-name { font-weight: 500; color: var(--ink); }
+.over-chip-count { color: var(--muted); }
+.over-chip-count b { color: var(--ink); }
+@media (hover: hover) { .over-chip:hover { border-color: var(--flag); } }
+
+@media (max-width: 760px) {
+  /* Phones: the count and words on top, the size and why under them */
+  .over-line { grid-template-columns: 16px max-content minmax(0, 1fr) 16px; grid-template-areas: 'icon count text go' '. . size .' '. . why .'; }
+  .over-count { font-size: 18px; }
+  .over-text { font-size: 14px; }
+}
+
+/* ---------- The activities behind a check: what to do about them ---------- */
+
+.todo { margin: -4px 0 12px; font-size: 13px; color: var(--ink); }
+.todo-label { font-weight: 600; color: var(--muted); }

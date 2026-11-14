@@ -22,7 +22,7 @@ This file is a work list. Each issue says what was seen, why it hurts the first 
 | **P0-2** driving path | Partly | "13 activities at 6.0 d float, most in Work Package 49548". The red "no path from start to finish" needs a path trace. It is not built |
 | **P0-3** one bar scale | Done | Every bar ends at 10x its limit. A 0% limit has no bar |
 | **P0-4** serious and minor | Done | Severity 2 or 3 is serious. A serious row has a filled flag |
-| **P0-5** units in "Worst" | Done | Sorted by severity, then by activities flagged |
+| **P0-5** the worst checks | Done | Every check over the limit sits under the verdict, in Serious and Minor. The worst 3 are sentences led by their count, with why each matters. The rest are chips. The list of a check now says what to do in P6 |
 | **P0-6** two projects | Partly | A project picker sets the name and dates. The checks still cover all projects together, and its tooltip says so |
 | **P1-1** to **P1-9** | Done | Problem names: "No resources", "Not finish to start". High float kinds now match the float strip: 45 to 90, and over 90 |
 | **P1-10** map | Partly | A legend replaced the caption. The forecast and deadline labels still stack on 2 lines |
@@ -33,7 +33,7 @@ This file is a work list. Each issue says what was seen, why it hurts the first 
 
 **Fixed on the way:** the words for out-of-sequence work were keyed `out-of-sequence-work`. The API sends `out-of-sequence`, so the row showed the fallback words.
 
-**Not checked:** phone width. The browser window would not shrink.
+**Phone width:** checked at 386 px in a frame. The activity list was 5 px too wide, so the page scrolled sideways. That is fixed.
 
 ## The test: 5 questions in the first 10 seconds
 

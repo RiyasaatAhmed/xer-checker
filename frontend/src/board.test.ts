@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barAt, byFile, changes, flaggedIn, groupsOf, heatFor, isSerious, overText, ratio, shade, tally, trendOf, worstFirst, worstSort } from './board'
+import { barAt, byFile, changes, flaggedIn, groupsOf, heatFor, isSerious, limitParts, ratio, shade, tally, trendOf, worstFirst, worstSort } from './board'
 import type { RuleResult, UploadSummary } from './types'
 
 function rule(id: string, over: Partial<RuleResult> = {}): RuleResult {
@@ -38,10 +38,13 @@ describe('serious checks and their words', () => {
     expect([1, 2, 3].map((severity) => isSerious({ severity }))).toEqual([false, true, true])
     expect(isSerious({})).toBe(false) // an older check with no severity
   })
-  it('gives each failing check its unit: times the limit, or activities when the limit is 0', () => {
-    expect(overText(rule('a', { status: 'flag', percent: 46.6, count: 170 }))).toBe('9.3x limit')
-    expect(overText(rule('a', { status: 'flag', percent: 0.3, count: 1, limit_percent: 0 }))).toBe('1 activity')
-    expect(overText(rule('a', { status: 'flag', percent: 29.9, count: 109, limit_percent: 0 }))).toBe('109 activities')
+  it('sets a failing check against its limit: times over it, or none allowed for a limit of 0', () => {
+    expect(limitParts(rule('a', { status: 'flag', percent: 46.6, count: 170 }), 365)).toEqual({ share: '46.6%', against: '9.3x the 5% limit' })
+    expect(limitParts(rule('a', { status: 'flag', percent: 29.9, count: 109, limit_percent: 0 }), 365)).toEqual({ share: '29.9%', against: 'none allowed' })
+  })
+  it('shows a count, not a share, for a small file, and the limit alone for an index', () => {
+    expect(limitParts(rule('a', { status: 'flag', percent: 25, count: 1 }), 4)).toEqual({ share: '1 of 4', against: '5.0x the 5% limit' })
+    expect(limitParts(rule('a', { status: 'flag', measure: 'index', limit_percent: 0.95 }), 365)).toEqual({ share: '', against: 'limit 0.95' })
   })
   it('draws every bar on one scale: the limit at a tenth of the bar, ten times the limit at its end', () => {
     expect(barAt(5, 5)).toBe(10)

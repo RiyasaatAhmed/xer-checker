@@ -1,9 +1,10 @@
 import { ArrowDown, ArrowUp, Calendar, CalendarCheck, CalendarX, Check, Flag, Minus, Route, TriangleAlert } from 'lucide-react'
-import { MAX_WORST, SMALL_SAMPLE, changes, overText, tally, worstFirst } from '../board'
+import { SMALL_SAMPLE, changes, tally } from '../board'
 import { countText, dayText, daysBetween, percentText, plural } from '../format'
 import { progressOf, trustOf } from '../glance'
 import type { CheckResult, ProjectInfo } from '../types'
 import { FinishGap } from './FinishGap'
+import { OverLimit } from './OverLimit'
 
 // ---------- Constants ----------
 
@@ -16,12 +17,11 @@ interface Props {
   onIssues: () => void // show the broken rows
 }
 
-/** The answer in 3 seconds: can the file be trusted, how many checks are over the limit and how serious,
- *  what drives the finish, will it finish on time, and how far along it is. */
+/** The answer in 3 seconds: can the file be trusted, how many checks are over the limit, what drives the finish,
+ *  will it finish on time, and how far along it is. Under them, every check over the limit, worst first. */
 export function Verdict({ result, project, onPick, onIssues }: Props) {
   const counts = tally(result.rules)
   const runnable = counts.flag + counts.pass
-  const worst = worstFirst(result.rules).slice(0, MAX_WORST)
   const change = changes(result.rules, result.previous)
   const gap = project?.forecast_finish && project.deadline ? daysBetween(project.deadline, project.forecast_finish) : null // forecast minus deadline
   const bad = counts.flag > 0
@@ -44,29 +44,6 @@ export function Verdict({ result, project, onPick, onIssues }: Props) {
             )}
           </span>
         </p>
-        {bad && (
-          <p className="verdict-tiers">
-            <span className={counts.serious > 0 ? 'serious' : undefined}>
-              <b className="num">{counts.serious}</b> serious
-            </span>{' '}
-            · <b className="num">{counts.flag - counts.serious}</b> minor
-          </p>
-        )}
-        {worst.length > 0 && (
-          <p className="verdict-worst">
-            Worst:{' '}
-            {worst.map((r, i) => (
-              <span key={r.id}>
-                {i > 0 && ' · '}
-                <button type="button" className="link-inline" onClick={() => onPick(r.id)}>
-                  {r.name}
-                </button>{' '}
-                <span className="faint num">{overText(r)}</span>
-              </span>
-            ))}
-          </p>
-        )}
-        <Driving result={result} />
         {change && (
           <p className="verdict-change">
             {change.worse === 0 && change.better === 0 ? (
@@ -88,6 +65,7 @@ export function Verdict({ result, project, onPick, onIssues }: Props) {
             )}
           </p>
         )}
+        <Driving result={result} />
       </div>
 
       <div className="verdict-finish">
@@ -116,6 +94,8 @@ export function Verdict({ result, project, onPick, onIssues }: Props) {
         </p>
         <Progress result={result} />
       </div>
+
+      <OverLimit rules={result.rules} checked={result.checked} onPick={onPick} />
     </section>
   )
 }

@@ -50,7 +50,12 @@ describe('App', () => {
     expect(verdict).toHaveTextContent('10 days early')
     expect(verdict).toHaveTextContent('Deadline 30 Oct 2027')
     expect(verdict).toHaveTextContent('2 better than the last upload')
-    expect(within(verdict).getAllByRole('button').map((b) => b.textContent)).toEqual(['Missing links', 'High float', 'Long durations']) // the most serious first
+    const sentence = (b: HTMLElement) => `${b.querySelector('.over-count')?.textContent} ${b.querySelector('.over-text')?.textContent}`
+    expect(within(verdict).getAllByRole('button').map(sentence)).toEqual([
+      '20 activities are missing a link before or after them',
+      '78 activities have more than 44 working days of float',
+      '23 activities have more than 44 working days of work left',
+    ]) // the most serious first, each a sentence led by its count
   })
 
   it('says no check could run, not that all are within the limit, when nothing was checked', async () => {
