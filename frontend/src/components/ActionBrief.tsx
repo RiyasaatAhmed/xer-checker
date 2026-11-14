@@ -1,6 +1,5 @@
 import { ArrowRight } from 'lucide-react'
 import { countText, percentText } from '../format'
-import { ruleText } from '../rules'
 import type { CheckResult } from '../types'
 import { StatusPill } from './StatusPill'
 
@@ -12,8 +11,6 @@ interface Props {
 
 interface Item {
   title: string
-  text: string
-  next: string
   button: string
   onClick: () => void
 }
@@ -22,11 +19,8 @@ interface Item {
 export function ActionBrief({ result, onShowRule, onShowIssues }: Props) {
   const flagged = result.rules.filter((rule) => rule.status === 'flag')
   const items: Item[] = flagged.map((rule) => {
-    const words = ruleText(rule.name)
     return {
       title: `${rule.name}: ${rule.count.toLocaleString()} of ${result.checked.toLocaleString()} activities (${percentText(rule.percent)})`,
-      text: `${countText(rule.count, 'activity', 'activities')} ${words.meaning} DCMA's limit is ${rule.limit_percent}%.`,
-      next: words.action,
       button: `Show the ${countText(rule.count, 'activity', 'activities')}`,
       onClick: () => onShowRule(rule.name),
     }
@@ -34,8 +28,6 @@ export function ActionBrief({ result, onShowRule, onShowIssues }: Props) {
   if (result.broken_rows.length > 0) {
     items.push({
       title: `${countText(result.broken_rows.length, 'row')} couldn't be read`,
-      text: 'They were left out of the checks, so the numbers above may be low.',
-      next: 'Fix them in P6, or export the schedule again.',
       button: 'Show the rows',
       onClick: onShowIssues,
     })
@@ -66,8 +58,6 @@ export function ActionBrief({ result, onShowRule, onShowIssues }: Props) {
               <span className="brief-number mono">{String(index + 1).padStart(2, '0')}</span>
               <div className="brief-body">
                 <h3>{item.title}</h3>
-                <p>{item.text}</p>
-                <p className="brief-next">{item.next}</p>
               </div>
               <button type="button" className="button secondary small" onClick={item.onClick}>
                 {item.button}

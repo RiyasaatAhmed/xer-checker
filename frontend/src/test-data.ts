@@ -1,10 +1,18 @@
 import { vi } from 'vitest'
-import type { ActivityRow, CheckResult, UploadSummary } from './types'
+import type { ActivityRow, CheckResult, UploadSummary, WbsGroup } from './types'
 
 /** One activity row, as the API sends it. */
 function row(code: string, name: string, float_days: number, predecessors: number, successors: number): ActivityRow {
+  const next = [{ code: 'ContractNo_C100', name: 'Next activity', link_type: 'PR_FS', lag_hours: 16 }]
   return { code, name, wbs: 'Utility Notifications & Meetings', status: 'Not started', float_days, duration_days: 30,
-    start: '2026-01-22T08:00:00', finish: '2026-02-20T16:00:00', predecessors, successors }
+    start: '2026-01-22T08:00:00', finish: '2026-02-20T16:00:00', predecessors, successors,
+    before: predecessors > 0 ? [{ code: 'ContractNo_C050', name: 'Earlier activity', link_type: 'PR_FS', lag_hours: 0 }] : [],
+    after: successors > 0 ? next : [] }
+}
+
+/** One WBS group, as the API sends it. */
+function group(id: string, parent_id: string | null, name: string, depth: number, checked: number, flagged: number, start: string, finish: string): WbsGroup {
+  return { id, parent_id, name, depth, checked, flagged, by_rule: [flagged, 0, 0], start, finish }
 }
 
 // The backend's answer for CSTv2.4.xer, cut down: the README numbers, with a few activities.
@@ -38,6 +46,12 @@ export const CST_RESULT: CheckResult = {
     ],
     no_float: 0,
   },
+  structure: [
+    group('r', null, 'CSTv2.4', 0, 133, 98, '2026-01-02T08:00:00', '2027-10-20T16:00:00'),
+    group('u', 'r', 'Utility', 1, 40, 3, '2026-01-02T08:00:00', '2026-09-01T16:00:00'),
+    group('u1', 'u', 'Utility Notifications & Meetings', 2, 4, 3, '2026-01-22T08:00:00', '2026-02-20T16:00:00'),
+    group('p', 'r', 'Placeholder', 1, 20, 20, '2026-01-02T08:00:00', '2027-10-20T16:00:00'),
+  ],
 }
 
 // The upload list after one good upload and one that failed.

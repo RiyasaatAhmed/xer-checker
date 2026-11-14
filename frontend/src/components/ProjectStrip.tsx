@@ -5,10 +5,10 @@ import type { ProjectInfo } from '../types'
 export function ProjectStrip({ project, more }: { project: ProjectInfo; more: number }) {
   const gap = project.deadline && project.forecast_finish ? daysBetween(project.forecast_finish, project.deadline) : null
   const dates = [
-    { label: 'Data date', value: project.data_date, note: 'Actual before it, forecast after' },
-    { label: 'Planned start', value: project.planned_start, note: null },
-    { label: 'Forecast finish', value: project.forecast_finish, note: 'P6’s calculated finish' },
-    { label: 'Deadline', value: project.deadline, note: project.deadline ? null : 'None set in P6' },
+    { label: 'Data date', value: project.data_date },
+    { label: 'Planned start', value: project.planned_start },
+    { label: 'Forecast finish', value: project.forecast_finish },
+    { label: 'Deadline', value: project.deadline },
   ]
   return (
     <section className="project" aria-label="Project dates">
@@ -22,7 +22,6 @@ export function ProjectStrip({ project, more }: { project: ProjectInfo; more: nu
           <div key={d.label}>
             <dt className="label">{d.label}</dt>
             <dd className="num">{d.value ? dayText(d.value) : '–'}</dd>
-            {d.note && <dd className="hint small">{d.note}</dd>}
           </div>
         ))}
       </dl>

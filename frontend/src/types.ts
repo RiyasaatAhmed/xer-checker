@@ -2,6 +2,27 @@
 
 export type RuleStatus = 'pass' | 'flag' | 'n/a'
 
+/** An activity one link away from another. */
+export interface Neighbor {
+  code: string
+  name: string
+  link_type: string // PR_FS, PR_SS, PR_FF or PR_SF
+  lag_hours: number // below 0 is a lead, above 0 a lag
+}
+
+/** One WBS group with its subtree's numbers. Mirrors WbsGroup in the backend. */
+export interface WbsGroup {
+  id: string
+  parent_id: string | null // null for the root
+  name: string
+  depth: number // 0 for the root
+  checked: number // activities DCMA checks, in this group and the groups inside it
+  flagged: number // how many of those any rule flags
+  by_rule: number[] // flagged per rule, in the order of CheckResult.rules
+  start: string | null // earliest start; site-local, no time zone
+  finish: string | null // latest finish
+}
+
 /** One activity behind a number, as a scheduler finds it in P6. Dates are site-local, with no time zone. */
 export interface ActivityRow {
   code: string
@@ -12,6 +33,8 @@ export interface ActivityRow {
   duration_days: number | null // remaining duration, working days
   predecessors: number // links into it: 0 means nothing comes before it
   successors: number // links out of it: 0 means nothing comes after it
+  before: Neighbor[] // up to 4 of the activities linked before it
+  after: Neighbor[] // up to 4 of the activities linked after it
   start: string | null // actual start, else early start
   finish: string | null // actual finish, else early finish
 }
@@ -81,6 +104,7 @@ export interface CheckResult {
   summary_author: string // Gemini, or code and why
   projects?: ProjectInfo[] // missing on older uploads
   overview?: Overview | null
+  structure?: WbsGroup[] // the WBS tree in tree order; missing on older uploads
 }
 
 /** One upload in the list of recent uploads. */

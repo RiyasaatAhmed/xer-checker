@@ -148,7 +148,7 @@ describe('App', () => {
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
     expect(within(list).getByText('Calendar placeholder 1')).toBeInTheDocument()
     expect(within(list).getAllByText('Utility Notifications & Meetings')).toHaveLength(2)
-    expect(within(list).getByLabelText('0 before, 1 after')).toBeInTheDocument()
+    expect(within(list).getByRole('button', { name: /ContractNo_CAL01: 0 before, 1 after/ })).toBeInTheDocument()
 
     await user().click(within(list).getByRole('button', { name: 'Float (d)' })) // largest first
     const firstRow = within(list).getAllByRole('row')[1]
@@ -158,12 +158,50 @@ describe('App', () => {
 
   it('counts what is in the file, and links a flagged float band to its activities', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
-    const overview = await screen.findByRole('region', { name: 'The schedule, counted' })
+    const overview = await screen.findByRole('region', { name: 'What’s in the file' })
     expect(within(overview).getByText('194')).toBeInTheDocument() // links
-    expect(within(overview).getByText(/4 pairs of activities are linked twice/)).toBeInTheDocument()
+    expect(within(overview).getByText('85.6% finish to start')).toBeInTheDocument()
+    expect(within(overview).getByText(/4 pairs are linked twice/)).toBeInTheDocument()
 
     await user().click(within(overview).getByRole('button', { name: 'High float: over the limit' }))
     expect(screen.getByRole('heading', { name: 'High float: 78 activities' })).toBeInTheDocument()
+  })
+
+  it('draws the WBS groups with their flagged counts, and opens a group to show what is in it', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const map = await screen.findByRole('region', { name: 'Schedule map' })
+    const rows = () => within(map).getAllByRole('row').slice(1).map((r) => r.textContent)
+    expect(rows()).toEqual([expect.stringContaining('Utility3 / 40'), expect.stringContaining('Placeholder20 / 20')]) // the root is skipped
+    await user().click(within(map).getByRole('button', { name: 'Expand Utility' }))
+    expect(rows()[1]).toContain('Utility Notifications & Meetings')
+    expect(within(map).getByText(/Forecast finish/)).toBeInTheDocument() // the legend names the marked dates
+  })
+
+  it('picks a group on the map to list only its activities, and clears it again', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const map = await screen.findByRole('region', { name: 'Schedule map' })
+    await user().click(within(map).getByRole('button', { name: 'Expand Utility' }))
+    await user().click(within(map).getByRole('button', { name: /^Utility Notifications & Meetings/ }))
+    const list = screen.getByRole('region', { name: /: \d+ activit/ })
+    expect(within(list).getByText(/In Utility Notifications & Meetings: 2 activities/)).toBeInTheDocument()
+    await user().click(within(list).getByRole('button', { name: 'Show every group again' }))
+    expect(within(list).queryByText(/In Utility Notifications/)).not.toBeInTheDocument()
+  })
+
+  it('shows the logic around an activity, with an empty box where a link is missing', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
+    await user().click(within(list).getByRole('button', { name: /ContractNo_CAL01: 0 before, 1 after/ }))
+    const logic = within(list).getByLabelText('Logic around ContractNo_CAL01')
+    expect(within(logic).getByText('Nothing before it')).toBeInTheDocument() // the missing link
+    expect(within(logic).getByText('Next activity')).toBeInTheDocument()
+    expect(within(logic).getByText('FS +16 h')).toBeInTheDocument() // a lag
+  })
+
+  it('folds the summary away, so the picture comes first', async () => {
+    await uploadWith(() => reply(200, CST_RESULT))
+    const summary = (await screen.findByText('Summary')).closest('details')!
+    expect(summary).not.toHaveAttribute('open')
   })
 
   it('opens the check in the address bar when the page loads', async () => {

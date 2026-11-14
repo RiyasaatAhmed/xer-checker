@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowUp, Check, Copy, Download, Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Copy, Download, Network, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { countText, csvText, dayText, daysText } from '../format'
 import { ruleText } from '../rules'
 import type { ActivityRow, RuleResult } from '../types'
+import { LogicDiagram } from './LogicDiagram'
 
 // ---------- Constants ----------
 
@@ -25,19 +26,23 @@ const COLUMNS: { key: Column; label: string; numeric?: boolean }[] = [
 interface Props {
   rule: RuleResult
   fileName: string // names the CSV download
+  wbs?: { names: Set<string>; label: string } | null // only the activities in this WBS group, picked on the map
+  onClearWbs?: () => void
 }
 
 /** The activities behind one rule's number: sort, filter, copy their IDs for P6, or download them. */
-export function FlaggedActivities({ rule, fileName }: Props) {
+export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
   const [filter, setFilter] = useState('')
   const [copied, setCopied] = useState(false)
   const [sort, setSort] = useState<{ by: Column; up: boolean }>({ by: 'n', up: true })
+  const [logicOf, setLogicOf] = useState<string | null>(null) // the activity whose logic diagram is open
 
   // Older uploads have IDs only: show them as rows with the rest blank.
   const rows: Row[] = (rule.details?.length ? rule.details : rule.activities.map(blankRow)).map((row, i) => ({ ...row, n: i + 1 }))
   const hasDetails = Boolean(rule.details?.length)
   const query = filter.trim().toLowerCase()
   const shown = rows
+    .filter((r) => !wbs || !hasDetails || wbs.names.has(r.wbs)) // a group picked on the map
     .filter((r) => [r.code, r.name, r.wbs].some((text) => text.toLowerCase().includes(query)))
     .sort((a, b) => compare(a, b, sort.by) * (sort.up ? 1 : -1))
 
@@ -89,6 +94,16 @@ export function FlaggedActivities({ rule, fileName }: Props) {
       ) : (
         <>
           <p className="hint">{ruleText(rule.name).action}</p>
+          {wbs && hasDetails && (
+            <p className="chip-row">
+              <span className="chip">
+                In {wbs.label}: {countText(shown.length, 'activity', 'activities')}
+                <button type="button" className="chip-x" aria-label={`Show every group again`} onClick={onClearWbs}>
+                  <X size={12} aria-hidden />
+                </button>
+              </span>
+            </p>
+          )}
           <label className="search">
             <Search size={15} strokeWidth={2.25} aria-hidden />
             <input
@@ -114,7 +129,7 @@ export function FlaggedActivities({ rule, fileName }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((r) => (
+                {shown.flatMap((r) => [
                   <tr key={r.n}>
                     <td className="num faint right">{r.n}</td>
                     <td className="mono nowrap">{r.code}</td>
@@ -125,10 +140,19 @@ export function FlaggedActivities({ rule, fileName }: Props) {
                           <span className="name">{r.name}</span>
                           <span className="wbs">{r.wbs}</span>
                         </td>
-                        <td className="num right nowrap" aria-label={`${r.predecessors} before, ${r.successors} after`}>
-                          <span className={r.predecessors === 0 ? 'zero-link' : undefined}>{r.predecessors}</span>
-                          {' / '}
-                          <span className={r.successors === 0 ? 'zero-link' : undefined}>{r.successors}</span>
+                        <td className="num right nowrap">
+                          <button
+                            type="button"
+                            className="logic-toggle"
+                            aria-expanded={logicOf === r.code}
+                            aria-label={`${r.code}: ${r.predecessors} before, ${r.successors} after. Show its logic`}
+                            onClick={() => setLogicOf(logicOf === r.code ? null : r.code)}
+                          >
+                            <span className={r.predecessors === 0 ? 'zero-link' : undefined}>{r.predecessors}</span>
+                            {' / '}
+                            <span className={r.successors === 0 ? 'zero-link' : undefined}>{r.successors}</span>
+                            <Network size={13} aria-hidden />
+                          </button>
                         </td>
                         <td className="num right strong">{daysText(r.float_days)}</td>
                         <td className="num right">{daysText(r.duration_days)}</td>
@@ -137,8 +161,15 @@ export function FlaggedActivities({ rule, fileName }: Props) {
                         <td className="nowrap">{r.status}</td>
                       </>
                     )}
-                  </tr>
-                ))}
+                  </tr>,
+                  logicOf === r.code && (
+                    <tr key={`${r.n}-logic`} className="logic-row">
+                      <td colSpan={COLUMNS.length}>
+                        <LogicDiagram row={r} />
+                      </td>
+                    </tr>
+                  ),
+                ])}
               </tbody>
             </table>
             {shown.length === 0 && <p className="hint empty-filter">Nothing matches “{filter}”.</p>}
@@ -151,7 +182,7 @@ export function FlaggedActivities({ rule, fileName }: Props) {
 }
 
 function blankRow(code: string): ActivityRow {
-  return { code, name: '', wbs: '', status: '', float_days: null, duration_days: null, start: null, finish: null, predecessors: 0, successors: 0 }
+  return { code, name: '', wbs: '', status: '', float_days: null, duration_days: null, start: null, finish: null, predecessors: 0, successors: 0, before: [], after: [] }
 }
 
 /** Sort order for one column. A blank float or duration sorts as the lowest. */

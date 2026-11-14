@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { countText, dateText } from '../format'
+import { namesIn } from '../tree'
 import type { CheckResult } from '../types'
 import { ActionBrief } from './ActionBrief'
 import { FileIssues } from './FileIssues'
 import { FlaggedActivities } from './FlaggedActivities'
 import { ProjectStrip } from './ProjectStrip'
+import { ScheduleMap } from './ScheduleMap'
 import { RuleBand } from './RuleBand'
 import { ScheduleOverview } from './ScheduleOverview'
 import { Summary } from './Summary'
@@ -18,6 +20,9 @@ export function Dashboard({ result }: { result: CheckResult }) {
   const rule = result.rules.find((r) => r.name === selected)
   const flagged = new Set(result.rules.filter((r) => r.status === 'flag').map((r) => r.name))
   const [project, ...others] = result.projects ?? []
+  const [groupId, setGroupId] = useState<string | null>(null) // the WBS group picked on the map
+  const groups = result.structure ?? []
+  const group = groups.find((g) => g.id === groupId)
 
   /** Bring a section into view and move focus to it, for keyboard and screen reader users too. */
   function reveal(id: string) {
@@ -29,6 +34,12 @@ export function Dashboard({ result }: { result: CheckResult }) {
   function showRule(name: string) {
     setSelected(name)
     reveal('activities')
+  }
+
+  /** Pick a WBS group on the map: list its activities, for the check that's selected. */
+  function pickGroup(id: string | null) {
+    setGroupId(id)
+    if (id) reveal('activities')
   }
 
   return (
@@ -48,8 +59,18 @@ export function Dashboard({ result }: { result: CheckResult }) {
 
       <RuleBand rules={result.rules} checked={result.checked} selected={selected} onSelect={setSelected} />
 
+      {groups.length > 0 && <ScheduleMap groups={groups} project={project} selectedId={groupId} onSelect={pickGroup} />}
+
       {/* key: each rule starts with an empty filter and its own sort */}
-      {rule && <FlaggedActivities key={rule.name} rule={rule} fileName={result.file_name} />}
+      {rule && (
+        <FlaggedActivities
+          key={rule.name}
+          rule={rule}
+          fileName={result.file_name}
+          wbs={group ? { names: namesIn(groups, group.id), label: group.name } : null}
+          onClearWbs={() => setGroupId(null)}
+        />
+      )}
 
       {result.overview && <ScheduleOverview overview={result.overview} flagged={flagged} onShowRule={showRule} />}
 
