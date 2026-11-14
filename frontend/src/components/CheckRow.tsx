@@ -33,7 +33,7 @@ export function CheckRow({ rule, trend, selected, onSelect, checked, note, lowes
   const hasBar = rule.limit_percent > 0 && rule.measure !== 'test'
   const overflows = !index && rule.percent > rule.limit_percent * TIMES_SHOWN
   const small = rule.measure === 'percent' && checked > 0 && checked < SMALL_SAMPLE
-  const value = small ? `${rule.count.toLocaleString()} of ${checked.toLocaleString()}` : percentText(rule.percent)
+  const value = small ? `${rule.count.toLocaleString()} of ${checked.toLocaleString()}` : percentText(rule.percent, rule.count)
   return (
     <button
       type="button"

@@ -42,7 +42,7 @@ export function isSerious(rule: { severity?: number }): boolean {
  *  A small file shows the share as "1 of 4". */
 export function limitParts(rule: RuleResult, checked: number): { share: string; against: string } {
   if (rule.measure !== 'percent') return { share: '', against: `limit ${rule.limit_percent}` }
-  const share = checked > 0 && checked < SMALL_SAMPLE ? `${rule.count.toLocaleString()} of ${checked.toLocaleString()}` : percentText(rule.percent)
+  const share = checked > 0 && checked < SMALL_SAMPLE ? `${rule.count.toLocaleString()} of ${checked.toLocaleString()}` : percentText(rule.percent, rule.count)
   const over = ratio(rule)
   if (over !== null) return { share, against: `${over.toFixed(1)}x the ${rule.limit_percent}% limit` }
   return { share, against: rule.limit_percent > 0 ? `limit ${rule.limit_percent}%` : 'none allowed' }

@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use("Agg")  # draw straight to a file; no window
 import matplotlib.pyplot as plt  # noqa: E402  (must come after matplotlib.use)
 
-from .checks import percent, within_limit  # noqa: E402
+from .checks import percent, share_text, within_limit  # noqa: E402
 from .rules import LIMITS  # noqa: E402
 
 # ---------- Constants ----------
@@ -48,7 +48,7 @@ def draw_chart(results, path):
         pcts = [percent(len(r.failures[n]), r.checked) for n in names]  # bar heights in %
         bars = ax.bar(xs, pcts, width * 0.9, label=r.name, color=FILE_COLORS[i % len(FILE_COLORS)])
         # Write "count (percent)" on top of each bar, with one decimal like the printed report.
-        ax.bar_label(bars, labels=[f"{len(r.failures[n])} ({p:.1f}%)" for n, p in zip(names, pcts)], fontsize=LABEL_FONT_SIZE)
+        ax.bar_label(bars, labels=[f"{len(r.failures[n])} ({share_text(len(r.failures[n]), r.checked)})" for n in names], fontsize=LABEL_FONT_SIZE)
     for x, name in enumerate(names):  # a dashed line at each check's limit
         ax.hlines(LIMITS[name], x - 0.4, x + 0.4, colors=LIMIT_LINE_COLOR, linestyles="dashed",
                   label="DCMA limit" if x == 0 else None)  # label once so the legend shows it once

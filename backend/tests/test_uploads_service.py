@@ -88,8 +88,8 @@ def test_the_list_shows_the_newest_first_with_headline_numbers(db_session):
 def test_the_list_gives_each_check_its_share_and_limit(db_session):
     check_upload(db_session, "CSTv2.4.xer", CST)
     (line,) = list_uploads(db_session, 10)
-    shown = {c.id: (c.percent, c.limit_percent) for c in line.checks}
-    assert shown["missing-links"] == (15.0, 5) and shown["high-float"] == (58.6, 5)  # the baseline numbers
+    shown = {c.id: (c.count, c.percent, c.limit_percent) for c in line.checks}
+    assert shown["missing-links"] == (20, 15.0, 5) and shown["high-float"] == (78, 58.6, 5)  # the baseline numbers
 
 
 def test_times_are_sent_as_utc(db_session):

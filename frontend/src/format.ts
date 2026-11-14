@@ -3,11 +3,12 @@
 import type { Neighbor } from './types'
 
 const FORMULA_START = /^[=+\-@\t\r]/ // a spreadsheet runs a cell that starts like this as a formula
+const SMALLEST_SHOWN = 0.05 // a share under this prints as "0.0%", so a nonzero one says "<0.1%" instead
 const LINK_TYPE: Record<string, string> = { PR_FS: 'FS', PR_SS: 'SS', PR_FF: 'FF', PR_SF: 'SF' } // finish to start, ...
 
-/** 15 -> "15.0%". */
-export function percentText(value: number): string {
-  return `${value.toFixed(1)}%`
+/** 15 -> "15.0%". With a count above 0, a share too small to show reads "<0.1%", never "0.0%". */
+export function percentText(value: number, count = 0): string {
+  return count > 0 && value < SMALLEST_SHOWN ? '<0.1%' : `${value.toFixed(1)}%`
 }
 
 /** (1, "row") -> "1 row", (7, "row") -> "7 rows", (2, "activity", "activities") -> "2 activities". */

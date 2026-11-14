@@ -13,6 +13,7 @@ export interface ShownCheck {
   name: string
   status: RuleStatus
   percent?: number | null
+  count?: number | null // activities it flags; missing on an upload listed by an older backend
   limit_percent?: number | null
   na_reason?: string | null
 }
@@ -39,11 +40,11 @@ function Row({ check, delay }: { check: ShownCheck; delay: number }) {
   const state = check.status === 'flag' ? 'flag' : check.status === 'pass' ? 'pass' : 'na'
   const word = state === 'flag' ? `over the ${limit}% limit` : state === 'pass' ? `within the ${limit}% limit` : 'could not run'
   const shown = useCountUp(known ? percent : 0, delay)
-  const tip = state === 'na' ? (check.na_reason ?? 'This check could not run') : known ? `${percentText(percent)} of activities, ${word}` : word
+  const tip = state === 'na' ? (check.na_reason ?? 'This check could not run') : known ? `${percentText(percent, check.count ?? 0)} of activities, ${word}` : word
   return (
     <div className={`live-row ${state}`} data-tip={tip}>
       <span className="live-check-name">{check.name}</span>
-      <span className="live-figure num">{state === 'na' ? 'n/a' : known ? `${shown.toFixed(1)}%` : state === 'flag' ? 'Over' : 'Within'}</span>
+      <span className="live-figure num">{state === 'na' ? 'n/a' : known ? (percentText(percent, check.count ?? 0).startsWith('<') ? '<0.1%' : `${shown.toFixed(1)}%`) : state === 'flag' ? 'Over' : 'Within'}</span>
       <span className="sr-only">{word}</span>
       <span className="live-meter" aria-hidden>
         {known && (

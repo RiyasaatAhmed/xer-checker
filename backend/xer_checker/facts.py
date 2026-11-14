@@ -2,7 +2,7 @@
 
 import re  # makes a fact name from a check name
 
-from .checks import percent, within_limit
+from .checks import percent, share_text, within_limit
 from .rules import LIMITS, RULES
 from .rules.high_float import HIGH_FLOAT_DAYS
 
@@ -44,7 +44,7 @@ def summary_facts(checked, failures, broken, skipped=()):
         pct = percent(len(codes), checked)
         facts[key + "_name"] = check_name  # e.g. "Missing links"
         facts[key] = str(len(codes))  # e.g. "20"
-        facts[key + "_pct"] = f"{pct:.1f}%"  # e.g. "15.0%", rounded like the report and the chart
+        facts[key + "_pct"] = share_text(len(codes), checked)  # e.g. "15.0%", or "<0.1%": rounded like the report and the chart
         over_or_within = "within" if within_limit(check_name, pct) else "over"  # code judges the limit, not the AI
         whose = "DCMA's" if FROM_DCMA[check_name] else "the checker's"  # a check of ours has no DCMA limit
         facts[key + "_vs_limit"] = f"{over_or_within} {whose} {LIMITS[check_name]}% limit" if checked else "nothing to check"

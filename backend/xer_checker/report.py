@@ -2,7 +2,7 @@
 
 import textwrap  # wraps the summary points to fit the terminal
 
-from .checks import percent, within_limit
+from .checks import percent, share_text, within_limit
 from .rules import LIMITS
 
 # ---------- Constants ----------
@@ -31,7 +31,7 @@ def report(result):
             continue
         pct = percent(len(codes), result.checked)  # share that failed (0 if nothing checked)
         examples = ", ".join(codes[:EXAMPLES_SHOWN])  # a few failing activity codes
-        print(f"  {check_name:<{NAME_WIDTH}} {len(codes):>4}  {pct:5.1f}%  {verdict(check_name, pct, result.checked)} "
+        print(f"  {check_name:<{NAME_WIDTH}} {len(codes):>4}  {share_text(len(codes), result.checked):>6}  {verdict(check_name, pct, result.checked)} "
               f"(limit {LIMITS[check_name]}%)  {examples}")
     print(f"  Summary, written by {result.author}:")
     for point in result.points:  # one finding per bullet

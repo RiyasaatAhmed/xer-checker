@@ -206,7 +206,7 @@ def summary(upload, metrics, projects=(), broken=0):
         broken_rows=broken if ready else None, projects=len(projects) if ready else None,
         checks=[CheckStatus(id=rule_id_of(m), name=m.name, group=BY_METRIC[m.metric_id].GROUP if m.metric_id in BY_METRIC else OTHER_GROUP,
                             status=TO_STATUS[m.verdict], severity=BY_METRIC[m.metric_id].SEVERITY if m.metric_id in BY_METRIC else 1,
-                            percent=round(m.value, 1), limit_percent=m.limit_value, na_reason=m.na_reason)
+                            percent=round(m.value, 1), count=m.numerator, limit_percent=m.limit_value, na_reason=m.na_reason)
                 for m in metrics] if ready else [],
         project=project.name if project else None, data_date=project.data_date if project else None,
         forecast_finish=project.forecast_finish if project else None, deadline=project.deadline if project else None)

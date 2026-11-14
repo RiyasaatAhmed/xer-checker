@@ -16,6 +16,7 @@ NOT_CHECKED_TYPES = ("TT_LOE", "TT_WBS", "TT_Mile", "TT_FinMile")
 DEFAULT_HOURS_PER_DAY = 8  # used when a calendar is missing or has no hours per day
 NOT_STARTED, ACTIVE = "TK_NotStart", "TK_Active"  # statuses of work that hasn't started, and work in progress
 FINISH_TO_START = "PR_FS"  # the link type DCMA wants most links to be
+SMALLEST_SHOWN = 0.05  # a share under this prints as "0.0%", so a nonzero one says "<0.1%" instead
 
 # The rules come from the DCMA 14-Point Assessment, section 4 of DCMA-EA PAM 200.1 (Oct 2012).
 # That is the last published version of the checklist. Mosaic Projects hosts a copy:
@@ -37,6 +38,12 @@ def number(text):
 def percent(count, checked):
     """count as a % of the activities checked (0 if nothing was checked, instead of dividing by 0)."""
     return 100 * count / checked if checked else 0
+
+
+def share_text(count, checked):
+    """count as a share of checked, as text: "15.0%". A count above 0 never reads "0.0%": it reads "<0.1%"."""
+    pct = percent(count, checked)
+    return "<0.1%" if count and pct < SMALLEST_SHOWN else f"{pct:.1f}%"
 
 
 def within_limit(check_name, pct):

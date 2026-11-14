@@ -9,6 +9,8 @@ const ID = '11111111-1111-4111-8111-111111111111'
 describe('format', () => {
   it('writes percents with 1 decimal and counts with their noun', () => {
     expect(percentText(15)).toBe('15.0%')
+    expect(percentText(0.025, 1)).toBe('<0.1%') // 1 of 3,973: above 0, so never "0.0%"
+    expect(percentText(0, 0)).toBe('0.0%')
     expect([countText(1, 'row'), countText(7, 'row'), countText(2, 'activity', 'activities')]).toEqual(['1 row', '7 rows', '2 activities'])
   })
 

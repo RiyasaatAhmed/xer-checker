@@ -5,7 +5,7 @@ Each rule on its own is tested in its own file: test_rule_*.py.
 
 import pytest
 
-from xer_checker.checks import check, percent, within_limit
+from xer_checker.checks import check, percent, share_text, within_limit
 from xer_checker.rules import RULES
 
 
@@ -93,6 +93,10 @@ def test_unknown_calendar_falls_back_to_8_hours():
 
 
 # ---------- Percentages and limits ----------
+
+def test_a_tiny_share_above_zero_reads_under_0_1_percent_not_zero():
+    assert (share_text(1, 3973), share_text(0, 3973), share_text(20, 133)) == ("<0.1%", "0.0%", "15.0%")
+
 
 def test_percent_of_nothing_is_zero():
     assert percent(0, 0) == 0 and percent(20, 133) == pytest.approx(15.04, abs=0.01)
