@@ -28,11 +28,13 @@ def previous_of(session, upload):
     return Previous(upload_id=earlier.id, uploaded_at=as_utc(earlier.created_at), values=values)
 
 
-def fix_first(activities, links, flag_counts):
+def fix_first(activities, links, flags, check_ids=()):
     """The open ends that may clear many flags, and the activities that fail the most checks.
 
-    activities, links: one upload's saved rows. flag_counts: {activity code: how many checks flag it}.
+    activities, links: one upload's saved rows. flags: {activity code: the numbers of the checks that flag it}.
+    check_ids: each check's ID, by its number, to name the checks an activity fails.
     """
+    flag_counts = {code: len(numbers) for code, numbers in flags.items()}
     repeat = [(code, n) for code, n in Counter(flag_counts).most_common() if n >= MIN_FAILS][:SHOWN]
     by_code = {}
     for a in activities:  # an ID repeated across 2 P6 projects keeps the first
@@ -44,4 +46,10 @@ def fix_first(activities, links, flag_counts):
     by_id = {a.p6_task_id: a for a in activities}
     return FixFirst(
         open_ends=[OpenEnd(code=code_of[i], name=by_id[i].name, wbs=by_id[i].wbs, clears=n) for i, n in ends],
-        repeat_offenders=[Repeat(code=c, name=by_code[c].name, wbs=by_code[c].wbs, fails=n) for c, n in repeat if c in by_code])
+        repeat_offenders=[Repeat(code=c, name=by_code[c].name, wbs=by_code[c].wbs, fails=n, checks=named(flags[c], check_ids))
+                          for c, n in repeat if c in by_code])
+
+
+def named(numbers, check_ids):
+    """The IDs of the checks with these numbers, in report order. Empty when the IDs aren't known."""
+    return [check_ids[n] for n in sorted(numbers) if n < len(check_ids)]

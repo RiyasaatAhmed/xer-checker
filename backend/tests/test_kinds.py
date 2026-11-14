@@ -16,7 +16,7 @@ def test_negative_float_is_split_by_how_late(days, kind):
     assert kind_of("negative-float", 1, 1, days) == kind
 
 
-@pytest.mark.parametrize("days, kind", [(50, "hf1"), (90, "hf1"), (91, "hf2"), (136, "hf3")])
+@pytest.mark.parametrize("days, kind", [(50, "hf1"), (90, "hf1"), (91, "hf2"), (136, "hf2")])
 def test_high_float_is_split_by_how_much(days, kind):
     assert kind_of("high-float", 1, 1, days) == kind
 

@@ -2,6 +2,7 @@
 // The numbers come from the backend; these are only the words around them. Keyed by the check's ID.
 
 export interface RuleText {
+  name?: string // the problem, when the backend's name only names the topic: "No resources", not "Resources"
   short: string // one line under the rule's name
   meaning: string // what a flagged activity is
   action: string // what to do about it in P6
@@ -24,6 +25,7 @@ const TEXT: Record<string, RuleText> = {
     action: 'Model the wait as its own activity, so it can be seen and tracked.',
   },
   'link-types': {
+    name: 'Not finish to start',
     short: 'A link into it that is not finish to start',
     meaning: 'have a start to start, finish to finish or start to finish link into them.',
     action: 'Use finish to start links where the work allows it.',
@@ -33,7 +35,7 @@ const TEXT: Record<string, RuleText> = {
     meaning: 'sit at the end of a pair of activities that the file links twice.',
     action: 'Delete the extra link in P6.',
   },
-  'out-of-sequence-work': {
+  'out-of-sequence': {
     short: 'Started before its predecessor finished',
     meaning: 'are in progress while a finish to start predecessor is not finished.',
     action: 'Fix the logic or the progress, so the forecast can be trusted.',
@@ -64,6 +66,7 @@ const TEXT: Record<string, RuleText> = {
     action: 'Correct the progress dates, then recalculate.',
   },
   resources: {
+    name: 'No resources',
     short: 'A day or more of work with no resource',
     meaning: 'last a day or more and have no resource assigned.',
     action: 'Assign the resource, or confirm that the activity needs none.',
@@ -95,4 +98,9 @@ const FALLBACK: RuleText = { short: 'A schedule check', meaning: 'break this rul
 /** The words for a check, by its ID. A new check from the backend still gets plain words. */
 export function ruleText(id: string): RuleText {
   return TEXT[id] ?? FALLBACK
+}
+
+/** The name a check shows: the problem it finds, else the backend's own name. */
+export function checkName(rule: { id: string; name: string }): string {
+  return TEXT[rule.id]?.name ?? rule.name
 }

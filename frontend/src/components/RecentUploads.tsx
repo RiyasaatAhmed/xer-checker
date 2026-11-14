@@ -1,5 +1,6 @@
-import { byFile } from '../board'
-import { dateText, dayText, daysBetween, plural } from '../format'
+import { TriangleAlert } from 'lucide-react'
+import { byFile, groupsOf, isSerious } from '../board'
+import { countText, dateText, dayText, daysBetween, plural } from '../format'
 import { pathFor } from '../route'
 import type { UploadSummary } from '../types'
 import { MiniStrip } from './MiniStrip'
@@ -9,15 +10,17 @@ interface Props {
   onOpen: (uploadId: string) => void
 }
 
-/** Finish against deadline for one row: "10 days early", "3 days late", or a dash. */
-function finishText(u: UploadSummary): { text: string; late: boolean } | null {
-  if (!u.forecast_finish || !u.deadline) return null
+/** Finish against deadline for one row: "10 days early", "3 days late", or the finish date when there is no deadline. */
+function finishText(u: UploadSummary): { text: string; under: string | null; late: boolean } | null {
+  if (!u.forecast_finish) return null
+  if (!u.deadline) return { text: dayText(u.forecast_finish), under: 'No deadline', late: false }
   const gap = daysBetween(u.deadline, u.forecast_finish)
-  return { text: `${Math.abs(gap)} ${plural(Math.abs(gap), 'day')} ${gap > 0 ? 'late' : gap === 0 ? 'on the deadline' : 'early'}`, late: gap > 0 }
+  return { text: `${Math.abs(gap)} ${plural(Math.abs(gap), 'day')} ${gap > 0 ? 'late' : gap === 0 ? 'on the deadline' : 'early'}`, under: dayText(u.forecast_finish), late: gap > 0 }
 }
 
 /** Saved schedules. A repeat of one file sits under its name, so the strip shows the trend. A failed one shows why. */
 export function RecentUploads({ uploads, onOpen }: Props) {
+  const sets = groupsOf(uploads.find((u) => u.checks && u.checks.length > 0)?.checks ?? []) // the strip's sets, left to right
   /** Open in place, unless the user asked for a new tab or window. */
   function open(event: React.MouseEvent, uploadId: string) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
@@ -31,7 +34,9 @@ export function RecentUploads({ uploads, onOpen }: Props) {
         <thead>
           <tr>
             <th scope="col" className="label">File</th>
-            <th scope="col" className="label">Checks</th>
+            <th scope="col" className="label">
+              Checks{sets.length > 0 && <span className="faint recent-sets"> by set: {sets.join(' · ')}</span>}
+            </th>
             <th scope="col" className="label">Finish</th>
             <th scope="col" className="label">Data date</th>
           </tr>
@@ -61,21 +66,34 @@ export function RecentUploads({ uploads, onOpen }: Props) {
                     {!repeat && (
                       <span className="faint small recent-sub">
                         {upload.project ? `${upload.project} · ` : ''}
+                        {upload.projects && upload.projects > 1 ? `${upload.projects} projects · ` : ''}
                         {dateText(upload.uploaded_at)}
                       </span>
                     )}
                   </td>
                   <td>
                     {upload.status === 'failed' ? (
-                      <span className="failed-reason">Couldn’t be checked: {upload.failure_reason}</span>
+                      <span className="failed-reason" data-tip={`Couldn’t be checked: ${upload.failure_reason ?? 'no reason saved'}`}>
+                        <TriangleAlert size={13} aria-hidden /> Can’t be read<span className="vh">: {upload.failure_reason}</span>
+                      </span>
                     ) : (
                       <span className="recent-checks">
                         <MiniStrip checks={upload.checks ?? []} />
                         <span className={upload.flags ? 'flagcount' : 'okcount'}>{upload.flags ? `${upload.flags} over` : 'All within'}</span>
+                        <Marks upload={upload} />
                       </span>
                     )}
                   </td>
-                  <td className={`nowrap${finish?.late ? ' late' : ''}`}>{finish?.text ?? <span className="faint">–</span>}</td>
+                  <td className={`nowrap${finish?.late ? ' late' : ''}`}>
+                    {finish ? (
+                      <>
+                        {finish.text}
+                        {finish.under && <span className="faint small recent-sub">{finish.under}</span>}
+                      </>
+                    ) : (
+                      <span className="faint">–</span>
+                    )}
+                  </td>
                   <td className="num faint nowrap">{upload.data_date ? dayText(upload.data_date) : '–'}</td>
                 </tr>
               )
@@ -84,5 +102,20 @@ export function RecentUploads({ uploads, onOpen }: Props) {
         ))}
       </table>
     </div>
+  )
+}
+
+/** How many failing checks are serious, and whether the file read cleanly. */
+function Marks({ upload }: { upload: UploadSummary }) {
+  const serious = (upload.checks ?? []).filter((c) => c.status === 'flag' && isSerious(c)).length
+  return (
+    <>
+      {serious > 0 && <span className="serious-count">{serious} serious</span>}
+      {(upload.broken_rows ?? 0) > 0 && (
+        <span className="broken-count" data-tip="Results may be partial">
+          <TriangleAlert size={12} aria-hidden /> {countText(upload.broken_rows ?? 0, 'broken row')}
+        </span>
+      )}
+    </>
   )
 }

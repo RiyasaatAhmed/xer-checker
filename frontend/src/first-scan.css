@@ -1,0 +1,77 @@
+/* The first-scan parts: the trust line, serious and minor, the driving path, the broken rows under the verdict,
+   and the marks on the home list. Tokens are in theme.css. */
+
+/* ---------- Header ---------- */
+
+.meta-date { color: var(--ink); font-weight: 600; }
+.meta-date .faint { font-weight: 400; }
+.meta-project { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; }
+.select.small { height: 28px; font-size: 13px; }
+
+/* ---------- Verdict ---------- */
+
+.verdict-trust { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.verdict-trust svg { flex: none; }
+.verdict-trust.ok svg { color: var(--ok-ink); }
+.verdict-trust.bad { color: var(--flag-ink); font-weight: 600; }
+.verdict-trust .link-inline { color: inherit; font-weight: inherit; text-align: left; }
+.verdict-tiers { font-size: 14px; color: var(--muted); }
+.verdict-tiers b { color: var(--ink); }
+.verdict-tiers .serious, .verdict-tiers .serious b { color: var(--flag-ink); font-weight: 650; }
+.verdict-driving { display: flex; align-items: baseline; gap: 6px; font-size: 14px; color: var(--ink); }
+.verdict-driving svg { flex: none; align-self: center; color: var(--muted); }
+.verdict-driving.late, .verdict-driving.late svg { color: var(--flag-ink); }
+.verdict-driving.none { color: var(--muted); }
+.verdict-line.neutral { color: var(--ink); }
+.verdict-worst, .verdict-change, .verdict-dates { font-size: 14px; }
+.verdict-dates b { color: var(--ink); }
+
+/* ---------- Broken rows, folded under the verdict ---------- */
+
+.issues summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.issues summary::-webkit-details-marker { display: none; }
+.issues summary h2 { font-size: 14px; }
+.issues.bad summary h2, .issues.bad summary > svg:nth-of-type(2) { color: var(--flag-ink); }
+.issues[open] summary { margin-bottom: 12px; }
+
+/* ---------- Check board: serious and minor ---------- */
+
+.tier { display: grid; gap: 2px; }
+.tier + .tier, .tier + .crows { margin-top: 10px; }
+.tier-title { font-size: 13px; font-weight: 600; color: var(--muted); display: flex; align-items: baseline; gap: 6px; }
+.tier-title.serious { color: var(--flag-ink); }
+.crow-nobar { display: block; height: 8px; }
+.crow.serious .crow-name { font-weight: 700; }
+.cell.wide { width: auto; min-width: 22px; padding: 0 6px; gap: 3px; grid-auto-flow: column; font-size: 11px; font-weight: 600; }
+
+/* ---------- Float strip: the limit tick says what it is ---------- */
+
+.fbands { margin-top: 16px; }
+.flimit-label { position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+/* ---------- Map legend ---------- */
+
+.smap-legend { margin-bottom: 10px; }
+.key-heat { background: var(--heat-3); }
+.key-span { height: 4px; background: linear-gradient(90deg, var(--slate-deep) 50%, var(--slate-soft) 50%); }
+.key-past { background: color-mix(in srgb, var(--slate-soft) 45%, transparent); border: 1px solid var(--line); }
+
+/* ---------- Fix first ---------- */
+
+.fixlist .link-inline.id { font-size: inherit; color: var(--ink); }
+.fix-wbs { font-size: 12px; }
+
+/* ---------- Home list ---------- */
+
+.recent-sets { font-weight: 400; }
+.serious-count { color: var(--flag-ink); font-size: 12px; white-space: nowrap; }
+.broken-count { display: inline-flex; align-items: center; gap: 4px; color: var(--flag-ink); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.failed-reason { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+
+/* ---------- Summary: the one line to copy ---------- */
+
+.summary-card { display: grid; gap: 12px; }
+.summary-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.summary-line { font-size: 14px; color: var(--ink); }
+.crow-note { display: block; }
+@media (max-width: 760px) { .crow-nobar { grid-area: bar; height: 0; } } /* phones: a row with no bar keeps the bar's place, at no height */

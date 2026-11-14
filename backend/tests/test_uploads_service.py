@@ -168,3 +168,22 @@ def test_fix_first_finds_one_missing_link_behind_a_chain_of_flags(db_session):
     assert ends["A12830"] >= 8  # 8 of its chain lead only into it: the others also feed other work
     assert saved.fix_first.open_ends[0].clears >= ends["A12830"]  # most first
     assert saved.fix_first.repeat_offenders[0].fails >= 2
+
+
+def test_fix_first_names_the_checks_each_repeat_offender_fails(db_session):
+    saved = check_upload(db_session, "example_xer_file.xer", EXAMPLE)
+    worst = saved.fix_first.repeat_offenders[0]
+    assert len(worst.checks) == worst.fails and set(worst.checks) <= {r.id for r in saved.rules}
+
+
+def test_each_activity_behind_a_check_names_every_check_that_flags_it(db_session):
+    saved = check_upload(db_session, "example_xer_file.xer", EXAMPLE)
+    rows = get_check(db_session, saved.upload_id, "high-float").details
+    assert all("high-float" in r.failed and len(r.failed) == r.fails for r in rows)
+
+
+def test_the_list_counts_broken_rows_projects_and_check_severity(db_session):
+    check_upload(db_session, "CSTv2.4.xer", CST)
+    [line] = list_uploads(db_session, 20)
+    assert (line.broken_rows, line.projects) == (0, 1)
+    assert {c.id: c.severity for c in line.checks}["missing-links"] == 3

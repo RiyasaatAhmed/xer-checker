@@ -29,10 +29,12 @@ interface Props {
   dataDate: string | null // marked on each activity's mini timeline
   wbs?: { names: Set<string>; label: string } | null // only the activities in this WBS group, picked on the map. Keep it stable between renders
   onClearWbs?: () => void
+  initialFilter?: string // the filter it opens with: an activity picked in Fix first
+  checkNames?: Record<string, string> // each check's name by ID, to say which checks an activity fails
 }
 
 /** The activities behind one check, loaded when the check is opened, in a fixed-height window that stays light for any number of them. */
-export function FlaggedActivities({ uploadId, rule, fileName, groups, dataDate, wbs, onClearWbs }: Props) {
+export function FlaggedActivities({ uploadId, rule, fileName, groups, dataDate, wbs, onClearWbs, initialFilter = '', checkNames = {} }: Props) {
   const [loaded, setLoaded] = useState<Loaded>(rule.count === 0 ? { status: 'ready', ids: [], rows: [] } : { status: 'loading' })
 
   // Only this check's activities are fetched, not every check's. A new check starts a new load.
@@ -51,7 +53,7 @@ export function FlaggedActivities({ uploadId, rule, fileName, groups, dataDate, 
   return (
     <section className="card activities" id="activities" aria-label={`${rule.name}: ${countText(rule.count, 'activity', 'activities')}`} tabIndex={-1}>
       {loaded.status === 'ready' ? (
-        <Ready rule={rule} fileName={fileName} groups={groups} dataDate={dataDate} wbs={wbs} onClearWbs={onClearWbs} ids={loaded.ids} details={loaded.rows} />
+        <Ready rule={rule} fileName={fileName} groups={groups} dataDate={dataDate} wbs={wbs} onClearWbs={onClearWbs} initialFilter={initialFilter} checkNames={checkNames} ids={loaded.ids} details={loaded.rows} />
       ) : (
         <>
           <div className="card-head">
@@ -78,8 +80,8 @@ interface ReadyProps extends Omit<Props, 'uploadId'> {
   details: ActivityRow[]
 }
 
-function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, ids: allIds, details }: ReadyProps) {
-  const [filter, setFilter] = useState('')
+function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, initialFilter = '', checkNames = {}, ids: allIds, details }: ReadyProps) {
+  const [filter, setFilter] = useState(initialFilter)
   const [copied, setCopied] = useState(false)
   const [sort, setSort] = useState<SortKey>('worst')
   const [only, setOnly] = useState<string | null>(null) // show one kind only
@@ -186,7 +188,7 @@ function Ready({ rule, fileName, groups, dataDate, wbs, onClearWbs, ids: allIds,
           {shown.length === 0 ? (
             <p className="hint empty-filter">Nothing matches.</p>
           ) : hasDetails ? (
-            <ActivityGroups groups={rowGroups} categories={categories} categoryOf={(r) => categories.find((c) => c.key === of(r)) ?? categories[0]} resetKey={`${rule.id}|${query}|${only}|${sort}|${wbs?.label ?? ''}`} domain={domain} dataDate={dataDate} />
+            <ActivityGroups groups={rowGroups} categories={categories} categoryOf={(r) => categories.find((c) => c.key === of(r)) ?? categories[0]} resetKey={`${rule.id}|${query}|${only}|${sort}|${wbs?.label ?? ''}`} domain={domain} dataDate={dataDate} checkNames={checkNames} />
           ) : (
             <VirtualList heights={idHeights} maxHeight={ID_LIST_PX} label="Activity IDs" renderItem={(i) => <span className="mono id-only">{ids[i]}</span>} />
           )}

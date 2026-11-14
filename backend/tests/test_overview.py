@@ -7,7 +7,7 @@ import pytest
 from helpers import ROOT
 
 from xer_checker.checks import check
-from xer_checker.overview import overview
+from xer_checker.overview import driving, overview
 from xer_checker.reader import read_xer
 from xer_checker.schedule import read_schedule
 
@@ -56,3 +56,13 @@ def test_activities_by_status_and_type():
     assert [(p["label"], p["count"]) for p in o["by_type"]] == [
         ("Task", 384), ("Start milestone", 2), ("Finish milestone", 39), ("WBS summary", 10)]
     assert sum(p["count"] for p in o["by_type"]) == o["activities"] == 435
+
+
+@pytest.mark.parametrize("name, count, wbs", [("example_xer_file.xer", 13, "Work Package 49548"), ("CSTv2.4.xer", 3, "Close-Out")])
+def test_driving_path_is_the_work_at_the_lowest_float(name, count, wbs):
+    o, _ = overview_of(name)
+    assert (o["driving_count"], o["driving_wbs"]) == (count, wbs)  # the demo's must-finish date lifts its path to 6 days
+
+
+def test_a_schedule_with_no_float_has_no_driving_path():
+    assert driving([]) == {"driving_count": 0, "driving_wbs": None}

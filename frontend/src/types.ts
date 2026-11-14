@@ -43,6 +43,7 @@ export interface ActivityRow {
   finish: string | null // actual finish, else early finish
   kind?: string // which kind of this check's activities it is: a key in RuleResult.kinds
   fails?: number // how many checks flag it
+  failed?: string[] // the IDs of the checks that flag it
 }
 
 /** One P6 project in the file. */
@@ -80,6 +81,8 @@ export interface Overview {
   float_bands?: { key: string; label: string; count: number }[] // finer bands for the float picture
   lowest_float?: number | null // the least float of any checked activity, in days
   left_out?: { key: string; label: string; count: number }[] // activities DCMA leaves out, by reason
+  driving_count?: number | null // checked activities at the lowest float: the driving path
+  driving_wbs?: string | null // the WBS that holds most of the driving path
 }
 
 export type Measure = 'percent' | 'index' | 'test'
@@ -138,6 +141,7 @@ export interface Repeat {
   name: string
   wbs: string
   fails: number
+  checks?: string[] // the IDs of the checks that flag it
 }
 
 /** Where one fix helps most. */
@@ -177,6 +181,7 @@ export interface CheckStatus {
   name: string
   group: string
   status: RuleStatus
+  severity?: number // 1 minor, 2 serious, 3 critical
 }
 
 /** One upload in the list of recent uploads. */
@@ -188,6 +193,8 @@ export interface UploadSummary {
   failure_reason: string | null // why the file couldn't be checked
   checked: number | null // null when the upload failed
   flags: number | null // checks over their limit; null when the upload failed
+  broken_rows?: number | null // rows the checker couldn't use
+  projects?: number | null // how many P6 projects the file holds
   checks?: CheckStatus[] // every check's status, in report order
   project?: string | null
   data_date?: string | null

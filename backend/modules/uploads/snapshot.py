@@ -80,9 +80,10 @@ def read_rows(activities, links):
     return details
 
 
-def kinded(row, rule_id, fails):
-    """The row for one check: its kind in that check, and how many checks flag it."""
-    return row.model_copy(update={"kind": kind_of(rule_id, row.predecessors, row.successors, row.float_days), "fails": fails})
+def kinded(row, rule_id, failed):
+    """The row for one check: its kind in that check, and the IDs of the checks that flag it."""
+    return row.model_copy(update={"kind": kind_of(rule_id, row.predecessors, row.successors, row.float_days),
+                                  "fails": max(1, len(failed)), "failed": list(failed)})
 
 
 def project_info(p):

@@ -146,7 +146,8 @@ describe('App', () => {
 
   it('names the browser tab after the file', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
-    await screen.findByRole('heading', { level: 1, name: 'CSTv2.4.xer' })
+    await screen.findByRole('heading', { level: 1, name: 'CSTv2.4' }) // the project leads; the file name sits under it
+    expect(screen.getByText('CSTv2.4.xer')).toBeInTheDocument()
     expect(document.title).toBe('CSTv2.4.xer · XER checker')
   })
 
@@ -166,13 +167,15 @@ describe('App', () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     const recent = await screen.findByRole('region', { name: 'Recent schedules' })
-    expect(within(recent).getByText('Couldn’t be checked: the file is empty')).toBeInTheDocument()
+    expect(tipped(recent, 'Couldn’t be checked: the file is empty')[0]).toHaveTextContent('Can’t be read')
+    expect(within(recent).getByText('2 serious')).toBeInTheDocument() // missing links and high float
+    expect(within(recent).getByText('20 Oct 2027')).toBeInTheDocument() // the finish date, under the gap
     expect(within(recent).getByRole('img', { name: "3 over the limit, 5 within, 2 can't be checked" })).toBeInTheDocument()
     expect(within(recent).getByText('10 days early')).toBeInTheDocument()
 
     vi.mocked(window.scrollTo).mockClear()
     await user().click(within(recent).getByRole('link', { name: 'CSTv2.4.xer' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4.xer' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4' })).toBeInTheDocument()
     expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}`)
     expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0 }) // the schedule opens at its top, not at the list
   })
@@ -200,7 +203,7 @@ describe('App', () => {
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
     expect(await within(list).findByText('Calendar placeholder 1')).toBeInTheDocument()
     expect(within(list).getAllByText('Utility Notifications & Meetings')).toHaveLength(2)
-    expect(tipped(list, '22 Jan – 20 Feb 2026')).toHaveLength(2) // the dates, on hover; the mini timeline shows them
+    expect(tipped(list, 'Total float 12.0 d. Bar below: 22 Jan – 20 Feb 2026, against the data date 1 Jan 2026')).toHaveLength(1) // float and dates, on hover
     expect(within(list).getByText('fails 3')).toBeInTheDocument() // CAL03 is flagged by 3 checks
     const codes = () => within(list).getAllByText(/^ContractNo_CAL\d+$/).map((e) => e.textContent)
     expect(codes()).toEqual(['ContractNo_CAL03', 'ContractNo_CAL01']) // worst first: most checks failed
@@ -342,7 +345,7 @@ describe('App', () => {
     window.history.replaceState(null, '', `/uploads/${CST_RESULT.upload_id}`)
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
-    expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4.xer' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4' })).toBeInTheDocument()
   })
 
   it('shows a tooltip on hover after a short delay, with the tooltip layer describing the element, and hides it on Escape', async () => {

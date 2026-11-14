@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { byFile, changes, flaggedIn, groupsOf, heatFor, ratio, shade, tally, trendOf, worstFirst, worstSort } from './board'
+import { barAt, byFile, changes, flaggedIn, groupsOf, heatFor, isSerious, overText, ratio, shade, tally, trendOf, worstFirst, worstSort } from './board'
 import type { RuleResult, UploadSummary } from './types'
 
 function rule(id: string, over: Partial<RuleResult> = {}): RuleResult {
@@ -18,18 +18,37 @@ describe('ratio', () => {
 })
 
 describe('worstFirst', () => {
-  it('lists only failing checks: the most serious first, then the furthest over the limit', () => {
+  it('lists only failing checks: the most serious first, then the most activities flagged', () => {
     const rules = [
-      rule('minor', { status: 'flag', severity: 1, percent: 90 }),
+      rule('minor', { status: 'flag', severity: 1, percent: 90, count: 300 }),
       rule('ok', { status: 'pass', severity: 3 }),
-      rule('near', { status: 'flag', severity: 3, percent: 6 }),
-      rule('far', { status: 'flag', severity: 3, percent: 50 }),
+      rule('few', { status: 'flag', severity: 3, percent: 6, count: 1 }),
+      rule('many', { status: 'flag', severity: 3, percent: 50, count: 109 }),
     ]
-    expect(worstFirst(rules).map((r) => r.id)).toEqual(['far', 'near', 'minor'])
+    expect(worstFirst(rules).map((r) => r.id)).toEqual(['many', 'few', 'minor'])
   })
-  it('ranks a limit of 0 by its share, and keeps file order for equal checks', () => {
-    const rules = [rule('a', { status: 'flag', limit_percent: 0, percent: 2 }), rule('b', { status: 'flag', limit_percent: 0, percent: 2 })]
+  it('keeps file order for equal checks', () => {
+    const rules = [rule('a', { status: 'flag', limit_percent: 0, percent: 2, count: 4 }), rule('b', { status: 'flag', limit_percent: 0, percent: 2, count: 4 })]
     expect(worstFirst(rules).map((r) => r.id)).toEqual(['a', 'b'])
+  })
+})
+
+describe('serious checks and their words', () => {
+  it('calls a check of severity 2 or more serious', () => {
+    expect([1, 2, 3].map((severity) => isSerious({ severity }))).toEqual([false, true, true])
+    expect(isSerious({})).toBe(false) // an older check with no severity
+  })
+  it('gives each failing check its unit: times the limit, or activities when the limit is 0', () => {
+    expect(overText(rule('a', { status: 'flag', percent: 46.6, count: 170 }))).toBe('9.3x limit')
+    expect(overText(rule('a', { status: 'flag', percent: 0.3, count: 1, limit_percent: 0 }))).toBe('1 activity')
+    expect(overText(rule('a', { status: 'flag', percent: 29.9, count: 109, limit_percent: 0 }))).toBe('109 activities')
+  })
+  it('draws every bar on one scale: the limit at a tenth of the bar, ten times the limit at its end', () => {
+    expect(barAt(5, 5)).toBe(10)
+    expect(barAt(15, 5)).toBe(30) // 3x the limit
+    expect(barAt(14, 10)).toBeCloseTo(14) // 1.4x a 10% limit
+    expect(barAt(90, 5)).toBe(100) // past the end: capped
+    expect(barAt(3, 0)).toBe(0) // a limit of 0 has no bar
   })
 })
 
@@ -38,7 +57,8 @@ describe('groups and tallies', () => {
     expect(groupsOf([{ group: 'Logic' }, { group: 'Float' }, { group: 'Logic' }, { group: 'Dates' }])).toEqual(['Logic', 'Float', 'Dates'])
   })
   it('counts each status', () => {
-    expect(tally([rule('a', { status: 'flag' }), rule('b'), rule('c'), rule('d', { status: 'n/a' })])).toEqual({ flag: 1, pass: 2, na: 1 })
+    expect(tally([rule('a', { status: 'flag' }), rule('b'), rule('c'), rule('d', { status: 'n/a' })])).toEqual({ flag: 1, pass: 2, na: 1, serious: 0 })
+    expect(tally([rule('a', { status: 'flag', severity: 2 }), rule('b', { status: 'pass', severity: 3 })]).serious).toBe(1) // only failing checks count
   })
 })
 

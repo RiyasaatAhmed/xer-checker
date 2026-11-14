@@ -31,6 +31,7 @@ class ActivityRow(BaseModel):
     finish: datetime | None = Field(description="Actual finish, else early finish; site-local, no time zone")
     kind: str = Field(default="", description="Which kind of this check's activities it is; the keys are in RuleResult.kinds")
     fails: int = Field(default=1, description="How many checks flag this activity")
+    failed: list[str] = Field(default=[], description="The IDs of the checks that flag this activity")
 
 
 class Kind(BaseModel):
@@ -130,6 +131,8 @@ class Overview(BaseModel):
     float_bands: list[FloatBand] = Field(default=[], description="Finer float bands for the float picture")
     lowest_float: float | None = Field(default=None, description="The least float of any checked activity, in days")
     left_out: list[FloatBand] = Field(default=[], description="Activities DCMA leaves out of the checks, by reason")
+    driving_count: int | None = Field(default=None, description="Checked activities at the lowest float: the driving path")
+    driving_wbs: str | None = Field(default=None, description="The WBS that holds most of the driving path")
 
 
 class Previous(BaseModel):
@@ -153,6 +156,7 @@ class Repeat(BaseModel):
     name: str
     wbs: str
     fails: int = Field(description="How many checks flag it")
+    checks: list[str] = Field(default=[], description="The IDs of the checks that flag it")
 
 
 class FixFirst(BaseModel):
@@ -186,6 +190,7 @@ class CheckStatus(BaseModel):
     name: str
     group: str
     status: Literal["pass", "flag", "n/a"]
+    severity: int = Field(default=1, description="1 minor, 2 serious, 3 critical")
 
 
 class UploadSummary(BaseModel):
@@ -197,6 +202,8 @@ class UploadSummary(BaseModel):
     failure_reason: str | None = Field(description="Why the file couldn't be checked")
     checked: int | None = Field(description="Activities checked; None when the upload failed")
     flags: int | None = Field(description="Checks over their limit; None when the upload failed")
+    broken_rows: int | None = Field(default=None, description="Rows the checker couldn't use; None when the upload failed")
+    projects: int | None = Field(default=None, description="How many P6 projects the file holds")
     checks: list[CheckStatus] = Field(default=[], description="Every check's status, in report order")
     project: str | None = Field(default=None, description="The first P6 project's name")
     data_date: datetime | None = Field(default=None, description="The first project's data date")

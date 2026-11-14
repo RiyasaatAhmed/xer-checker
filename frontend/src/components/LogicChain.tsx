@@ -13,7 +13,7 @@ export function LogicChain({ row, tone }: { row: ActivityRow; tone: string }) {
     <span className="chain">
       <Side items={row.before} total={row.predecessors} none="Nothing before it" />
       <ArrowRight size={12} aria-hidden className="chain-arrow" />
-      <span className={`chain-me t-${tone}`} aria-hidden="true" />
+      <span className={`chain-me t-${tone}`} aria-hidden="true" data-tip="This activity" />
       <ArrowRight size={12} aria-hidden className="chain-arrow" />
       <Side items={row.after} total={row.successors} none="Nothing after it" />
     </span>

@@ -36,7 +36,9 @@ export function FloatStrip({ overview: o, onShow }: Props) {
         {bands.filter((b) => b.count > 0).map((b) => (
           <span key={b.key} className={`fband ${LOOK[b.key] ?? 'f-fine'}`} style={{ flexGrow: b.count }} data-tip={`${b.label} days: ${b.count.toLocaleString()} of ${total.toLocaleString()}`} />
         ))}
-        <span className="flimit" style={{ left: `${100 - HIGH_FLOAT_LIMIT}%` }} data-tip={`DCMA limit: ${HIGH_FLOAT_LIMIT}% over 44 days`} />
+        <span className="flimit" style={{ left: `${100 - HIGH_FLOAT_LIMIT}%` }} data-tip={`DCMA limit: at most ${HIGH_FLOAT_LIMIT}% of the work over 44 days. Within it, the hatched part starts right of this line`}>
+          <span className="flimit-label">{HIGH_FLOAT_LIMIT}% limit</span>
+        </span>
       </div>
       <ul className="legend">
         {bands.map((b) => {
@@ -44,7 +46,7 @@ export function FloatStrip({ overview: o, onShow }: Props) {
           const inner = (
             <>
               <span className={`swatch ${LOOK[b.key] ?? 'f-fine'}`} aria-hidden="true" />
-              {b.label.replace(/ days.*/, '')} <span className="num">{b.count.toLocaleString()}</span>
+              {b.label.replace(/ days.*/, '')} d <span className="num">{b.count.toLocaleString()}</span>
             </>
           )
           return (

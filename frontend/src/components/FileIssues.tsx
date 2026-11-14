@@ -1,21 +1,28 @@
+import { ChevronDown, ChevronRight, TriangleAlert } from 'lucide-react'
 import { countText } from '../format'
 import type { RowNote } from '../types'
 
 interface Props {
   broken: RowNote[] // rows the checker couldn't use
   notes: RowNote[] // rows that ended early and were read with blanks
+  open: boolean
+  onToggle: (open: boolean) => void
 }
 
-/** Broken rows and notes, each with its line number. Shown only when the file has some. */
-export function FileIssues({ broken, notes }: Props) {
+/** Broken rows and notes, each with its line number, folded under the verdict. Shown only when the file has some. */
+export function FileIssues({ broken, notes, open, onToggle }: Props) {
+  const title = [broken.length > 0 && countText(broken.length, 'broken row'), notes.length > 0 && countText(notes.length, 'row read with blanks', 'rows read with blanks')].filter(Boolean).join(' · ')
   return (
-    <section className="card" id="file-issues" aria-labelledby="issues-title" tabIndex={-1}>
-      <div className="card-head">
-        <h2 id="issues-title">Rows with problems</h2>
-      </div>
+    <details className={`card issues${broken.length > 0 ? ' bad' : ''}`} id="file-issues" tabIndex={-1} open={open} onToggle={(event) => onToggle(event.currentTarget.open)}>
+      <summary aria-label={`Rows with problems: ${title}`}>
+        {open ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+        <TriangleAlert size={14} aria-hidden />
+        <h2 id="issues-title">{title}</h2>
+        <span className="faint small">{open ? 'Hide' : 'Show'} the rows</span>
+      </summary>
       <IssueTable title={countText(broken.length, 'broken row')} rows={broken} />
       <IssueTable title={countText(notes.length, 'row read with blanks', 'rows read with blanks')} rows={notes} />
-    </section>
+    </details>
   )
 }
 

@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { Row } from '../activitySort'
 import type { Category } from '../categories'
-import { daysText, rangeText } from '../format'
+import { dayText, daysText, rangeText } from '../format'
 import { percentAt, type Domain } from '../timeline'
 import { useMediaQuery } from '../useMediaQuery'
 import { LogicChain } from './LogicChain'
@@ -38,11 +38,12 @@ interface Props {
   resetKey: string // a new key starts the list at the top: the filter, kind or sort changed
   domain: Domain | null // the dates the mini timelines are drawn on
   dataDate: string | null // marked on each mini timeline
+  checkNames?: Record<string, string> // each check's name by ID, for the "fails" badge
 }
 
 /** The activities under their WBS group in one fixed-height scroll window. Each activity is one line with its logic.
  *  Only the lines on screen are in the page, so 20 activities or 20,000 are equally light. */
-export function ActivityGroups({ groups, categories, categoryOf, resetKey, domain, dataDate }: Props) {
+export function ActivityGroups({ groups, categories, categoryOf, resetKey, domain, dataDate, checkNames = {} }: Props) {
   const [toggled, setToggled] = useState<Record<string, boolean>>({}) // a group the user opened or closed
   const [showAll, setShowAll] = useState<Record<string, boolean>>({}) // a group the user asked to see in full
   const phone = useMediaQuery('(max-width: 760px)')
@@ -117,12 +118,16 @@ export function ActivityGroups({ groups, categories, categoryOf, resetKey, domai
                 <span className={`sdot ${STATUS_TONE[r.status] ?? 'step-1'}`} data-tip={r.status} role="img" aria-label={r.status} />
                 <span className="id mono">{r.code}</span>
                 <span className="name">{r.name}</span>
-                {(r.fails ?? 1) > 1 && <span className="fails" data-tip="Flagged by more than one check">fails {r.fails}</span>}
+                {(r.fails ?? 1) > 1 && (
+                  <span className="fails" data-tip={r.failed && r.failed.length > 0 ? `Fails ${r.failed.map((id) => checkNames[id] ?? id).join(', ')}` : 'Flagged by more than one check'}>
+                    fails {r.fails}
+                  </span>
+                )}
               </span>
               {r.wbs !== it.group.name && <span className="wbs">{r.wbs}</span>}
             </span>
             <LogicChain row={r} tone={categoryOf(r).tone} />
-            <span className="afloat num" data-tip={rangeText(r.start, r.finish)}>
+            <span className="afloat num" data-tip={`Total float ${daysText(r.float_days)} d. Bar below: ${rangeText(r.start, r.finish)}${dataDate ? `, against the data date ${dayText(dataDate)}` : ''}`}>
               <span className="float-cell">
                 {r.float_days !== null && r.float_days > 0 && <span className="fbar" aria-hidden="true" style={{ width: `${(FLOAT_BAR_PX * r.float_days) / longest}px` }} />}
                 <span className={(r.float_days ?? 0) < 0 ? 'neg' : undefined}>{daysText(r.float_days)} d</span>

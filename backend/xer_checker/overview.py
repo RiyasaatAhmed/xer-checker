@@ -22,6 +22,7 @@ CONSTRAINTS = {"CS_MSO": "Start on", "CS_MSOA": "Start on or after", "CS_MSOB": 
                "CS_MANDSTART": "Mandatory start", "CS_MANDFIN": "Mandatory finish", "CS_ALAP": "As late as possible"}
 
 LOW_FLOAT_DAYS = 10  # under two working weeks of float: close to critical
+DRIVING_SPAN_DAYS = 0.5  # working days above the lowest float that still count as the driving path
 
 # Float bands for the activities DCMA checks. The first and last match the negative and high float checks.
 FLOAT_BANDS = (
@@ -44,7 +45,7 @@ FINE_BANDS = (
     ("d90", "Over 90", lambda d: d > 90),
 )
 # Why an activity is left out of the checks, in the order the reasons are tried
-NOT_CHECKED = (("finished", "Finished", lambda a: a.status == "TK_Complete"),
+NOT_CHECKED = (("finished", "Complete", lambda a: a.status == "TK_Complete"),
                ("milestone", "Milestones", lambda a: a.task_type in ("TT_Mile", "TT_FinMile")),
                ("loe", "Level of effort", lambda a: a.task_type == "TT_LOE"),
                ("wbs", "WBS summaries", lambda a: a.task_type == "TT_WBS"))
@@ -83,7 +84,20 @@ def overview(activities, links, duplicate_links):
         "float_bands": [{"key": key, "label": label, "count": sum(1 for d in floats if test(d))} for key, label, test in FINE_BANDS],
         "lowest_float": min(floats) if floats else None,  # in days: how close to critical the schedule is
         "left_out": left_out(activities),
+        **driving(checked),
     }
+
+
+def driving(checked):
+    """{driving_count, driving_wbs}: the checked activities at the lowest float, and the WBS that holds most of them.
+
+    A must-finish date moves the whole path off 0 days, so the lowest float marks the path, not 0.
+    """
+    floats = [a.float_days for a in checked if a.float_days is not None]
+    if not floats:
+        return {"driving_count": 0, "driving_wbs": None}
+    path = [a for a in checked if a.float_days is not None and a.float_days <= min(floats) + DRIVING_SPAN_DAYS]
+    return {"driving_count": len(path), "driving_wbs": Counter(a.wbs for a in path).most_common(1)[0][0] or None}
 
 
 def parts(counts, labels, total):

@@ -1,6 +1,7 @@
 // The logic behind the check board: which checks are loud, in what order, and what changed.
 // Pure functions on the backend's answer, so each can be tested alone.
 
+import { countText } from './format'
 import type { Previous, RuleResult, RuleStatus, UploadSummary } from './types'
 
 // ---------- Constants ----------
@@ -9,6 +10,9 @@ export const SHOW_ALL_UP_TO = 6 // with this many checks or fewer, every check i
 export const ROWS_SHOWN = 8 // failing checks shown before "show more"
 const SAME = 0.05 // a change smaller than this (in percent points) is "no change"
 export const MAX_WORST = 3 // checks named in the verdict
+export const SERIOUS = 2 // a check of this severity or more is serious: 1 minor, 2 serious, 3 critical
+export const SMALL_SAMPLE = 30 // with fewer activities checked, a share says "1 of 4", not "25.0%"
+export const TIMES_SHOWN = 10 // every check bar ends at this many times its limit, so bars compare down the board
 const SHADE_STEPS = [0.05, 0.15, 0.4] // share flagged that steps a matrix cell's shade up: up to 5%, 15%, 40%, then more
 
 export type Trend = { delta: number; better: boolean | null } // better is null when nothing changed
@@ -19,14 +23,29 @@ export function ratio(rule: RuleResult): number | null {
   return rule.percent / rule.limit_percent
 }
 
-/** Failing checks first, the most serious first, then the furthest over the limit. Ties keep their order. */
+/** Failing checks first, the most serious first, then the most activities flagged. Ties keep their order. */
 export function worstFirst(rules: RuleResult[]): RuleResult[] {
-  const over = (r: RuleResult) => (ratio(r) ?? r.percent)
   return rules
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.status === 'flag')
-    .sort((a, b) => b.r.severity - a.r.severity || over(b.r) - over(a.r) || a.i - b.i)
+    .sort((a, b) => b.r.severity - a.r.severity || b.r.count - a.r.count || a.i - b.i)
     .map(({ r }) => r)
+}
+
+/** A check that can stop a schedule being used: severity 2 or more. */
+export function isSerious(rule: { severity?: number }): boolean {
+  return (rule.severity ?? 1) >= SERIOUS
+}
+
+/** How bad a failing check is, with its unit: "9.3x limit", or "1 activity" when its limit is 0. */
+export function overText(rule: RuleResult): string {
+  const over = ratio(rule)
+  return over !== null ? `${over.toFixed(1)}x limit` : countText(rule.count, 'activity', 'activities')
+}
+
+/** Where a value sits on a check bar, in % of its width: every bar ends at TIMES_SHOWN times its own limit. */
+export function barAt(value: number, limit: number): number {
+  return limit > 0 ? Math.min(100, Math.max(0, (100 * value) / (limit * TIMES_SHOWN))) : 0
 }
 
 /** The check groups in the order the backend lists them: ["Logic", "Constraints", ...]. */
@@ -34,9 +53,10 @@ export function groupsOf(rules: { group: string }[]): string[] {
   return [...new Set(rules.map((r) => r.group))]
 }
 
-/** How many checks of each status. */
-export function tally(rules: { status: RuleStatus }[]): { flag: number; pass: number; na: number } {
+/** How many checks of each status, and how many of the failing ones are serious. */
+export function tally(rules: { status: RuleStatus; severity?: number }[]): { flag: number; pass: number; na: number; serious: number } {
   return {
+    serious: rules.filter((r) => r.status === 'flag' && isSerious(r)).length,
     flag: rules.filter((r) => r.status === 'flag').length,
     pass: rules.filter((r) => r.status === 'pass').length,
     na: rules.filter((r) => r.status === 'n/a').length,

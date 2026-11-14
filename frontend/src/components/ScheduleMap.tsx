@@ -100,6 +100,14 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
         </div>
       </div>
 
+      {view === 'time' && (
+        <ul className="legend smap-legend" aria-label="How to read the map">
+          <li><span className="swatch key-heat" aria-hidden="true" /> Flagged starts in a month: darker is more</li>
+          <li><span className="swatch key-span" aria-hidden="true" /> The group’s span, filled for the share finished</li>
+          <li><span className="swatch key-past" aria-hidden="true" /> Before the data date</li>
+        </ul>
+      )}
+
       {view === 'sets' ? (
         <WbsMatrix rows={rows} rules={rules} selectedId={selectedId} group={group} indent={indent} onSelect={onSelect} onGroup={onGroup} />
       ) : (
@@ -182,11 +190,6 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
             )
           })}
         </div>
-      )}
-      {view === 'time' && (
-        <p className="smap-key hint small">
-          Darker cell: more flagged activities start that month. Thin bar: the group’s span, filled for the finished share. Grey wash: before the data date.
-        </p>
       )}
     </section>
   )

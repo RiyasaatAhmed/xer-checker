@@ -5,11 +5,12 @@ The answer is always read back from the database, so a result looks the same now
 
 import hashlib  # the file's fingerprint
 import tempfile  # a folder that's deleted after the check
+from collections import Counter  # broken rows per upload
 from pathlib import Path
 
 from sqlmodel import col, select
 
-from modules.uploads.insights import fix_first, previous_of
+from modules.uploads.insights import fix_first, named, previous_of
 from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, ScheduleProject, Upload, as_utc
 from modules.uploads.schema import CheckActivities, CheckResult, CheckStatus, RowNote, RuleResult, UploadSummary
 from modules.uploads.snapshot import bulk_insert, kinded, load_schedule, read_overview, read_rows, read_structure, save_schedule
@@ -115,7 +116,7 @@ def get_upload(session, upload_id):
         notes=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "note"],
         summary=review.points, summary_author=review.author_note, projects=projects, overview=schedule_overview,
         structure=groups, months=months, previous=previous_of(session, upload),
-        fix_first=fix_first(activities, links, {code: len(numbers) for code, numbers in flags.items()}))
+        fix_first=fix_first(activities, links, flags, [rule.id for rule in rules]))
 
 
 def get_check(session, upload_id, check_id):
@@ -131,9 +132,10 @@ def get_check(session, upload_id, check_id):
     codes = list(session.exec(select(MetricResultActivity.activity_code).where(MetricResultActivity.metric_result_id == metric.id)
                               .order_by(MetricResultActivity.position)).all())
     flags = flags_by_code(session, metrics)
+    ids = [rule_id_of(m) for m in metrics]
     rows = read_rows(*load_schedule(session, upload_id))
     return CheckActivities(id=check_id, activities=codes,
-                           details=[kinded(rows[c], check_id, len(flags.get(c, ()))) for c in codes if c in rows])
+                           details=[kinded(rows[c], check_id, named(flags.get(c, ()), ids)) for c in codes if c in rows])
 
 
 def flags_by_code(session, metrics):
@@ -175,18 +177,22 @@ def list_uploads(session, limit):
         by_upload.setdefault(metric.upload_id, []).append(metric)
     projects = {}
     for project in session.exec(select(ScheduleProject).where(col(ScheduleProject.upload_id).in_(ids)).order_by(ScheduleProject.id)).all():
-        projects.setdefault(project.upload_id, project)  # the first project of each file
-    return [summary(upload, by_upload.get(upload.id, []), projects.get(upload.id)) for upload in uploads]
+        projects.setdefault(project.upload_id, []).append(project)  # the file's projects, the first one first
+    broken = Counter(session.exec(select(FileIssue.upload_id).where(col(FileIssue.upload_id).in_(ids), FileIssue.severity == "error")).all())
+    return [summary(upload, by_upload.get(upload.id, []), projects.get(upload.id, []), broken[upload.id]) for upload in uploads]
 
 
-def summary(upload, metrics, project=None):
+def summary(upload, metrics, projects=(), broken=0):
     """One line of the upload list."""
     ready = upload.status == READY and bool(metrics)
+    project = projects[0] if projects else None
     return UploadSummary(
         upload_id=upload.id, uploaded_at=as_utc(upload.created_at), file_name=upload.file_name, status=upload.status,
         failure_reason=upload.failure_reason, checked=metrics[0].denominator if ready else None,
         flags=sum(m.verdict == "flag" for m in metrics) if ready else None,
+        broken_rows=broken if ready else None, projects=len(projects) if ready else None,
         checks=[CheckStatus(id=rule_id_of(m), name=m.name, group=BY_METRIC[m.metric_id].GROUP if m.metric_id in BY_METRIC else OTHER_GROUP,
-                            status=TO_STATUS[m.verdict]) for m in metrics] if ready else [],
+                            status=TO_STATUS[m.verdict], severity=BY_METRIC[m.metric_id].SEVERITY if m.metric_id in BY_METRIC else 1)
+                for m in metrics] if ready else [],
         project=project.name if project else None, data_date=project.data_date if project else None,
         forecast_finish=project.forecast_finish if project else None, deadline=project.deadline if project else None)
