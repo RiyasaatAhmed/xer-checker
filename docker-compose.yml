@@ -15,7 +15,7 @@ services:
       database:
         condition: service_healthy  # the API creates its tables at start, so the database must be ready
     ports:
-      - "8000:8000"  # the API; open http://localhost:8000/docs
+      - "127.0.0.1:8000:8000"  # the API, on this machine only; open http://localhost:8000/docs
     healthcheck:  # ready once the API answers
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
       interval: 10s
@@ -36,7 +36,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-xer_checker}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-only}  # local default; set a strong one in .env on a server
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # on this machine only: never open the database to the network
     volumes:
       - database-data:/var/lib/postgresql/data  # keeps the data when the container stops
     healthcheck:  # ready once it accepts connections
