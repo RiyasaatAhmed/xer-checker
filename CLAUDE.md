@@ -107,7 +107,7 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 - The API answers from the database, never straight from the checker: save first, then read back. A saved upload is never changed.
 - Tests use the `db_session` and `client` fixtures in `tests/conftest.py`: a fresh in-memory SQLite database each.
 - The tables are made with `create_all` at start. Once a table needs a change, add Alembic migrations first.
-- Frontend: the activities behind a check are dots, not a long table: a number that can be in the thousands must stay short. The list is a secondary view.
+- Frontend: the activities behind a check are grouped lines with their logic inline, 20 per group at a time, not a long table. A number that can be in the thousands must stay short, and checking one must not need a click. The table is a secondary view.
 - Frontend: keep the page glanceable: pictures first (the 3 checks, the schedule map, the logic diagram), words behind a click. New text on a check page needs a reason.
 - A new column on an existing table must be optional (nullable): `add_missing_columns` in `database/db.py` adds it on start. A required column needs Alembic first.
 - Frontend: one component per file in `src/components/`. Status shows an icon and a word, never color alone.

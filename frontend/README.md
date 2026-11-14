@@ -12,7 +12,7 @@ The page where you upload a `.xer` file and see where its problems are. Vite, Re
 | **Upload** | Drop a `.xer` file anywhere on the page, or use the button. A wrong file type or a file over 50 MB is refused at once, before it's sent |
 | **The 3 checks** | First on the page. Each is a value against its DCMA limit, on one 0 to 100% scale so they compare, with an icon for over or within. Click one to list its activities |
 | **Schedule map** | The WBS tree as rows: red for flagged activities, grey for fine, and a bar for when its work happens. The data date, forecast finish and deadline are labelled on the axis, with a chip for how far the forecast is from the deadline. Open a group, or click it to list its activities |
-| **Activities** | A grid of dots: one square per activity, grouped by WBS group and colored by kind. 400 activities take about 150 px, not a long table. For missing links the colors are nothing before, nothing after, or both; for float they're 3 float ranges. The kinds are filters. Click a dot for the activity, its float, dates and logic diagram (before, this activity, after). Switch to "List" to sort a table. Filter by ID, name or WBS, copy the IDs, or download every column as CSV |
+| **Activities** | Grouped by WBS group. Each activity is one line. It shows its logic as `before → ■ → after`, with a red `none` on a missing side, so a missing link is read, not clicked. Also its name, WBS, float as a bar and dates. A small result opens every group; a big one shows group totals and a bar of kinds, 20 rows a group at a time. The kinds are filters. Switch to "Table" to sort. Filter by ID, name or WBS, copy the IDs, or download every column as CSV |
 | **File profile** | One small card: five counts (activities, links, leads, lags, constraints) and two bars (status, float). A float band over its limit links to its activities |
 | **Summary and broken rows** | The summary is folded away. Broken rows show only when the file has some |
 
@@ -22,7 +22,7 @@ The page where you upload a `.xer` file and see where its problems are. Vite, Re
 
 ![Schedule map](map.png)
 
-![Dots](dots.png)
+![Activities](activities.png)
 
 ![Upload screen](upload-screen.png)
 
@@ -69,9 +69,9 @@ All colors, type and shapes are tokens in [`src/theme.css`](src/theme.css). The 
 | `src/format.ts` | Percents, counts, dates and CSV |
 | `src/components/Health.tsx` | The 3 checks: a value against its limit |
 | `src/components/FlaggedActivities.tsx` | The activities behind a check: the Dots and List views, the kinds, filters, copy and CSV |
-| `src/components/ActivityDots.tsx` | One square per activity, grouped by WBS group |
-| `src/components/ActivityInspector.tsx` | The activity picked on the dots: its float, dates and logic |
-| `src/components/ActivityTable.tsx` | The "List" view: a table to sort |
+| `src/components/ActivityGroups.tsx` | The activities under their WBS group, one line each, 20 at a time |
+| `src/components/LogicChain.tsx` | One activity's logic on one line: before, it, after |
+| `src/components/ActivityTable.tsx` | The "Table" view: a table to sort |
 | `src/categories.ts` | How activities are told apart: which link is missing, or how much float |
 | `src/components/ScheduleMap.tsx` | The WBS tree as rows: flagged of checked, and a timeline with the key dates labelled |
 | `src/components/LogicDiagram.tsx` | One activity with what comes before and after it |
