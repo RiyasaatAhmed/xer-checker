@@ -8,8 +8,8 @@ export function Summary({ points, author }: { points: string[]; author: string }
         <span className="pill info">{byAi ? 'Written by AI' : 'Written by code'}</span>
       </summary>
       <ul className="points">
-        {points.map((point) => (
-          <li key={point}>{point}</li>
+        {points.map((point, i) => (
+          <li key={i}>{point}</li>
         ))}
       </ul>
       <p className="hint small">

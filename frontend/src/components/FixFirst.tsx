@@ -15,8 +15,8 @@ export function FixFirst({ fixes }: { fixes: Fixes }) {
               <Link2Off size={14} aria-hidden /> One missing link, many flags
             </h3>
             <ul className="fixlist">
-              {fixes.open_ends.map((e) => (
-                <li key={e.code} data-tip={`${e.name}, ${e.wbs}`}>
+              {fixes.open_ends.map((e, i) => (
+                <li key={`${e.code}-${i}`} data-tip={`${e.name}, ${e.wbs}`}>
                   <span className="mono id">{e.code}</span> has nothing after it.{' '}
                   <b className="num">{countText(e.clears, 'flagged activity', 'flagged activities')}</b> lead only into it.
                 </li>

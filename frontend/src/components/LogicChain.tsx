@@ -30,8 +30,8 @@ function Side({ items, total, none }: { items: Neighbor[]; total: number; none: 
   }
   return (
     <span className="chain-side">
-      {items.slice(0, CHIPS).map((n) => (
-        <span key={n.code} className="chain-chip mono" data-tip={`${n.name} (${linkText(n)})`}>
+      {items.slice(0, CHIPS).map((n, i) => (
+        <span key={`${n.code}-${i}`} className="chain-chip mono" data-tip={`${n.name} (${linkText(n)})`}>
           {n.code}
         </span>
       ))}
