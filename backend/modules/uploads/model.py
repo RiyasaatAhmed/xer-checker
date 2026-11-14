@@ -8,6 +8,7 @@
   schedule_projects          the P6 projects in the file: data date, deadline, forecast finish
   activities                 every activity: ID, name, WBS, status, float, duration, dates
   relationships              every link row in the file, and whether it's counted (one per pair)
+  wbs_nodes                  the WBS tree: each group and the group it sits in
 
 Deleting an upload deletes everything from it (ON DELETE CASCADE).
 """
@@ -129,6 +130,7 @@ class Activity(SQLModel, table=True):
     activity_code: str  # the activity ID schedulers see
     name: str
     wbs: str  # the WBS element's name
+    p6_wbs_id: str | None = None  # the WBS element it belongs to; None on uploads saved before the tree was kept
     task_type: str  # TT_Task, TT_Mile, ...
     status: str  # TK_NotStart, TK_Active, TK_Complete
     checked: bool  # one of the activities DCMA checks
@@ -153,3 +155,15 @@ class Relationship(SQLModel, table=True):
     lag_hours: float  # below 0 is a lead, above 0 a lag
     counted: bool  # False for a pair's earlier row when the file links the pair twice
     source_line: int
+
+
+class WbsNode(SQLModel, table=True):
+    """One WBS element of an uploaded file, as read from PROJWBS."""
+    __tablename__ = "wbs_nodes"
+
+    id: int | None = Field(default=None, primary_key=True)
+    upload_id: uuid.UUID = Field(foreign_key="uploads.id", ondelete="CASCADE", index=True)
+    p6_wbs_id: str
+    parent_p6_wbs_id: str | None = None  # None for the root
+    name: str
+    seq: int  # the order P6 shows siblings in

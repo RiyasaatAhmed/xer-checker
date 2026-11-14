@@ -7,7 +7,7 @@ DATABASE_URL picks the database:
 
 import os  # reads DATABASE_URL
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect, text
 from sqlmodel import Session, SQLModel, create_engine
 
 # ---------- Constants ----------
@@ -38,7 +38,25 @@ def init_db(engine=None):
     """Create any table that doesn't exist yet. Existing tables and their rows are left alone."""
     import modules.uploads.model  # noqa: F401  (registers the tables before they're created)
 
-    SQLModel.metadata.create_all(engine or get_engine())
+    engine = engine or get_engine()
+    SQLModel.metadata.create_all(engine)
+    add_missing_columns(engine)
+
+
+def add_missing_columns(engine):
+    """Add any new optional column to a table made before it existed, so saved uploads stay.
+
+    A stopgap until the schema needs real migrations (Alembic). Only nullable columns are added:
+    older rows get NULL, which the code treats as "not kept".
+    """
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        for table in SQLModel.metadata.sorted_tables:
+            have = {c["name"] for c in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name not in have and column.nullable:
+                    kind = column.type.compile(engine.dialect)
+                    connection.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {kind}'))
 
 
 def get_session():

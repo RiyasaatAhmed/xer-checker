@@ -20,7 +20,7 @@ def test_init_db_creates_every_table_and_can_run_twice(db_session):
     db.init_db(db_session.get_bind())  # a second time: changes nothing
     tables = set(inspect(db_session.get_bind()).get_table_names())
     assert tables == {"uploads", "file_issues", "metric_results", "metric_result_activities", "reviews",
-                      "schedule_projects", "activities", "relationships"}
+                      "schedule_projects", "activities", "relationships", "wbs_nodes"}
 
 
 def test_deleting_an_upload_deletes_its_rows(db_session):
@@ -39,3 +39,17 @@ def test_an_unknown_status_is_refused(db_session):
     with Session(engine) as session, pytest.raises(IntegrityError):
         session.add(Upload(file_name="a.xer", size_bytes=1, sha256="x", status="maybe"))
         session.commit()
+
+
+def test_a_new_optional_column_is_added_to_an_older_table():
+    from sqlalchemy.pool import StaticPool
+    engine = db.make_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    with engine.begin() as connection:  # an activities table as it was before p6_wbs_id existed
+        connection.exec_driver_sql("CREATE TABLE activities (id INTEGER PRIMARY KEY, upload_id TEXT, p6_task_id TEXT)")
+        connection.exec_driver_sql("INSERT INTO activities VALUES (1, 'u', 't')")
+    db.init_db(engine)
+    columns = {c["name"] for c in inspect(engine).get_columns("activities")}
+    assert "p6_wbs_id" in columns  # the optional column is added
+    assert "name" not in columns  # a required column is never added to a table that has rows
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql("SELECT p6_task_id, p6_wbs_id FROM activities").fetchall() == [("t", None)]
