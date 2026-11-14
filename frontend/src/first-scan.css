@@ -58,13 +58,6 @@
 .fixlist .link-inline.id { font-size: inherit; color: var(--ink); }
 .fix-wbs { font-size: 12px; }
 
-/* ---------- Home list ---------- */
-
-.recent-sets { font-weight: 400; }
-.serious-count { color: var(--flag-ink); font-size: 12px; white-space: nowrap; }
-.broken-count { display: inline-flex; align-items: center; gap: 4px; color: var(--flag-ink); font-size: 12px; font-weight: 600; white-space: nowrap; }
-.failed-reason { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
-
 /* ---------- Summary: the one line to copy ---------- */
 
 .summary-card { display: grid; gap: 12px; }

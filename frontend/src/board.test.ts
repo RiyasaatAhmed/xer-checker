@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { barAt, byFile, changes, flaggedIn, groupsOf, heatFor, isSerious, limitParts, ratio, shade, tally, trendOf, worstFirst, worstSort } from './board'
-import type { RuleResult, UploadSummary } from './types'
+import { barAt, changes, flaggedIn, groupsOf, heatFor, isSerious, limitParts, ratio, shade, tally, threeOf, trendOf, worstFirst, worstSort } from './board'
+import type { RuleResult } from './types'
 
 function rule(id: string, over: Partial<RuleResult> = {}): RuleResult {
   return { id, name: id, group: 'Logic', measure: 'percent', direction: 'above', severity: 1, dcma_section: '', limit_percent: 5, count: 0, percent: 0, status: 'pass', kinds: [], ...over }
@@ -116,10 +116,8 @@ describe('shade', () => {
   })
 })
 
-describe('byFile', () => {
-  const up = (file_name: string, uploaded_at: string): UploadSummary => ({ upload_id: file_name + uploaded_at, uploaded_at, file_name, status: 'ready', failure_reason: null, checked: 1, flags: 0 })
-  it('groups repeat uploads under their file, keeping the newest first and the files in order of their newest', () => {
-    const groups = byFile([up('a.xer', '3'), up('b.xer', '2'), up('a.xer', '1')])
-    expect(groups.map((g) => [g.name, g.uploads.map((u) => u.uploaded_at)])).toEqual([['a.xer', ['3', '1']], ['b.xer', ['2']]])
+describe('threeOf', () => {
+  it('picks the demo\'s 3 checks in its order, and leaves out one the file lacks', () => {
+    expect(threeOf([rule('high-float'), rule('leads'), rule('missing-links')]).map((r) => r.id)).toEqual(['missing-links', 'high-float'])
   })
 })

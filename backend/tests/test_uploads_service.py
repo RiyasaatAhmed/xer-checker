@@ -85,6 +85,13 @@ def test_the_list_shows_the_newest_first_with_headline_numbers(db_session):
     assert len(list_uploads(db_session, 1)) == 1
 
 
+def test_the_list_gives_each_check_its_share_and_limit(db_session):
+    check_upload(db_session, "CSTv2.4.xer", CST)
+    (line,) = list_uploads(db_session, 10)
+    shown = {c.id: (c.percent, c.limit_percent) for c in line.checks}
+    assert shown["missing-links"] == (15.0, 5) and shown["high-float"] == (58.6, 5)  # the baseline numbers
+
+
 def test_times_are_sent_as_utc(db_session):
     saved = check_upload(db_session, "CSTv2.4.xer", CST)
     assert saved.uploaded_at.utcoffset().total_seconds() == 0  # "...Z", not a time the browser reads as local

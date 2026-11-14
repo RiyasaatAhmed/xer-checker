@@ -182,6 +182,9 @@ export interface CheckStatus {
   group: string
   status: RuleStatus
   severity?: number // 1 minor, 2 serious, 3 critical
+  percent?: number | null // the share of activities it flags; missing on an upload listed by an older backend
+  limit_percent?: number | null
+  na_reason?: string | null // why the check could not run
 }
 
 /** One upload in the list of recent uploads. */

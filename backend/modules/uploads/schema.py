@@ -191,6 +191,9 @@ class CheckStatus(BaseModel):
     group: str
     status: Literal["pass", "flag", "n/a"]
     severity: int = Field(default=1, description="1 minor, 2 serious, 3 critical")
+    percent: float | None = Field(default=None, description="The share of activities it flags, 1 decimal")
+    limit_percent: float | None = Field(default=None, description="Its limit, in %")
+    na_reason: str | None = Field(default=None, description="Why the check could not run")
 
 
 class UploadSummary(BaseModel):

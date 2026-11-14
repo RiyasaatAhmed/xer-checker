@@ -1,120 +1,87 @@
-import { TriangleAlert } from 'lucide-react'
-import { byFile, groupsOf, isSerious } from '../board'
-import { countText, dateText, dayText, daysBetween, plural } from '../format'
+import { ArrowRight, ChevronDown, TriangleAlert } from 'lucide-react'
+import { useState } from 'react'
+import { dateText } from '../format'
+import { threeOf } from '../board'
 import { pathFor } from '../route'
 import type { UploadSummary } from '../types'
-import { MiniStrip } from './MiniStrip'
+import { ThreeBadge } from './ThreeBadge'
+import { ThreeChecks } from './ThreeChecks'
 
 interface Props {
-  uploads: UploadSummary[]
+  uploads: UploadSummary[] // newest first
   onOpen: (uploadId: string) => void
 }
 
-/** Finish against deadline for one row: "10 days early", "3 days late", or the finish date when there is no deadline. */
-function finishText(u: UploadSummary): { text: string; under: string | null; late: boolean } | null {
-  if (!u.forecast_finish) return null
-  if (!u.deadline) return { text: dayText(u.forecast_finish), under: 'No deadline', late: false }
-  const gap = daysBetween(u.deadline, u.forecast_finish)
-  return { text: `${Math.abs(gap)} ${plural(Math.abs(gap), 'day')} ${gap > 0 ? 'late' : gap === 0 ? 'on the deadline' : 'early'}`, under: dayText(u.forecast_finish), late: gap > 0 }
-}
-
-/** Saved schedules. A repeat of one file sits under its name, so the strip shows the trend. A failed one shows why. */
+/** Saved schedules, drawn as the demo draws a file: its row, and under it the 3 checks. Each row opens and
+ *  closes; the newest opens by default, and again when a new file arrives. */
 export function RecentUploads({ uploads, onOpen }: Props) {
-  const sets = groupsOf(uploads.find((u) => u.checks && u.checks.length > 0)?.checks ?? []) // the strip's sets, left to right
-  /** Open in place, unless the user asked for a new tab or window. */
-  function open(event: React.MouseEvent, uploadId: string) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
-    event.preventDefault()
-    onOpen(uploadId)
+  const first = uploads.find((u) => u.status === 'ready')?.upload_id ?? null
+  const [open, setOpen] = useState<{ first: string | null; ids: Set<string> }>(() => ({ first, ids: new Set(first ? [first] : []) }))
+  // A new newest file: open it alone, so its checks arrive as in the demo (adjusted during render, not in an effect)
+  const ids = open.first === first ? open.ids : new Set(first ? [first] : [])
+  if (open.first !== first) setOpen({ first, ids })
+
+  function toggle(id: string) {
+    const next = new Set(ids)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setOpen({ first, ids: next })
   }
 
   return (
-    <div className="table-scroll recent">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col" className="label">File</th>
-            <th scope="col" className="label">
-              Checks{sets.length > 0 && <span className="faint recent-sets"> by set: {sets.join(' · ')}</span>}
-            </th>
-            <th scope="col" className="label">Finish</th>
-            <th scope="col" className="label">Data date</th>
-          </tr>
-        </thead>
-        {byFile(uploads).map((file) => (
-          <tbody key={file.name}>
-            {file.uploads.length > 1 && (
-              <tr className="recent-group">
-                <th scope="rowgroup" colSpan={4}>
-                  {file.name} <span className="faint">{file.uploads.length} uploads, newest first</span>
-                </th>
-              </tr>
-            )}
-            {file.uploads.map((upload) => {
-              const finish = finishText(upload)
-              const repeat = file.uploads.length > 1
-              return (
-                <tr key={upload.upload_id} className={repeat ? 'recent-repeat' : undefined}>
-                  <td className="recent-file">
-                    {upload.status === 'ready' ? (
-                      <a href={pathFor(upload.upload_id)} onClick={(event) => open(event, upload.upload_id)}>
-                        {repeat ? dateText(upload.uploaded_at) : upload.file_name}
-                      </a>
-                    ) : (
-                      <span>{repeat ? dateText(upload.uploaded_at) : upload.file_name}</span>
-                    )}
-                    {!repeat && (
-                      <span className="faint small recent-sub">
-                        {upload.project ? `${upload.project} · ` : ''}
-                        {upload.projects && upload.projects > 1 ? `${upload.projects} projects · ` : ''}
-                        {dateText(upload.uploaded_at)}
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    {upload.status === 'failed' ? (
-                      <span className="failed-reason" data-tip={`Couldn’t be checked: ${upload.failure_reason ?? 'no reason saved'}`}>
-                        <TriangleAlert size={13} aria-hidden /> Can’t be read<span className="vh">: {upload.failure_reason}</span>
-                      </span>
-                    ) : (
-                      <span className="recent-checks">
-                        <MiniStrip checks={upload.checks ?? []} />
-                        <span className={upload.flags ? 'flagcount' : 'okcount'}>{upload.flags ? `${upload.flags} over` : 'All within'}</span>
-                        <Marks upload={upload} />
-                      </span>
-                    )}
-                  </td>
-                  <td className={`nowrap${finish?.late ? ' late' : ''}`}>
-                    {finish ? (
-                      <>
-                        {finish.text}
-                        {finish.under && <span className="faint small recent-sub">{finish.under}</span>}
-                      </>
-                    ) : (
-                      <span className="faint">–</span>
-                    )}
-                  </td>
-                  <td className="num faint nowrap">{upload.data_date ? dayText(upload.data_date) : '–'}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        ))}
-      </table>
-    </div>
+    <ul className="files">
+      {uploads.map((upload) => (
+        <li key={upload.upload_id}>
+          {upload.status === 'ready' ? (
+            <Ready upload={upload} open={ids.has(upload.upload_id)} onToggle={() => toggle(upload.upload_id)} onOpen={onOpen} />
+          ) : (
+            <div className="file-head failed">
+              <span className="live-xer" aria-hidden>
+                <span />
+              </span>
+              <span className="file-name">{upload.file_name}</span>
+              <span className="pill flag" data-tip={`Couldn’t be checked: ${upload.failure_reason ?? 'no reason saved'}`}>
+                <TriangleAlert size={12} strokeWidth={2.5} aria-hidden /> Can’t be read<span className="sr-only">: {upload.failure_reason}</span>
+              </span>
+              <span className="file-when">{dateText(upload.uploaded_at)}</span>
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 
-/** How many failing checks are serious, and whether the file read cleanly. */
-function Marks({ upload }: { upload: UploadSummary }) {
-  const serious = (upload.checks ?? []).filter((c) => c.status === 'flag' && isSerious(c)).length
+/** A checked file: a row that opens to show its 3 checks, and a link to its full report. */
+function Ready({ upload, open, onToggle, onOpen }: { upload: UploadSummary; open: boolean; onToggle: () => void; onOpen: (uploadId: string) => void }) {
+  const three = threeOf(upload.checks ?? [])
+  const panel = `file-${upload.upload_id}`
   return (
     <>
-      {serious > 0 && <span className="serious-count">{serious} serious</span>}
-      {(upload.broken_rows ?? 0) > 0 && (
-        <span className="broken-count" data-tip="Results may be partial">
-          <TriangleAlert size={12} aria-hidden /> {countText(upload.broken_rows ?? 0, 'broken row')}
+      <button type="button" className="file-head" aria-expanded={open} aria-controls={panel} onClick={onToggle}>
+        <span className="live-xer" aria-hidden>
+          <span />
         </span>
+        <span className="file-name">{upload.file_name}</span>
+        <ThreeBadge checks={three} />
+        <span className="file-when">{dateText(upload.uploaded_at)}</span>
+        <ChevronDown className="file-chevron" size={16} aria-hidden />
+      </button>
+      {open && (
+        <div id={panel} className="file-panel">
+          <ThreeChecks checks={three} />
+          <a
+            className="file-report"
+            href={pathFor(upload.upload_id)}
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return // a new tab or window
+              event.preventDefault()
+              onOpen(upload.upload_id)
+            }}
+          >
+            Full report <ArrowRight size={13} aria-hidden />
+          </a>
+        </div>
       )}
     </>
   )

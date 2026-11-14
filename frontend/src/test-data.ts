@@ -108,7 +108,7 @@ export function manyMissing(n: number): { result: CheckResult; checks: Record<st
   }
 }
 
-const STRIP = CST_RULES.map((r) => ({ id: r.id, name: r.name, group: r.group, status: r.status, severity: r.severity }))
+const STRIP = CST_RULES.map((r) => ({ id: r.id, name: r.name, group: r.group, status: r.status, severity: r.severity, percent: r.percent, limit_percent: r.limit_percent, na_reason: r.na_reason }))
 
 // The upload list after one good upload and one that failed.
 export const UPLOAD_LIST: UploadSummary[] = [

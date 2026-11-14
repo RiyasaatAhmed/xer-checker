@@ -2,7 +2,7 @@
 // Pure functions on the backend's answer, so each can be tested alone.
 
 import { percentText } from './format'
-import type { Previous, RuleResult, RuleStatus, UploadSummary } from './types'
+import type { Previous, RuleResult, RuleStatus } from './types'
 
 // ---------- Constants ----------
 
@@ -13,6 +13,7 @@ export const MAX_WORST = 3 // failing checks the verdict writes out as sentences
 export const SERIOUS = 2 // a check of this severity or more is serious: 1 minor, 2 serious, 3 critical
 export const SMALL_SAMPLE = 30 // with fewer activities checked, a share says "1 of 4", not "25.0%"
 export const TIMES_SHOWN = 10 // every check bar ends at this many times its limit, so bars compare down the board
+const SHOWN = ['missing-links', 'negative-float', 'high-float'] // the 3 checks the home page shows, as the demo does, in its order
 const SHADE_STEPS = [0.05, 0.15, 0.4] // share flagged that steps a matrix cell's shade up: up to 5%, 15%, 40%, then more
 
 export type Trend = { delta: number; better: boolean | null } // better is null when nothing changed
@@ -120,9 +121,8 @@ export function shade(share: number): number {
   return 1 + SHADE_STEPS.filter((step) => share > step).length
 }
 
-/** Uploads of one file, newest first, and the files in the order of their newest upload. */
-export function byFile(uploads: UploadSummary[]): { name: string; uploads: UploadSummary[] }[] {
-  const files = new Map<string, UploadSummary[]>()
-  for (const u of uploads) files.set(u.file_name, [...(files.get(u.file_name) ?? []), u])
-  return [...files].map(([name, list]) => ({ name, uploads: list }))
+
+/** The demo's 3 checks from a file's checks, in the demo's order. A check the file lacks is left out. */
+export function threeOf<T extends { id: string }>(checks: T[]): T[] {
+  return SHOWN.map((id) => checks.find((c) => c.id === id)).filter((c): c is T => c !== undefined)
 }

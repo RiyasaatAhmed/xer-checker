@@ -22,6 +22,9 @@ async function uploadWith(upload: () => Response, name = 'CSTv2.4.xer', backend:
   render(<App />)
   const [input] = await screen.findAllByTestId('file-input') // the home page shows once its list has loaded
   await user().upload(input, new File(['ERMHDR'], name))
+  const live = await screen.findByRole('region', { name: 'Latest check' }).catch(() => null)
+  const link = live && (await within(live).findByRole('link', { name }).catch(() => null))
+  if (link) await user().click(link) // the 3 checks show on the home page first; the file's name opens the report
   return fetch
 }
 
@@ -35,12 +38,31 @@ describe('App', () => {
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument() // no headline copy
   })
 
-  it('with saved schedules, shows the list and the upload button instead of the demo', async () => {
+  it('with saved schedules, shows the drop area and the list instead of the demo', async () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     expect(await screen.findByRole('heading', { level: 1, name: 'Recent schedules' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Upload a schedule' })).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Upload a .xer file' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Drop a .xer file to check it' })).toHaveLength(1) // not repeated in the header
+  })
+
+  it('after an upload, stays on the home page and shows the 3 checks as the demo does, over the limit or within it', async () => {
+    vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT)))
+    render(<App />)
+    const [input] = await screen.findAllByTestId('file-input')
+    await user().upload(input, new File(['ERMHDR'], 'CSTv2.4.xer'))
+    const live = await screen.findByRole('region', { name: 'Latest check' })
+    expect(live).toHaveTextContent('2 of 3 over the limit')
+    const rows = Array.from(live.querySelectorAll<HTMLElement>('.live-row'))
+    expect(rows.map((r) => `${r.querySelector('.live-check-name')?.textContent} ${r.className.split(' ')[1]} ${r.getAttribute('data-tip')}`)).toEqual([
+      'Missing links flag 15.0% of activities, over the 5% limit',
+      'Negative float pass 0.0% of activities, within the 0% limit',
+      'High float flag 58.6% of activities, over the 5% limit',
+    ])
+    expect(window.location.pathname).toBe('/') // no report: the home page holds the answer
+    expect(screen.queryByRole('region', { name: 'Verdict' })).not.toBeInTheDocument()
+    await user().click(within(live).getByRole('link', { name: 'CSTv2.4.xer' })) // the file's name still opens its report
+    expect(await screen.findByRole('region', { name: 'Verdict' })).toBeInTheDocument()
   })
 
   it('answers in the verdict: how many checks are over, the worst ones, the finish against the deadline, and what changed', async () => {
@@ -168,30 +190,42 @@ describe('App', () => {
     expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
   })
 
-  it('lists recent schedules with a strip each, and opens a saved one at its own address', async () => {
+  it('lists recent schedules as file rows with the 3 checks, the newest open, and opens a saved one at its own address', async () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     const recent = await screen.findByRole('region', { name: 'Recent schedules' })
+    const head = within(recent).getByRole('button', { name: /CSTv2\.4\.xer/ })
+    expect(head).toHaveAttribute('aria-expanded', 'true') // the newest opens by default
+    expect(head).toHaveTextContent('2 of 3 over the limit')
+    expect(Array.from(recent.querySelectorAll('.live-row')).map((r) => r.getAttribute('data-tip'))).toEqual([
+      '15.0% of activities, over the 5% limit',
+      '0.0% of activities, within the 0% limit',
+      '58.6% of activities, over the 5% limit',
+    ])
     expect(tipped(recent, 'Couldn’t be checked: the file is empty')[0]).toHaveTextContent('Can’t be read')
-    expect(within(recent).getByText('2 serious')).toBeInTheDocument() // missing links and high float
-    expect(within(recent).getByText('20 Oct 2027')).toBeInTheDocument() // the finish date, under the gap
-    expect(within(recent).getByRole('img', { name: "3 over the limit, 5 within, 2 can't be checked" })).toBeInTheDocument()
-    expect(within(recent).getByText('10 days early')).toBeInTheDocument()
+
+    await user().click(head) // closes, and opens again
+    expect(head).toHaveAttribute('aria-expanded', 'false')
+    expect(recent.querySelectorAll('.live-row')).toHaveLength(0)
+    await user().click(head)
+    expect(head).toHaveAttribute('aria-expanded', 'true')
 
     vi.mocked(window.scrollTo).mockClear()
-    await user().click(within(recent).getByRole('link', { name: 'CSTv2.4.xer' }))
+    await user().click(within(recent).getByRole('link', { name: 'Full report' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4' })).toBeInTheDocument()
     expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}`)
     expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0 }) // the schedule opens at its top, not at the list
   })
 
-  it('puts repeat uploads of one file under its name, newest first', async () => {
-    const older = { ...UPLOAD_LIST[0], upload_id: '44444444-4444-4444-8444-444444444444', uploaded_at: '2026-11-01T03:00:00Z', flags: 5 }
+  it('opens only the newest file by default, and each other one on a click', async () => {
+    const older = { ...UPLOAD_LIST[0], upload_id: '44444444-4444-4444-8444-444444444444', uploaded_at: '2026-11-01T03:00:00Z' }
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), [UPLOAD_LIST[0], older]))
     render(<App />)
     const recent = await screen.findByRole('region', { name: 'Recent schedules' })
-    expect(within(recent).getByText('2 uploads, newest first')).toBeInTheDocument()
-    expect(within(recent).getAllByText(/over$/).map((e) => e.textContent)).toEqual(['3 over', '5 over'])
+    const [newest, earlier] = within(recent).getAllByRole('button', { name: /CSTv2\.4\.xer/ })
+    expect([newest, earlier].map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'false'])
+    await user().click(earlier)
+    expect([newest, earlier].map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'true'])
   })
 
   it('labels the key dates on the map axis, and counts the picked check on it', async () => {

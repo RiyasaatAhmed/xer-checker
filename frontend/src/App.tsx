@@ -6,6 +6,7 @@ import { DropOverlay } from './components/DropOverlay'
 import { TooltipLayer } from './components/Tooltip'
 import { ErrorNotice } from './components/ErrorNotice'
 import { Home } from './components/Home'
+import type { Fresh } from './components/LiveCheck'
 import { UploadButton } from './components/UploadButton'
 import { useUploadRoute } from './route'
 import type { CheckResult, UploadSummary } from './types'
@@ -28,6 +29,7 @@ export function App() {
   const uploadId = route.uploadId
   const [state, setView] = useState<View>(() => (uploadId ? { step: 'loading', text: OPENING } : { step: 'empty' }))
   const [uploads, setUploads] = useState<UploadSummary[] | null>(null) // null until the list has loaded
+  const [fresh, setFresh] = useState<Fresh | null>(null) // the file just uploaded, shown on the home page
   const shownId = useRef<string | null>(null) // the upload on screen, so a fresh upload isn't fetched again
 
   // The list is a convenience: if it can't load, uploading still works.
@@ -72,17 +74,28 @@ export function App() {
       setView({ step: 'failed', message: problem })
       return
     }
-    setView({ step: 'loading', text: `Checking ${file.name}…` })
+    // The check runs on the home page, which then shows each check's result; the full report is a click away
+    go(null)
+    setView({ step: 'empty' })
+    setFresh({ name: file.name, result: null })
     try {
       const result = await uploadXer(file)
-      shownId.current = result.upload_id
-      setView({ step: 'done', result })
-      go(result.upload_id)
+      await listUploads().then(setUploads, () => undefined) // the list first, so the page's layout settles before the checks arrive
+      setFresh({ name: file.name, result })
     } catch (error) {
-      go(null)
+      setFresh(null)
       setView({ step: 'failed', message: messageOf(error) })
+      refreshList() // a failed upload is saved too, with its reason
     }
-    refreshList() // a failed upload is saved too, with its reason
+  }
+
+  /** Open a schedule. The one just uploaded is already here, so it isn't fetched again. */
+  function open(uploadId: string, checkId?: string) {
+    if (fresh?.result?.upload_id === uploadId) {
+      shownId.current = uploadId
+      setView({ step: 'done', result: fresh.result })
+    }
+    go(uploadId, checkId)
   }
 
   function home(event: React.MouseEvent) {
@@ -119,7 +132,7 @@ export function App() {
       <main className="main">
         {view.step === 'failed' && <ErrorNotice message={view.message} />}
         {view.step === 'loading' && <Checking text={view.text} />}
-        {(view.step === 'empty' || view.step === 'failed') && <Home uploads={uploads} onFile={check} onOpen={go} />}
+        {(view.step === 'empty' || view.step === 'failed') && <Home uploads={uploads} onFile={check} onOpen={open} fresh={fresh} />}
         {view.step === 'done' && (
           <>
             <a href="/" className="back" onClick={home}>
