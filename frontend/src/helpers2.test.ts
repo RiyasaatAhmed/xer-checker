@@ -17,6 +17,13 @@ describe('timeline', () => {
     expect(domainOf([null])).toBeNull()
   })
 
+  it('spans 200,000 dates without overflowing the call stack', () => {
+    const dates = Array.from({ length: 200_000 }, (_, i) => `2026-0${1 + (i % 9)}-01T00:00:00`)
+    const domain = domainOf(dates)!
+    expect(percentAt(domain, '2026-01-01T00:00:00')).toBeGreaterThan(0)
+    expect(percentAt(domain, '2026-09-01T00:00:00')).toBeLessThan(100)
+  })
+
   it('labels the axis with at most 6 ticks, in months for a short span and years for a long one', () => {
     const short = ticks(domainOf(['2026-06-01T00:00:00', '2027-05-16T00:00:00'])!)
     expect(short.length).toBeLessThanOrEqual(6)

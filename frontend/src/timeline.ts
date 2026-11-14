@@ -16,10 +16,15 @@ const YEAR = new Intl.DateTimeFormat('en-GB', { year: 'numeric' })
 
 /** The span that holds every given date, with a little room. Null when there are no dates. */
 export function domainOf(dates: (string | null | undefined)[]): Domain | null {
-  const times = dates.filter((d): d is string => Boolean(d)).map((d) => new Date(d).getTime())
-  if (times.length === 0) return null
-  const from = Math.min(...times)
-  const to = Math.max(...times)
+  let from = Infinity
+  let to = -Infinity
+  for (const d of dates) {
+    if (!d) continue
+    const t = new Date(d).getTime()
+    from = Math.min(from, t)
+    to = Math.max(to, t)
+  }
+  if (from === Infinity) return null // no dates; a loop, not Math.min(...all), so 50,000 dates can't overflow the stack
   const pad = Math.max(to - from, 86_400_000) * PADDING
   return { from: from - pad, to: to + pad }
 }

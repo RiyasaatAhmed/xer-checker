@@ -47,7 +47,7 @@ export function ActivityGroups({ groups, categories, categoryOf, resetKey, domai
   const [showAll, setShowAll] = useState<Record<string, boolean>>({}) // a group the user asked to see in full
   const phone = useMediaQuery('(max-width: 760px)')
   const rowPx = phone ? ROW_PX.phone : ROW_PX.wide
-  const longest = useMemo(() => Math.max(1, ...groups.flatMap((g) => g.rows.map((r) => Math.max(0, r.float_days ?? 0)))), [groups])
+  const longest = useMemo(() => groups.reduce((most, g) => g.rows.reduce((m, r) => Math.max(m, r.float_days ?? 0), most), 1), [groups]) // a loop: any number of rows
   const biggest = Math.max(1, ...groups.map((g) => g.rows.length)) // the group the header bars are measured against
 
   // The header and, when it's open, the lines of every group, as one flat list.
