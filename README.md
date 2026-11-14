@@ -1,6 +1,11 @@
 # XER checker
 
+[![Tests](https://github.com/RiyasaatAhmed/xer-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/RiyasaatAhmed/xer-checker/actions/workflows/tests.yml)
+
 Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and see what needs attention first, then the checks and the activities behind each number.
+
+> [!NOTE]
+> **The submitted version** is the [`take-home-submission`](https://github.com/RiyasaatAhmed/xer-checker/tree/take-home-submission) tag, from 9 Nov 2026: one script with the 3 checks and the chart. Everything on `main` since then is later work.
 
 <p align="center">
   <img src="frontend/screenshots/empty-state.gif" width="680" alt="Empty-state demo: a dropped .xer file and its 5 headline checks">
