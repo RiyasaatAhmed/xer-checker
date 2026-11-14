@@ -196,7 +196,7 @@ describe('App', () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     const recent = await screen.findByRole('region', { name: 'Recent schedules' })
-    const head = within(recent).getByRole('button', { name: /CSTv2\.4\.xer/ })
+    const head = within(recent).getByRole('button', { name: /^CSTv2\.4\.xer/ })
     expect(head).toHaveAttribute('aria-expanded', 'true') // the newest opens by default
     expect(head).toHaveTextContent('2 of 5 over the limit')
     expect(Array.from(recent.querySelectorAll('.live-row')).map((r) => r.getAttribute('data-tip'))).toEqual([
@@ -215,7 +215,8 @@ describe('App', () => {
     expect(head).toHaveAttribute('aria-expanded', 'true')
 
     vi.mocked(window.scrollTo).mockClear()
-    await user().click(within(recent).getByRole('link', { name: 'Full report' }))
+    await user().click(head) // closed, the row still opens its report in one click
+    await user().click(within(recent).getByRole('link', { name: 'Open the report for CSTv2.4.xer' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4' })).toBeInTheDocument()
     expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}`)
     expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0 }) // the schedule opens at its top, not at the list
@@ -226,10 +227,34 @@ describe('App', () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), [UPLOAD_LIST[0], older]))
     render(<App />)
     const recent = await screen.findByRole('region', { name: 'Recent schedules' })
-    const [newest, earlier] = within(recent).getAllByRole('button', { name: /CSTv2\.4\.xer/ })
+    const [newest, earlier] = within(recent).getAllByRole('button', { name: /^CSTv2\.4\.xer/ })
     expect([newest, earlier].map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'false'])
     await user().click(earlier)
     expect([newest, earlier].map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'true'])
+  })
+
+  it('deletes a saved file after asking once, and keeps it on cancel', async () => {
+    let list = UPLOAD_LIST
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') {
+        list = list.filter((u) => !url.endsWith(u.upload_id))
+        return new Response(null, { status: 204 })
+      }
+      return url === '/api/uploads' ? reply(200, list) : reply(200, CST_RESULT)
+    })
+    vi.stubGlobal('fetch', fetch)
+    render(<App />)
+    const recent = await screen.findByRole('region', { name: 'Recent schedules' })
+    await user().click(within(recent).getByRole('button', { name: 'Delete CSTv2.4.xer' }))
+    await user().click(within(recent).getByRole('button', { name: 'Cancel' })) // nothing is deleted
+    expect(fetch).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ method: 'DELETE' }))
+
+    await user().click(within(recent).getByRole('button', { name: 'Delete CSTv2.4.xer' }))
+    expect(within(recent).getByRole('group', { name: 'Delete CSTv2.4.xer?' })).toHaveTextContent('Delete for good?')
+    await user().click(within(recent).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(within(recent).queryByRole('button', { name: /^CSTv2\.4\.xer/ })).not.toBeInTheDocument())
+    expect(fetch).toHaveBeenCalledWith(`/api/uploads/${CST_RESULT.upload_id}`, { method: 'DELETE' })
+    expect(within(recent).getByText('empty.xer')).toBeInTheDocument() // the other file stays
   })
 
   it('labels the key dates on the map axis, and counts the picked check on it', async () => {

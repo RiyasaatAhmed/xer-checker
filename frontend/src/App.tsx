@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { UploadError, getUpload, listUploads, uploadXer } from './api'
+import { UploadError, deleteUpload, getUpload, listUploads, uploadXer } from './api'
 import { Checking } from './components/Checking'
 import { Dashboard } from './components/Dashboard'
 import { DropOverlay } from './components/DropOverlay'
@@ -98,6 +98,19 @@ export function App() {
     go(uploadId, checkId)
   }
 
+  /** Delete a saved upload, then drop it from the list. The list loads again, so it shows what is saved. */
+  async function remove(uploadId: string) {
+    try {
+      await deleteUpload(uploadId)
+      setUploads((list) => list?.filter((u) => u.upload_id !== uploadId) ?? list)
+      setFresh((now) => (now?.result?.upload_id === uploadId ? null : now))
+      if (view.step === 'failed') setView({ step: 'empty' })
+    } catch (error) {
+      setView({ step: 'failed', message: `Couldn’t delete this schedule. ${messageOf(error)}` })
+    }
+    refreshList()
+  }
+
   function home(event: React.MouseEvent) {
     event.preventDefault()
     setView({ step: 'empty' })
@@ -132,7 +145,7 @@ export function App() {
       <main className="main">
         {view.step === 'failed' && <ErrorNotice message={view.message} />}
         {view.step === 'loading' && <Checking text={view.text} />}
-        {(view.step === 'empty' || view.step === 'failed') && <Home uploads={uploads} onFile={check} onOpen={open} fresh={fresh} />}
+        {(view.step === 'empty' || view.step === 'failed') && <Home uploads={uploads} onFile={check} onOpen={open} onDelete={remove} fresh={fresh} />}
         {view.step === 'done' && (
           <>
             <a href="/" className="back" onClick={home}>

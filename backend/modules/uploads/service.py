@@ -91,6 +91,19 @@ def save_results(session, upload_id, result):
 
 # ---------- Read back ----------
 
+def delete_upload(session, upload_id):
+    """Delete one upload and everything saved with it. False if there's no upload with this ID.
+
+    The database deletes its results, rows and schedule with it (ON DELETE CASCADE).
+    """
+    upload = session.get(Upload, upload_id)
+    if upload is None:
+        return False
+    session.delete(upload)
+    session.commit()
+    return True
+
+
 def get_upload(session, upload_id):
     """One checked upload's results, as saved. None if there's no checked upload with this ID.
 

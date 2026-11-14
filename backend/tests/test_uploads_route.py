@@ -3,8 +3,10 @@
 import uuid
 
 from helpers import ROOT
+from sqlmodel import select
 
 from modules.uploads import route
+from modules.uploads.model import Activity, MetricResult, MetricResultActivity
 
 CST = (ROOT / "data" / "CSTv2.4.xer").read_bytes()
 
@@ -60,3 +62,16 @@ def test_a_checks_activities_come_from_its_own_call(client):
     assert response.status_code == 200 and len(response.json()["activities"]) == 78
     assert client.get(f"/api/uploads/{saved['upload_id']}/checks/nope").status_code == 404
     assert client.get(f"/api/uploads/{uuid.uuid4()}/checks/high-float").status_code == 404
+
+
+def test_deleting_an_upload_removes_it_and_everything_saved_with_it(client, db_session):
+    saved = upload(client, "CSTv2.4.xer", CST).json()
+    assert client.delete(f"/api/uploads/{saved['upload_id']}").status_code == 204
+    assert client.get(f"/api/uploads/{saved['upload_id']}").status_code == 404
+    assert client.get("/api/uploads").json() == []
+    for table in (MetricResult, MetricResultActivity, Activity):  # the database cascades the delete
+        assert db_session.exec(select(table)).all() == []
+
+
+def test_deleting_an_unknown_upload_is_404(client):
+    assert client.delete(f"/api/uploads/{uuid.uuid4()}").status_code == 404

@@ -237,6 +237,7 @@ broken_test.xer: 4 activities checked
 | `POST` | `/api/uploads` | Checks one `.xer` file, sent as the form field `file`, and saves it |
 | `GET` | `/api/uploads` | The 20 newest uploads, failed ones included |
 | `GET` | `/api/uploads/{upload_id}` | One saved upload's results |
+| `DELETE` | `/api/uploads/{upload_id}` | Deletes one upload and its results. Answers 204, or 404 if there's no such upload |
 | `GET` | `/` | Answers `{"status": "ok"}` when the API is up |
 | `GET` | `/docs` | A page to try each endpoint in the browser |
 

@@ -1,4 +1,4 @@
-"""The endpoints: upload a .xer file and get its results, list recent uploads, open one again."""
+"""The endpoints: upload a .xer file and get its results, list recent uploads, open one again, delete one."""
 
 import uuid
 
@@ -47,6 +47,13 @@ def get_upload(upload_id: uuid.UUID, session: Session = Depends(get_session)) ->
     if result is None:
         raise HTTPException(status_code=404, detail="no checked upload with this ID")
     return result
+
+
+@router.delete("/{upload_id}", status_code=204)
+def delete_upload(upload_id: uuid.UUID, session: Session = Depends(get_session)) -> None:
+    """Delete one upload with its results. Answers 404 if there's no upload with this ID."""
+    if not service.delete_upload(session, upload_id):
+        raise HTTPException(status_code=404, detail="no upload with this ID")
 
 
 @router.get("/{upload_id}/checks/{check_id}", response_model=CheckActivities)

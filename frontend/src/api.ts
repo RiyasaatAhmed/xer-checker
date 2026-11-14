@@ -3,6 +3,7 @@ import type { CheckActivities, CheckResult, UploadSummary } from './types'
 // ---------- Constants ----------
 
 export const UPLOADS_URL = '/api/uploads' // the backend, through the dev proxy or nginx
+const NO_CONTENT = 204 // the status of an answer with no body
 const UNREACHABLE = "Can't reach the server. Is the backend running?"
 
 /** A request that failed, with a message to show the user as is. */
@@ -25,6 +26,11 @@ export function getUpload(uploadId: string): Promise<CheckResult> {
   return request<CheckResult>(`${UPLOADS_URL}/${encodeURIComponent(uploadId)}`)
 }
 
+/** Delete one saved upload with its results. */
+export function deleteUpload(uploadId: string): Promise<void> {
+  return request<void>(`${UPLOADS_URL}/${encodeURIComponent(uploadId)}`, { method: 'DELETE' })
+}
+
 /** The activities behind one check of one upload, with their logic. */
 export function getCheck(uploadId: string, checkId: string): Promise<CheckActivities> {
   return request<CheckActivities>(`${UPLOADS_URL}/${encodeURIComponent(uploadId)}/checks/${encodeURIComponent(checkId)}`)
@@ -41,6 +47,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     throw new UploadError(await errorMessage(response))
   }
+  if (response.status === NO_CONTENT) return undefined as T // a delete answers with no body
   return (await response.json()) as T
 }
 

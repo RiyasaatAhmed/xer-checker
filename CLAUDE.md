@@ -61,7 +61,7 @@ Run the Python commands from `backend/`: `checker.py` finds `data/` from the cur
 |---|---|
 | `main.py` | Creates the FastAPI app, with a health route at `/`, and adds each module's router |
 | `modules/<feature>/` | One API feature: `route.py` (HTTP only), `schema.py` (pydantic answers), `service.py` (the work), `model.py` (its tables) |
-| `modules/uploads/` | `POST /api/uploads` checks and saves a file; `GET /api/uploads` lists them; `GET /api/uploads/{id}` opens one. Reuses `cli.check_file`. `snapshot.py` saves and reads the schedule rows |
+| `modules/uploads/` | `POST /api/uploads` checks and saves a file; `GET /api/uploads` lists them; `GET /api/uploads/{id}` opens one; `DELETE /api/uploads/{id}` deletes one with its results. Reuses `cli.check_file`. `snapshot.py` saves and reads the schedule rows |
 | `database/db.py` | `DATABASE_URL` (PostgreSQL in Docker, else SQLite), `get_session` per request, `init_db` creates missing tables |
 | `checker.py` | Starts the command line |
 | `xer_checker/` | The checker, shared by the API and the command line |
@@ -110,7 +110,7 @@ These 5 are the headline checks the home page and the demo show (`HEADLINE` in `
 - Reuse an existing function before you write a new one. One job per function.
 - A new DCMA rule is a new file in `xer_checker/rules/`, added to `RULES`, with its own `tests/test_rule_<name>.py`.
 - A new API feature is a new folder in `modules/`, with `route.py`, `schema.py`, `service.py` and `model.py`, added in `main.py`.
-- The API answers from the database, never straight from the checker: save first, then read back. A saved upload is never changed.
+- The API answers from the database, never straight from the checker: save first, then read back. A saved upload is never changed, only deleted whole.
 - Tests use the `db_session` and `client` fixtures in `tests/conftest.py`: a fresh in-memory SQLite database each.
 - The tables are made with `create_all` at start. Once a table needs a change, add Alembic migrations first.
 - Frontend: the activities behind a check are grouped lines with their logic inline, in a fixed-height virtual list (`VirtualList`). Never render them all: a file can have 20,000. Checking one must not need a click. There is no table view.
