@@ -39,11 +39,11 @@ The command line draws the same results as one chart, for both files:
 | **Saving** | PostgreSQL in Docker (8 tables), SQLite without it. A result looks the same every time it's opened |
 | **Home page** | The demo and an upload button when there are no checks, else the list of recent checks. Drop a file anywhere |
 | **Schedule map** | One picture of the WBS tree: a row per group, how many of its activities are flagged, and when its work happens. The data date, forecast finish and deadline are labelled on the same axis. Open a group, or click it to list its activities |
-| **Activity lines** | Flagged activities grouped by WBS group, one line each. The line shows the logic: what's before, what's after, and a red `none` where a link is missing. Group headers show counts and a bar of kinds, so a big result stays short: groups open 20 rows at a time. A "Table" view is a click away |
-| **Logic diagram** | The same logic, larger, in the table view: what comes before an activity, it, and what comes after |
+| **Activity lines** | Flagged activities grouped by WBS group, one line each. The line shows the logic: what's before, what's after, and a red `none` where a link is missing. The list is a fixed-height window with only the lines on screen in the page, and the group name stays pinned while you scroll. Sort and filter it |
+| **Scale** | Tested with a real 20,000-activity file (16,783 missing links). The page holds about 650 elements and scrolls at 60 fps. A filter updates in under 0.1 s, and a saved check reopens in under 1 s. Saving the upload takes about 10 s |
 | **A check** | The 3 checks first, each a value against its limit. Then the schedule map and the activities behind each check, one line each with its logic, in groups that stay short. Then a small file profile, and the summary folded away. Broken rows show only when there are some |
 | **Details** | Each check has its own link. Works on phones, in dark mode and with the keyboard |
-| **Proof** | Tests compare every number with Kazinex on each run: 134 backend, 42 frontend |
+| **Proof** | Tests compare every number with Kazinex on each run: 134 backend, 46 frontend |
 | **Tooling** | `docker compose up` runs everything. `CLAUDE.md` and a writing skill keep the docs short |
 
 **Not yet:** login (the list isn't per user), and leads, lags and constraints as pass or fail checks. Also splitting a file with several projects, and checks that need a baseline.
