@@ -1,26 +1,21 @@
 import { ArrowDown, ArrowUp, Check, Copy, Download, Network, Search, X } from 'lucide-react'
 import { useState } from 'react'
-import { countText, csvText, dayText, daysText } from '../format'
-import { ruleText } from '../rules'
+import { countText, csvText, daysText, rangeText } from '../format'
 import type { ActivityRow, RuleResult } from '../types'
 import { LogicDiagram } from './LogicDiagram'
 
 // ---------- Constants ----------
 
-const COPIED_MS = 2000 // how long "Copied" shows on the button
+const COPIED_MS = 2000 // how long the check mark shows on the copy button
+const FLOAT_BAR_PX = 56 // the longest float bar
 
-type Column = 'n' | 'code' | 'name' | 'links' | 'float' | 'duration' | 'start' | 'finish' | 'status'
+type Column = 'n' | 'code' | 'links' | 'float' | 'start'
 type Row = ActivityRow & { n: number } // n: its place in the checker's list
-const COLUMNS: { key: Column; label: string; numeric?: boolean }[] = [
-  { key: 'n', label: '#', numeric: true },
-  { key: 'code', label: 'Activity ID' },
-  { key: 'name', label: 'Name and WBS' },
-  { key: 'links', label: 'Pred / Succ', numeric: true },
-  { key: 'float', label: 'Float (d)', numeric: true },
-  { key: 'duration', label: 'Remaining (d)', numeric: true },
-  { key: 'start', label: 'Start', numeric: true },
-  { key: 'finish', label: 'Finish', numeric: true },
-  { key: 'status', label: 'Status' },
+const COLUMNS: { key: Column; label: string; right?: boolean }[] = [
+  { key: 'code', label: 'Activity' },
+  { key: 'links', label: 'Links', right: true },
+  { key: 'float', label: 'Float (days)', right: true },
+  { key: 'start', label: 'Dates' },
 ]
 
 interface Props {
@@ -30,7 +25,7 @@ interface Props {
   onClearWbs?: () => void
 }
 
-/** The activities behind one rule's number: sort, filter, copy their IDs for P6, or download them. */
+/** The activities behind one check: sort, filter, copy their IDs for P6, or download them with every column. */
 export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
   const [filter, setFilter] = useState('')
   const [copied, setCopied] = useState(false)
@@ -45,6 +40,7 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
     .filter((r) => !wbs || !hasDetails || wbs.names.has(r.wbs)) // a group picked on the map
     .filter((r) => [r.code, r.name, r.wbs].some((text) => text.toLowerCase().includes(query)))
     .sort((a, b) => compare(a, b, sort.by) * (sort.up ? 1 : -1))
+  const longest = Math.max(1, ...shown.map((r) => Math.max(0, r.float_days ?? 0)))
 
   async function copy() {
     await navigator.clipboard.writeText(rule.activities.join('\n')) // one ID per line, ready to paste
@@ -67,23 +63,18 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
   }
 
   return (
-    <section className="card activities" id="activities" aria-labelledby="activities-title" tabIndex={-1}>
+    <section className="card activities" id="activities" aria-label={`${rule.name}: ${countText(rule.count, 'activity', 'activities')}`} tabIndex={-1}>
       <div className="card-head">
-        <div>
-          <div className="label">Activities behind the number</div>
-          <h2 id="activities-title">
-            {rule.name}: {countText(rule.count, 'activity', 'activities')}
-          </h2>
-        </div>
+        <h2>
+          {rule.name} <span className="faint num">{rule.count.toLocaleString()}</span>
+        </h2>
         {rows.length > 0 && (
-          <div className="tools">
-            <button type="button" className="button secondary small" onClick={copy}>
-              {copied ? <Check size={14} strokeWidth={2.5} aria-hidden /> : <Copy size={14} strokeWidth={2.25} aria-hidden />}
-              {copied ? 'Copied' : 'Copy IDs'}
+          <div className="toolbar">
+            <button type="button" className="icon-button" aria-label={copied ? 'Copied' : 'Copy IDs'} title="Copy the IDs, one per line, to paste into P6" onClick={copy}>
+              {copied ? <Check size={15} strokeWidth={2.5} aria-hidden /> : <Copy size={15} aria-hidden />}
             </button>
-            <button type="button" className="button secondary small" onClick={download}>
-              <Download size={14} strokeWidth={2.25} aria-hidden />
-              CSV
+            <button type="button" className="icon-button" aria-label="Download CSV" title="Download every column as CSV" onClick={download}>
+              <Download size={15} aria-hidden />
             </button>
           </div>
         )}
@@ -93,33 +84,27 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
         <p className="hint">No activity breaks this rule.</p>
       ) : (
         <>
-          <p className="hint">{ruleText(rule.name).action}</p>
-          {wbs && hasDetails && (
-            <p className="chip-row">
+          <div className="toolbar">
+            <label className="search">
+              <Search size={15} aria-hidden />
+              <input type="search" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter by ID, name or WBS" aria-label="Filter by activity ID, name or WBS" />
+            </label>
+            {wbs && hasDetails && (
               <span className="chip">
-                In {wbs.label}: {countText(shown.length, 'activity', 'activities')}
-                <button type="button" className="chip-x" aria-label={`Show every group again`} onClick={onClearWbs}>
+                {wbs.label}: {shown.length}
+                <button type="button" className="chip-x" aria-label="Show every group again" onClick={onClearWbs}>
                   <X size={12} aria-hidden />
                 </button>
               </span>
-            </p>
-          )}
-          <label className="search">
-            <Search size={15} strokeWidth={2.25} aria-hidden />
-            <input
-              type="search"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder="Filter by ID, name or WBS"
-              aria-label="Filter by activity ID, name or WBS"
-            />
-          </label>
+            )}
+          </div>
+
           <div className="table-scroll">
             <table className="activity-table">
               <thead>
                 <tr>
-                  {COLUMNS.filter((c) => hasDetails || c.key === 'n' || c.key === 'code').map((c) => (
-                    <th key={c.key} scope="col" className={`label${c.numeric ? ' right' : ''}`} aria-sort={sort.by === c.key ? (sort.up ? 'ascending' : 'descending') : undefined}>
+                  {COLUMNS.filter((c) => hasDetails || c.key === 'code').map((c) => (
+                    <th key={c.key} scope="col" className={c.right ? 'right' : undefined} aria-sort={sort.by === c.key ? (sort.up ? 'ascending' : 'descending') : undefined}>
                       <button type="button" className="sort" onClick={() => sortBy(c.key)}>
                         {c.label}
                         {sort.by === c.key && (sort.up ? <ArrowUp size={12} aria-hidden /> : <ArrowDown size={12} aria-hidden />)}
@@ -130,22 +115,25 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
               </thead>
               <tbody>
                 {shown.flatMap((r) => [
-                  <tr key={r.n}>
-                    <td className="num faint right">{r.n}</td>
-                    <td className="mono nowrap">{r.code}</td>
+                  <tr key={r.n} className={logicOf === r.code ? 'sel' : undefined}>
+                    <td>
+                      <span className="who">
+                        <span className="who-top">
+                          <span className="id mono">{r.code}</span>
+                          {hasDetails && <span className="name">{r.name}</span>}
+                        </span>
+                        {hasDetails && <span className="wbs">{r.wbs}</span>}
+                      </span>
+                    </td>
                     {hasDetails && (
                       <>
-                        <td className="name-cell">
-                          <span className="code-inline mono">{r.code}</span>
-                          <span className="name">{r.name}</span>
-                          <span className="wbs">{r.wbs}</span>
-                        </td>
-                        <td className="num right nowrap">
+                        <td className="right nowrap num">
                           <button
                             type="button"
                             className="logic-toggle"
                             aria-expanded={logicOf === r.code}
                             aria-label={`${r.code}: ${r.predecessors} before, ${r.successors} after. Show its logic`}
+                            title="Links before / after. A 0 is a missing link. Click for its logic."
                             onClick={() => setLogicOf(logicOf === r.code ? null : r.code)}
                           >
                             <span className={r.predecessors === 0 ? 'zero-link' : undefined}>{r.predecessors}</span>
@@ -154,11 +142,11 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
                             <Network size={13} aria-hidden />
                           </button>
                         </td>
-                        <td className="num right strong">{daysText(r.float_days)}</td>
-                        <td className="num right">{daysText(r.duration_days)}</td>
-                        <td className="num right nowrap">{r.start ? dayText(r.start) : '–'}</td>
-                        <td className="num right nowrap">{r.finish ? dayText(r.finish) : '–'}</td>
-                        <td className="nowrap">{r.status}</td>
+                        <td className={`float-cell num${(r.float_days ?? 0) < 0 ? ' neg' : ''}`}>
+                          {r.float_days !== null && r.float_days > 0 && <span className="fbar" aria-hidden="true" style={{ width: `${(FLOAT_BAR_PX * r.float_days) / longest}px` }} />}
+                          {daysText(r.float_days)}
+                        </td>
+                        <td className="nowrap num">{rangeText(r.start, r.finish)}</td>
                       </>
                     )}
                   </tr>,
@@ -172,9 +160,8 @@ export function FlaggedActivities({ rule, fileName, wbs, onClearWbs }: Props) {
                 ])}
               </tbody>
             </table>
-            {shown.length === 0 && <p className="hint empty-filter">Nothing matches “{filter}”.</p>}
+            {shown.length === 0 && <p className="hint empty-filter">Nothing matches.</p>}
           </div>
-          <p className="hint small table-foot">Pred / Succ: how many predecessors and successors it has; a 0 is a missing link. Float and remaining duration are in working days, on each activity’s own calendar.</p>
         </>
       )}
     </section>
@@ -185,19 +172,15 @@ function blankRow(code: string): ActivityRow {
   return { code, name: '', wbs: '', status: '', float_days: null, duration_days: null, start: null, finish: null, predecessors: 0, successors: 0, before: [], after: [] }
 }
 
-/** Sort order for one column. A blank float or duration sorts as the lowest. */
+/** Sort order for one column. A blank float sorts as the lowest. */
 function compare(a: Row, b: Row, by: Column): number {
   const value = (r: Row): number | string => {
     switch (by) {
       case 'n': return r.n
       case 'code': return r.code
-      case 'name': return r.name
       case 'links': return Math.min(r.predecessors, r.successors) // the side with fewest links first
       case 'float': return r.float_days ?? Number.NEGATIVE_INFINITY
-      case 'duration': return r.duration_days ?? Number.NEGATIVE_INFINITY
       case 'start': return r.start ?? ''
-      case 'finish': return r.finish ?? ''
-      case 'status': return r.status
     }
   }
   const x = value(a), y = value(b)

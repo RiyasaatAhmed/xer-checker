@@ -1,13 +1,15 @@
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
+import { CalendarCheck, CalendarX, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import { useState } from 'react'
-import { dayText } from '../format'
+import { countText, dayText, daysBetween } from '../format'
 import { domainOf, percentAt, ticks } from '../timeline'
 import { childrenOf, topLevel, visibleGroups } from '../tree'
 import type { ProjectInfo, WbsGroup } from '../types'
 
 // ---------- Constants ----------
 
-const MANY_FLAGGED = 0.25 // a group with at least this share flagged is drawn orange on the timeline
+const MANY_FLAGGED = 0.25 // a group with at least this share flagged is drawn red on the timeline
+const CLOSE = 24 // two marker labels closer than this (% of the axis) go on different lines
+const NEAR_END = 70 // a label past this (%) is written leftwards from its line, so it stays inside
 
 interface Props {
   groups: WbsGroup[]
@@ -17,7 +19,7 @@ interface Props {
 }
 
 /** One picture of the schedule: a row per WBS group, how many of its activities are flagged,
- *  and when its work happens. The project's key dates are marked on the same axis. */
+ *  and when its work happens. The project's key dates are labelled on the same axis. */
 export function ScheduleMap({ groups, project, selectedId, onSelect }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const children = childrenOf(groups)
@@ -28,11 +30,21 @@ export function ScheduleMap({ groups, project, selectedId, onSelect }: Props) {
 
   const markers = [
     { key: 'data', label: 'Data date', date: project?.data_date ?? null },
-    { key: 'forecast', label: 'Forecast finish', date: project?.forecast_finish ?? null },
+    { key: 'forecast', label: 'Forecast', date: project?.forecast_finish ?? null },
     { key: 'deadline', label: 'Deadline', date: project?.deadline ?? null },
   ].filter((m): m is { key: string; label: string; date: string } => m.date !== null)
   const domain = domainOf([...rows.flatMap((g) => [g.start, g.finish]), ...markers.map((m) => m.date)])
   const most = Math.max(1, ...rows.map((g) => g.checked))
+  const gap = project?.forecast_finish && project.deadline ? daysBetween(project.forecast_finish, project.deadline) : null
+
+  // Labels go on two lines when their markers sit close together, and lean inwards at the edges.
+  const placed: { key: string; label: string; date: string; at: number; line: number }[] = []
+  if (domain) {
+    for (const m of markers.map((m) => ({ ...m, at: percentAt(domain, m.date) })).sort((a, b) => a.at - b.at)) {
+      const prev = placed[placed.length - 1]
+      placed.push({ ...m, line: prev && m.at - prev.at < CLOSE ? 1 - prev.line : 0 })
+    }
+  }
 
   function toggle(id: string) {
     setExpanded((now) => {
@@ -45,16 +57,21 @@ export function ScheduleMap({ groups, project, selectedId, onSelect }: Props) {
   return (
     <section className="card smap" aria-labelledby="smap-title">
       <div className="card-head">
-        <div>
-          <div className="label">Where and when</div>
-          <h2 id="smap-title">Schedule map</h2>
+        <h2 id="smap-title">Schedule map</h2>
+        <div className="tools">
+          {gap !== null && (
+            <span className={`pill ${gap >= 0 ? 'pass' : 'flag'}`}>
+              {gap >= 0 ? <CalendarCheck size={13} aria-hidden /> : <CalendarX size={13} aria-hidden />}
+              {gap >= 0 ? `${countText(gap, 'day')} before the deadline` : `${countText(-gap, 'day')} past the deadline`}
+            </span>
+          )}
+          {parents.length > 0 && (
+            <button type="button" className="button secondary small" onClick={() => setExpanded(allOpen ? new Set() : new Set(parents))}>
+              {allOpen ? <ChevronsDownUp size={14} aria-hidden /> : <ChevronsUpDown size={14} aria-hidden />}
+              {allOpen ? 'Collapse all' : 'Expand all'}
+            </button>
+          )}
         </div>
-        {parents.length > 0 && (
-          <button type="button" className="button secondary small" onClick={() => setExpanded(allOpen ? new Set() : new Set(parents))}>
-            {allOpen ? <ChevronsDownUp size={14} aria-hidden /> : <ChevronsUpDown size={14} aria-hidden />}
-            {allOpen ? 'Collapse all' : 'Expand all'}
-          </button>
-        )}
       </div>
 
       <div className="smap-grid" role="table" aria-label="WBS groups, their flagged activities and their dates">
@@ -63,7 +80,15 @@ export function ScheduleMap({ groups, project, selectedId, onSelect }: Props) {
           <span className="label" role="columnheader">Flagged of checked</span>
           <span className="smap-axis" role="columnheader" aria-label="Timeline">
             {domain && ticks(domain).map((t) => (
-              <span key={t.at} className="smap-tick label" style={{ left: `${t.at}%` }}>{t.label}</span>
+              <span key={t.at} className="smap-tick" style={{ left: `${t.at}%` }}>{t.label}</span>
+            ))}
+            {placed.map((m) => (
+              <span key={m.key}>
+                <span className={`smap-stem m-${m.key}`} style={{ left: `${m.at}%`, top: m.line === 0 ? 14 : 29 }} aria-hidden="true" />
+                <span className={`smap-mlabel l${m.line} m-${m.key} ${m.at > NEAR_END ? 'end' : 'start'}`} style={{ left: `${m.at}%` }}>
+                  {m.label} {dayText(m.date)}
+                </span>
+              </span>
             ))}
           </span>
         </div>
@@ -110,7 +135,7 @@ export function ScheduleMap({ groups, project, selectedId, onSelect }: Props) {
                   <span
                     className={`smap-bar${share >= MANY_FLAGGED ? ' many' : ''}`}
                     style={{ left: `${percentAt(domain, g.start)}%`, width: `${Math.max(0.8, percentAt(domain, g.finish) - percentAt(domain, g.start))}%` }}
-                    title={`${dayText(g.start)} to ${dayText(g.finish)}`}
+                    title={`${dayText(g.start)} to ${dayText(g.finish)}. ${g.flagged} of ${g.checked} flagged.`}
                   />
                 )}
               </span>
@@ -118,17 +143,6 @@ export function ScheduleMap({ groups, project, selectedId, onSelect }: Props) {
           )
         })}
       </div>
-
-      <ul className="smap-legend">
-        <li><span className="swatch flagged" aria-hidden="true" /> Flagged by a DCMA check</li>
-        <li><span className="swatch ok" aria-hidden="true" /> Checked, fine</li>
-        <li><span className="swatch bar many" aria-hidden="true" /> Work period, a quarter or more flagged</li>
-        {markers.map((m) => (
-          <li key={m.key}>
-            <span className={`marker-key m-${m.key}`} aria-hidden="true" /> {m.label} <span className="num">{dayText(m.date)}</span>
-          </li>
-        ))}
-      </ul>
     </section>
   )
 }

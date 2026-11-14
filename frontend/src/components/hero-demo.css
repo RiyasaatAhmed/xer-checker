@@ -3,19 +3,19 @@
 
 /* ---- The look: CritPath's tokens mapped to the kit's ---- */
 .hd .ss-stage {
-  --ss-accent: #ff5a1f;
-  --ss-accent-soft: #ffe0cb;
-  --ss-accent-text: #b5440d;
+  --ss-accent: #3b5bdb;
+  --ss-accent-soft: #e8edfc;
+  --ss-accent-text: #2f4bb8;
   --ss-font: 'Geist Variable', 'Geist', system-ui, sans-serif;
-  --ss-canvas: #fffcf7;
-  --ss-surface: #fffefa;
-  --ss-well: #f7f3ea;
-  --ss-line: #d9d1c2;
-  --ss-text-strong: #0f2a4a;
-  --ss-text: #665f55;
-  --ss-radius-sm: 0px;
-  --ss-radius-md: 0px;
-  --ss-radius-lg: 0px;
+  --ss-canvas: #f4f5f7;
+  --ss-surface: #ffffff;
+  --ss-well: #edf0f3;
+  --ss-line: #e2e5ea;
+  --ss-text-strong: #151a22;
+  --ss-text: #5c6675;
+  --ss-radius-sm: 4px;
+  --ss-radius-md: 6px;
+  --ss-radius-lg: 8px;
   --ss-radius-window: 8px;
   overflow: hidden;
   background: var(--ss-well);
@@ -29,23 +29,23 @@
 /* ---- The drop area: lights up while the file is carried over it ---- */
 .hd .hd-drop {
   display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 16px; margin-bottom: 12px;
-  border: 1px dashed #bfb6a7; background: var(--ss-surface);
+  border: 1px dashed #cbd2db; background: var(--ss-surface);
   font-size: 14px; font-weight: 600; color: var(--ss-text-strong);
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-.hd .hd-drop[data-over] { border-color: var(--ss-accent); background: #fff2ea; } /* 7% orange on the surface */
+.hd .hd-drop[data-over] { border-color: var(--ss-accent); background: #eef2fe; } /* 7% orange on the surface */
 .hd .hd-drop__icon { flex: none; color: var(--ss-accent); }
 
 /* ---- The dropped file: tinted while it's checked ---- */
 .hd .hd-file {
   display: grid; grid-template-columns: 15px 96px minmax(0, 1fr); align-items: center; gap: 12px; /* fixed tracks: whole-pixel edges */
-  height: 48px; padding: 0 12px; margin-bottom: 12px; border: 1px solid #bfb6a7;
-  background: #fff3eb; /* 6% orange on the surface, while it's checked */
+  height: 48px; padding: 0 12px; margin-bottom: 12px; border: 1px solid #cbd2db;
+  background: #f1f4fe; /* a tint of the accent, while it's checked */
   transition: background-color 0.6s ease;
 }
 .hd .hd-file[data-done] { background: var(--ss-surface); }
 .hd .hd-file__name { font-size: 14px; font-weight: 650; color: var(--ss-text-strong); white-space: nowrap; }
-.hd .hd-track { width: 160px; background: #ffdccb; } /* 18% orange */
+.hd .hd-track { width: 160px; background: #d6defa; } /* a tint of the accent */
 .hd .hd-track .ss-meter__fill { background: var(--ss-accent); transition-duration: 0.42s; }
 .hd .ss-badge { font-weight: 700; }
 
@@ -57,13 +57,13 @@
   font-size: 13px; color: var(--ss-text-strong);
 }
 .hd .hd-check__name { font-weight: 600; white-space: nowrap; }
-.hd .hd-check__meter { position: relative; height: 6px; background: #ede7db; }
-.hd .hd-check__fill { position: absolute; inset: 0 auto 0 0; background: #2f8f62; transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.hd .hd-check[data-over] .hd-check__fill { background: var(--ss-accent); }
-.hd .hd-check__limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #0f2a4a; }
+.hd .hd-check__meter { position: relative; height: 6px; background: #e2e5ea; }
+.hd .hd-check__fill { position: absolute; inset: 0 auto 0 0; background: #12a150; transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.hd .hd-check[data-over] .hd-check__fill { background: #d92d20; }
+.hd .hd-check__limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #151a22; }
 .hd .hd-check__value { justify-self: end; font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
 /* The bar takes the rest of the row and runs off the stage with the window: it reads cut, words don't */
-.hd .hd-check[data-over] .hd-check__value { color: var(--ss-accent-text); }
+.hd .hd-check[data-over] .hd-check__value { color: #b42318; }
 
 /* ---- Recent checks: placeholder rows under the result ---- */
 .hd .hd-recent { padding-top: 16px; }

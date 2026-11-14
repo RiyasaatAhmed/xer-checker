@@ -1,28 +1,27 @@
+import { Check, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { countText, dateText } from '../format'
 import { namesIn } from '../tree'
 import type { CheckResult } from '../types'
-import { ActionBrief } from './ActionBrief'
 import { FileIssues } from './FileIssues'
+import { FileProfile } from './FileProfile'
 import { FlaggedActivities } from './FlaggedActivities'
-import { ProjectStrip } from './ProjectStrip'
+import { Health } from './Health'
 import { ScheduleMap } from './ScheduleMap'
-import { RuleBand } from './RuleBand'
-import { ScheduleOverview } from './ScheduleOverview'
 import { Summary } from './Summary'
 
-/** One checked file: its dates, what needs attention, the 3 checks and the activities behind them,
- *  then what's in the file, the summary and the file's own health. */
+/** One checked file: the 3 checks first, then where the problems are, then the activities behind them. */
 export function Dashboard({ result }: { result: CheckResult }) {
   // Start on the first check over its limit, so the list shows what needs a look.
   const first = result.rules.find((rule) => rule.status === 'flag') ?? result.rules[0]
   const [selected, setSelected] = useState(first?.name ?? '')
   const rule = result.rules.find((r) => r.name === selected)
   const flagged = new Set(result.rules.filter((r) => r.status === 'flag').map((r) => r.name))
-  const [project, ...others] = result.projects ?? []
+  const [project] = result.projects ?? []
   const [groupId, setGroupId] = useState<string | null>(null) // the WBS group picked on the map
   const groups = result.structure ?? []
   const group = groups.find((g) => g.id === groupId)
+  const issues = result.broken_rows.length + result.notes.length
 
   /** Bring a section into view and move focus to it, for keyboard and screen reader users too. */
   function reveal(id: string) {
@@ -43,21 +42,26 @@ export function Dashboard({ result }: { result: CheckResult }) {
   }
 
   return (
-    <div className="dashboard">
-      <header className="dash-head">
-        <div className="eyebrow">Schedule check · {dateText(result.uploaded_at)}</div>
+    <div className="check">
+      <header className="check-head">
         <h1 className="file-name">{result.file_name}</h1>
-        <p className="dash-meta">
-          <span>{countText(result.checked, 'unfinished activity', 'unfinished activities')} checked</span>
-          <span>{countText(result.broken_rows.length, 'broken row')}</span>
+        <p className="meta">
+          <span>{countText(result.checked, 'activity', 'activities')} checked</span>
+          {result.broken_rows.length === 0 ? (
+            <span className="ok">
+              <Check size={14} aria-hidden /> 0 broken rows
+            </span>
+          ) : (
+            <button type="button" className="link-inline bad" onClick={() => reveal('file-issues')}>
+              <TriangleAlert size={14} aria-hidden /> {countText(result.broken_rows.length, 'broken row')}
+            </button>
+          )}
+          {project && <span>{project.name}</span>}
+          <span>{dateText(result.uploaded_at)}</span>
         </p>
       </header>
 
-      {project && <ProjectStrip project={project} more={others.length} />}
-
-      <ActionBrief result={result} onShowRule={showRule} onShowIssues={() => reveal('file-issues')} />
-
-      <RuleBand rules={result.rules} checked={result.checked} selected={selected} onSelect={setSelected} />
+      <Health rules={result.rules} checked={result.checked} selected={selected} onSelect={showRule} />
 
       {groups.length > 0 && <ScheduleMap groups={groups} project={project} selectedId={groupId} onSelect={pickGroup} />}
 
@@ -72,16 +76,11 @@ export function Dashboard({ result }: { result: CheckResult }) {
         />
       )}
 
-      {result.overview && <ScheduleOverview overview={result.overview} flagged={flagged} onShowRule={showRule} />}
+      {result.overview && <FileProfile overview={result.overview} flagged={flagged} onShowRule={showRule} />}
 
-      <div className="dash-grid">
-        <Summary points={result.summary} author={result.summary_author} />
-        <FileIssues broken={result.broken_rows} notes={result.notes} />
-      </div>
+      <Summary points={result.summary} author={result.summary_author} />
 
-      <p className="hint small dash-foot">
-        Checks follow DCMA-EA PAM 200.1 (2012), section 4. A number over its limit is a reason to look closer, not a failed schedule.
-      </p>
+      {issues > 0 && <FileIssues broken={result.broken_rows} notes={result.notes} />}
     </div>
   )
 }

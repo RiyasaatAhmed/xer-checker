@@ -89,7 +89,7 @@ export function HeroDemo() {
       initial={initial}
       poster={poster}
       script={script}
-      accent="#ff5a1f"
+      accent="#3b5bdb"
       cursor={{ at: OUTSIDE }}
       className="hd"
     >
@@ -153,7 +153,7 @@ function FileRow({ progress, done }: { progress: number; done: boolean }) {
         states={{
           checking: <Meter className="hd-track" value={progress} />,
           done: (
-            <Badge tone="accent" icon={<Flag size={12} strokeWidth={2.5} />}>
+            <Badge tone="danger" icon={<Flag size={12} strokeWidth={2.5} />}>
               2 of 3 over the limit
             </Badge>
           ),

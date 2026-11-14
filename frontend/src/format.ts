@@ -39,3 +39,14 @@ export function daysBetween(from: string, to: string): number {
 export function daysText(days: number | null): string {
   return days === null ? '–' : days.toFixed(1)
 }
+
+/** Two P6 dates as one range: "22 Jan – 20 Feb 2026", or with both years when they differ. */
+export function rangeText(start: string | null, end: string | null): string {
+  if (!start && !end) return '–'
+  if (!start || !end) return dayText((start ?? end) as string)
+  const a = new Date(start)
+  const b = new Date(end)
+  const day = (d: Date, year: boolean) =>
+    d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}) })
+  return a.getFullYear() === b.getFullYear() ? `${day(a, false)} – ${day(b, true)}` : `${day(a, true)} – ${day(b, true)}`
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countText, csvText, percentText } from './format'
+import { countText, csvText, percentText, rangeText } from './format'
 import { pathFor, uploadIdIn } from './route'
 import { ruleText } from './rules'
 import { fileProblem } from './validate'
@@ -16,6 +16,14 @@ describe('format', () => {
     expect(csvText(['Check', 'Activity ID'], [['High float', 'A,1'], ['High float', 'say "hi"']])).toBe(
       'Check,Activity ID\nHigh float,"A,1"\nHigh float,"say ""hi"""\n',
     )
+  })
+})
+
+describe('rangeText', () => {
+  it('shows the year once when both dates share it, and both when they do not', () => {
+    expect(rangeText('2026-01-22T08:00:00', '2026-02-20T16:00:00')).toBe('22 Jan – 20 Feb 2026')
+    expect(rangeText('2026-11-30T08:00:00', '2027-02-20T16:00:00')).toBe('30 Nov 2026 – 20 Feb 2027')
+    expect(rangeText(null, null)).toBe('–')
   })
 })
 
