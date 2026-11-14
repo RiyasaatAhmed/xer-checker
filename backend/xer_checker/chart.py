@@ -14,7 +14,7 @@ from .rules import LIMITS  # noqa: E402
 
 # Bars
 CHART_SIZE = (9, 4.8)  # inches
-MAX_BARS = 6  # checks drawn: the ones over their limit in any file, else the first ones
+MAX_BARS = 6  # checks drawn: the ones furthest over their limit in any file, else the first ones
 FIRST_CHECKS = 3  # checks drawn when none is over its limit
 CHART_DPI = 150  # pixels per inch, so the bars are 1350 x 720 (the summaries add height)
 BAR_WIDTH = 0.35  # width of one file's group slot; each bar fills 90% of it
@@ -65,10 +65,12 @@ def draw_chart(results, path):
 
 
 def chart_checks(results):
-    """The checks the chart draws: those over their limit in any file, at most MAX_BARS, else the first few."""
+    """The checks the chart draws, in report order: the MAX_BARS over their limit with the largest share, else the first few."""
     ran = [n for n in LIMITS if all(n in r.failures and n not in r.unavailable for r in results)]  # a check that couldn't run has no bar
+    share = {n: max(percent(len(r.failures[n]), r.checked) for r in results) for n in ran}  # its largest share in any file
     over = [n for n in ran if any(r.checked and not within_limit(n, percent(len(r.failures[n]), r.checked)) for r in results)]
-    return (over or ran[:FIRST_CHECKS])[:MAX_BARS]
+    largest = set(sorted(over, key=lambda n: -share[n])[:MAX_BARS])  # the biggest problems first, so none is cut for its place
+    return [n for n in over if n in largest] or ran[:FIRST_CHECKS]
 
 
 def draw_summaries(ax, summaries, rows):

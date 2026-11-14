@@ -1,6 +1,6 @@
 """The report's verdicts (xer_checker/report.py) and the chart file (xer_checker/chart.py)."""
 
-from xer_checker.chart import draw_chart
+from xer_checker.chart import chart_checks, draw_chart
 from xer_checker.report import verdict
 from xer_checker.result import FileResult
 
@@ -32,3 +32,13 @@ def test_chart_handles_a_file_with_nothing_to_check(tmp_path):  # no dividing by
     path = tmp_path / "chart.png"
     draw_chart([result("finished.xer", 0, 0, ["Nothing to check."])], path)
     assert path.exists()
+
+
+def test_chart_draws_the_largest_problems_when_more_than_6_are_over(tmp_path):
+    over = {"Missing links": 10, "Leads": 2, "Lags": 6, "Link types": 11, "Duplicate links": 1, "Out-of-sequence work": 1,
+            "High float": 50, "Resources": 80}  # 8 checks over their limit, in activities out of 100
+    failures = {name: ["A1"] * over.get(name, 0) for name in ("Missing links", "Leads", "Lags", "Link types", "Duplicate links",
+                                                               "Out-of-sequence work", "Hard constraints", "Negative float",
+                                                               "High float", "Long durations", "Invalid dates", "Resources")}
+    shown = chart_checks([FileResult("a.xer", 100, failures, broken=[], notes=[], points=[], author="code")])
+    assert shown == ["Missing links", "Leads", "Lags", "Link types", "High float", "Resources"]  # the 2 smallest drop out
