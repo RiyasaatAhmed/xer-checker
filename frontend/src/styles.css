@@ -340,7 +340,7 @@ th { position: sticky; top: 0; background: color-mix(in srgb, var(--sunken) 45%,
 .mini { display: inline-flex; gap: 12px; align-items: center; }
 .mini-set { display: inline-flex; gap: 4px; align-items: center; }
 .mini-cell { box-sizing: border-box; flex: none; width: 10px; height: 18px; border: 1px solid var(--ok); border-radius: 3px; background: var(--ok-soft); }
-.mini-cell.flag { border-color: var(--flag); background: var(--flag-soft); }
+.mini-cell.flag { border-color: var(--flag); background: var(--flag); } /* solid: an over-the-limit cell is seen without a hover */
 .mini-cell.n\/a { border-color: var(--line-strong); border-style: dashed; background: var(--sunken); }
 .recent-checks { display: inline-flex; align-items: center; gap: 16px; }
 .flagcount { color: var(--flag-ink); font-weight: 650; font-size: 13px; white-space: nowrap; }
