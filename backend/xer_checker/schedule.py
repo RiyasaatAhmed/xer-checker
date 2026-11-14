@@ -32,6 +32,7 @@ class Activity:
     code: str  # task_code, the activity ID schedulers see
     name: str
     wbs: str  # the WBS element's name
+    p6_wbs_id: str  # the WBS element it belongs to
     task_type: str  # TT_Task, TT_Mile, ...
     status: str  # TK_NotStart, TK_Active, TK_Complete
     checked: bool  # one of the activities DCMA checks
@@ -41,6 +42,15 @@ class Activity:
     finish: datetime | None  # actual finish, else early finish
     constraint_type: str  # cstr_type, blank when none
     line: int  # its line in the file
+
+
+@dataclass(frozen=True)
+class WbsNode:
+    """One WBS element: a group of activities, inside its parent group."""
+    p6_id: str  # PROJWBS.wbs_id
+    parent_id: str | None  # the group it sits in; None for the root
+    name: str
+    seq: int  # PROJWBS.seq_num: the order P6 shows siblings in
 
 
 @dataclass(frozen=True)
@@ -56,6 +66,7 @@ class Link:
 @dataclass(frozen=True)
 class Schedule:
     projects: list
+    wbs_nodes: list  # the WBS tree, as WbsNode records
     activities: list
     links: list  # every usable link row, in file order
     counted: set  # the lines of the links counted: one per pair of activities
@@ -80,7 +91,15 @@ def read_schedule(tables):
         links.append(Link(row["pred_task_id"], row["task_id"], row.get("pred_type", ""), lag_hours, row["_line"]))
         last_of_pair[(row["pred_task_id"], row["task_id"])] = row["_line"]
     counted = set(last_of_pair.values())
-    return Schedule(projects, activities, links, counted, len(links) - len(counted))
+    return Schedule(projects, wbs_nodes(tables), activities, links, counted, len(links) - len(counted))
+
+
+def wbs_nodes(tables):
+    """The WBS tree. A node whose parent isn't in the table is a root."""
+    rows = tables.get("PROJWBS", [])
+    ids = {w["wbs_id"] for w in rows}
+    return [WbsNode(w["wbs_id"], w.get("parent_wbs_id") if w.get("parent_wbs_id") in ids else None,
+                    w.get("wbs_name", ""), int(number(w.get("seq_num", "")) or 0)) for w in rows]
 
 
 def project(row):
@@ -93,6 +112,7 @@ def activity(task, hours_per_day, wbs):
     remaining = number(task.get("remain_drtn_hr_cnt") or "")
     return Activity(
         p6_id=task["task_id"], code=task["task_code"], name=task.get("task_name", ""), wbs=wbs.get(task.get("wbs_id"), ""),
+        p6_wbs_id=task.get("wbs_id", ""),
         task_type=task["task_type"], status=task["status_code"], checked=is_checked(task),
         float_days=float_days(task, hours_per_day, []),  # its problems are already reported by the checks
         duration_days=remaining / per_day if remaining is not None else None,
