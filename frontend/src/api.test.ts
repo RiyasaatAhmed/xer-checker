@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { UPLOADS_URL, UploadError, getUpload, listUploads, uploadXer } from './api'
-import { CST_RESULT, UPLOAD_LIST, reply } from './test-data'
+import { UPLOADS_URL, UploadError, getCheck, getUpload, listUploads, uploadXer } from './api'
+import { CST_CHECKS, CST_RESULT, UPLOAD_LIST, reply } from './test-data'
 
 const FILE = new File(['ERMHDR'], 'CSTv2.4.xer')
 
@@ -46,5 +46,12 @@ describe('saved uploads', () => {
     vi.stubGlobal('fetch', fetch)
     expect(await getUpload(CST_RESULT.upload_id)).toEqual(CST_RESULT)
     expect(fetch.mock.calls[0][0]).toBe(`${UPLOADS_URL}/${CST_RESULT.upload_id}`)
+  })
+
+  it("opens one check's activities from GET /api/uploads/{id}/checks/{check}", async () => {
+    const fetch = vi.fn().mockResolvedValue(reply(200, CST_CHECKS['missing-links']))
+    vi.stubGlobal('fetch', fetch)
+    expect(await getCheck(CST_RESULT.upload_id, 'missing-links')).toEqual(CST_CHECKS['missing-links'])
+    expect(fetch.mock.calls[0][0]).toBe(`${UPLOADS_URL}/${CST_RESULT.upload_id}/checks/missing-links`)
   })
 })

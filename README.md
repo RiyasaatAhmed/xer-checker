@@ -7,10 +7,12 @@ Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and se
 For each file, it:
 
 1. **Flags broken rows**, with their line numbers.
-2. **Runs 3 DCMA checks** on unfinished work:
-   - **Missing links:** no link before it, or no link after it. Limit 5%.
-   - **Negative float:** already late for a deadline. Limit 0%.
-   - **High float:** more than 44 working days of spare time. Limit 5%.
+2. **Runs 16 checks** on unfinished work, in 7 sets. Each is a value against a limit:
+   - **Logic:** missing links, leads, lags, link types, duplicate links, out-of-sequence work.
+   - **Constraints:** hard constraints. **Float:** negative float, high float.
+   - **Duration, dates, resources:** long durations, invalid dates, resources.
+   - **Execution:** missed tasks, critical path test, CPLI and BEI. These need a baseline or a delay test, so they say why they can't run.
+   - **Locked numbers:** missing links (limit 5%), negative float (0%) and high float (5%) match Kazinex.
 3. **Draws one chart** of the results.
 4. **Writes a short summary.** Gemini picks the words; code computes every number.
 5. **Saves the upload and its results**, so you can open them again.
@@ -31,22 +33,23 @@ The command line draws the same results as one chart, for both files:
 | Area | What it does |
 |---|---|
 | **Reading** | Reads `.xer` files (UTF-8 or Windows-1252, values that span lines). Flags broken rows with their line numbers. Says why a file can't be checked |
-| **Checks** | 3 DCMA checks, one file per rule: missing links, negative float, high float. Float is converted to days with each activity's own calendar |
+| **Checks** | 16 checks, one file per rule, in 7 sets. 12 can run on a file. 4 need a baseline or a delay test and say so. 2 are ours, not DCMA's (duplicate links, out-of-sequence work). Float is converted to days with each activity's own calendar |
 | **Schedule** | Reads each project's dates, every activity (name, WBS, float, duration, dates) and every link |
 | **Overview** | Counts what's in the file: status, types, links, leads, lags, constraints, float profile. Matched to Kazinex |
 | **Summary** | A short written summary. Gemini picks the words, code fills every number; code writes it if the AI is off or breaks a rule |
-| **API** | Upload a file, list saved checks, open one. Clear errors: 404, 413, 422 |
+| **API** | Upload a file, list saved schedules, open one, and open one check's activities on its own. Clear errors: 404, 413, 422 |
 | **Saving** | PostgreSQL in Docker (8 tables), SQLite without it. A result looks the same every time it's opened |
-| **Home page** | The demo and an upload button when there are no checks, else the list of recent checks. Drop a file anywhere |
-| **Schedule map** | One picture of the WBS tree: a row per group, how many of its activities are flagged, and when its work happens. The data date, forecast finish and deadline are labelled on the same axis. Open a group, or click it to list its activities |
+| **Home page** | The demo and an upload button when there are no schedules, else the list. Each row has a strip of its checks, finish against deadline and the data date. Repeat uploads of one file sit together |
+| **Schedule map** | The WBS tree as rows, worst first. It counts the picked check, a set of checks, or all flags. Cells show the month flagged work starts, a thin bar shows the span and finished share. A second view is a matrix of groups against sets of checks. Click a group to list its activities |
 | **Activity lines** | Flagged activities grouped by WBS group, one line each. The line shows the logic: what's before, what's after, and a red `none` where a link is missing. The list is a fixed-height window with only the lines on screen in the page, and the group name stays pinned while you scroll. Sort and filter it |
 | **Scale** | Tested with a real 20,000-activity file (16,783 missing links). The page holds about 650 elements and scrolls at 60 fps. A filter updates in under 0.1 s, and a saved check reopens in under 1 s. Saving the upload takes about 10 s |
-| **A check** | The 3 checks first, each a value against its limit. Then the schedule map and the activities behind each check, one line each with its logic, in groups that stay short. Then a small file profile, and the summary folded away. Broken rows show only when there are some |
-| **Details** | Each check has its own link. Works on phones, in dark mode and with the keyboard |
-| **Proof** | Tests compare every number with Kazinex on each run: 134 backend, 46 frontend |
+| **A schedule** | The verdict first: checks over the limit, finish against deadline, what changed since the last upload. Then the checks: a strip of cells and a row for each failing check, with passing ones and ones that can't run folded away. Then the float bar, the map, "Fix first" and the activities behind the picked check. A small file profile and the folded summary come last |
+| **Fix first** | One open end that many flagged activities lead only into, and the activities that fail the most checks |
+| **Details** | Each schedule and each check in it has its own link. Works on phones, in dark mode and with the keyboard |
+| **Proof** | Tests compare the three locked numbers with Kazinex on each run: 213 backend, 72 frontend |
 | **Tooling** | `docker compose up` runs everything. `CLAUDE.md` and a writing skill keep the docs short |
 
-**Not yet:** login (the list isn't per user), and leads, lags and constraints as pass or fail checks. Also splitting a file with several projects, and checks that need a baseline.
+**Not yet:** login (the list isn't per user), splitting a file with several projects, and the checks that need a baseline or a delay test. The leads, lags and link types checks count activities, not links.
 
 ## Results
 

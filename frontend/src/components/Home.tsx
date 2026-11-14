@@ -10,7 +10,7 @@ interface Props {
   onOpen: (uploadId: string) => void
 }
 
-/** The home page. With saved checks: the list and the upload button. With none: the demo and the upload button. */
+/** The home page. With saved schedules: the list and the upload button. With none: the demo and the upload button. */
 export function Home({ uploads, onFile, onOpen }: Props) {
   if (uploads === null) return null // the list is loading: show nothing, not a demo that then disappears
   if (uploads.length === 0) {
@@ -27,7 +27,7 @@ export function Home({ uploads, onFile, onOpen }: Props) {
   return (
     <section aria-labelledby="recent-title">
       <div className="home-head">
-        <h1 id="recent-title">Recent checks</h1>
+        <h1 id="recent-title">Recent schedules</h1>
         <UploadButton busy={false} onFile={onFile} />
       </div>
       <RecentUploads uploads={uploads} onOpen={onOpen} />

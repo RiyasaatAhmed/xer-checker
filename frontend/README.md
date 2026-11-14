@@ -8,17 +8,20 @@ The page where you upload a `.xer` file and see where its problems are. Vite, Re
 
 | Part | What it does |
 |---|---|
-| **Home** | The demo and one upload button, or the list of recent checks. Nothing else |
+| **Home** | The demo and one upload button, or the list of recent schedules with a strip of checks each. Nothing else |
 | **Upload** | Drop a `.xer` file anywhere on the page, or use the button. A wrong file type or a file over 50 MB is refused at once, before it's sent |
-| **The 3 checks** | First on the page. Each is a value against its DCMA limit, on one 0 to 100% scale so they compare, with an icon for over or within. Click one to list its activities |
-| **Schedule map** | The WBS tree as rows: red for flagged activities, grey for fine, and a bar for when its work happens. The data date, forecast finish and deadline are labelled on the axis, with a chip for how far the forecast is from the deadline. Open a group, or click it to list its activities |
-| **Activities** | Grouped by WBS group in one fixed-height window (520 px). It draws only the lines on screen, so 20 activities or 20,000 stay equally light. Each line shows its logic as `before → ■ → after`, with a red `none` on a missing side. Also its name, WBS, float as a bar and dates. Group headers show a count and a bar of kinds, and the group name stays pinned while you scroll deep into it. The kinds are filters. Sort by file order, float or ID, filter by ID, name or WBS, copy the IDs, or download every column as CSV |
-| **File profile** | One small card: five counts (activities, links, leads, lags, constraints) and two bars (status, float). A float band over its limit links to its activities |
+| **Verdict** | First on the page: how many checks are over the limit, the worst three, finish against deadline, and what changed since the last upload |
+| **The checks** | One cell per check in sets, then a bullet row for each failing check: its value, limit tick, how many times over, and the change. Passing checks and checks that can't run fold into a line each. Click one to list its activities |
+| **Float** | One bar from late to spare time, coloured by how close to critical the work is |
+| **Where** | The WBS tree as rows, worst first, counting the picked check, a set of checks or all flags. Cells show the months flagged work starts, with the span and finished share. The data date, forecast finish and deadline are labelled on the axis. A second view is a matrix of groups against sets of checks. Click a group to list its activities |
+| **Fix first** | One open end behind many flags, and the activities that fail the most checks |
+| **Activities** | Grouped by WBS group in one fixed-height window (520 px). It draws only the lines on screen, so 20 activities or 20,000 stay equally light. Each line shows its logic as `before → ■ → after`, with a red `none` on a missing side. Also its name, WBS, float as a bar and dates. Each group shows its worst 8 first, then "Show all". Group headers show a count and, when a check has several kinds, a bar of them. The kinds are filters. Sort worst first (the default), or by file order, float, most checks failed or ID. Filter by ID, name or WBS, copy the IDs, or download every column as CSV |
+| **File profile** | One small card: five counts (activities, links, leads, lags, constraints) and two bars (status, and what the checks leave out) |
 | **Summary and broken rows** | The summary is folded away. Broken rows show only when the file has some |
 
-| **Recent checks** | Every saved check, newest first. Each has its own address (`/uploads/<id>`), so refresh, Back and a shared link all work |
+| **Recent schedules** | Every saved schedule, newest first, repeat uploads of one file together. Each has its own address (`/uploads/<id>`). So does each check in it (`/uploads/<id>/checks/<check>`). Refresh, Back and a shared link all work |
 
-**The home page is simple.** With no checks yet it shows a short looping demo, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow), and one upload button. Once there are checks it shows the list and the button. A check has an "All checks" link back.
+**The home page is simple.** With no checks yet it shows a short looping demo, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow), and one upload button. Once there are checks it shows the list and the button. A schedule has an "All schedules" link back.
 
 ![Schedule map](map.png)
 
@@ -62,23 +65,27 @@ All colors, type and shapes are tokens in [`src/theme.css`](src/theme.css). The 
 | File | Its one job |
 |---|---|
 | `src/App.tsx` | The page: the address bar, uploads, loading and errors, the drop target |
-| `src/api.ts` | Uploads a file, lists saved checks, opens one; turns errors into plain messages |
-| `src/route.ts` | Reads and writes `/uploads/<id>` in the address bar |
+| `src/api.ts` | Uploads a file, lists saved schedules, opens one, loads one check's activities; turns errors into plain messages |
+| `src/route.ts` | Reads and writes `/uploads/<id>` and `/uploads/<id>/checks/<check>` in the address bar |
+| `src/board.ts` | The logic behind the check board: ranking, ratio to the limit, change since last time, what the map counts (tested on its own) |
 | `src/validate.ts` | Refuses a wrong file type or size before upload |
-| `src/rules.ts` | What each check means, and what to do in P6 |
+| `src/rules.ts` | What each check means, and what to do in P6, by the check's ID |
 | `src/format.ts` | Percents, counts, dates and CSV |
-| `src/components/Health.tsx` | The 3 checks: a value against its limit |
-| `src/components/FlaggedActivities.tsx` | The activities behind a check: the Dots and List views, the kinds, filters, copy and CSV |
+| `src/components/Verdict.tsx`, `FinishGap.tsx` | The first answer: checks over, the worst, finish against deadline |
+| `src/components/CheckBoard.tsx`, `HealthStrip.tsx`, `CheckRow.tsx` | All the checks: the strip, the failing rows, the folds |
+| `src/components/FloatStrip.tsx` | Float as one bar |
+| `src/components/WbsMatrix.tsx`, `FixFirst.tsx`, `MiniStrip.tsx` | The matrix, the fix-first panel, and the small strip on the list |
+| `src/components/FlaggedActivities.tsx` | Loads one check's activities, then the kinds, sort, filters, copy and CSV |
 | `src/components/ActivityGroups.tsx` | The groups and their lines, as one flat list for the scroll window |
 | `src/components/VirtualList.tsx`, `src/virtual.ts` | The fixed-height scroll window, and the maths of which lines are on screen (tested on its own) |
 | `src/components/LogicChain.tsx` | One activity's logic on one line: before, it, after |
-| `src/categories.ts` | How activities are told apart: which link is missing, or how much float |
-| `src/components/ScheduleMap.tsx` | The WBS tree as rows: flagged of checked, and a timeline with the key dates labelled |
+| `src/categories.ts` | The kinds a check's activities fall into, from what the backend names |
+| `src/components/ScheduleMap.tsx` | The WBS tree as rows: flagged of checked, month heat, progress and the key dates |
 | `src/components/LogicDiagram.tsx` | One activity with what comes before and after it |
 | `src/timeline.ts`, `src/tree.ts` | The date axis, and the WBS tree helpers (tested on their own) |
 | `src/components/FileProfile.tsx` | What's in the file: five counts and two bars |
 | `src/components/HeroDemo.tsx` | The Stageshow demo on the empty screen. Its film notes are in `REHEARSAL.md` |
-| `src/components/*.tsx` | One component per file: the summary, file issues, recent checks and the rest |
+| `src/components/*.tsx` | One component per file: the summary, file issues, recent schedules and the rest |
 | `src/kit/` | Stageshow's React kit (MIT), copied in. Its README says what changed |
 | `nginx.conf` | In Docker: serves the app, sends every page path to it, and passes `/api` to the backend |
 

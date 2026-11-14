@@ -11,12 +11,14 @@ Usage:
 import sys  # reads file names given on the command line
 from pathlib import Path  # finds the .xer files
 
+from .availability import unavailable
 from .chart import draw_chart
 from .checks import check
 from .facts import summary_facts
 from .reader import FileError, read_xer
 from .report import report
 from .result import FileResult
+from .rules import RULES
 from .schedule import read_schedule
 from .summary import summarize
 
@@ -32,9 +34,10 @@ def check_file(path):
     tables, broken, notes = read_xer(path)  # 1. read
     checked, failures, problems = check(tables)  # 2. check
     broken = broken + problems  # rows the reader couldn't use, then data the checks couldn't use
-    facts = summary_facts(checked, failures, broken)  # 3. summarize: code's numbers, AI's words
+    skipped = unavailable(RULES, tables)  # checks this file can't support, with the reason
+    facts = summary_facts(checked, failures, broken, skipped)  # 3. summarize: code's numbers, AI's words
     points, author = summarize(facts)
-    return FileResult(path.name, checked, failures, broken, notes, points, author, facts, read_schedule(tables))
+    return FileResult(path.name, checked, failures, broken, notes, points, author, facts, read_schedule(tables), skipped)
 
 
 def main(args=None):

@@ -23,6 +23,19 @@
   --slate: #7d8da3; /* neutral data: bars, work periods */
   --slate-soft: #c4cdd9; /* the "fine" part of a bar */
   --slate-deep: #3d4a5c;
+  /* Float, colored by how close to critical it is, not by which check flags it. The one use of color
+     outside "red for flagged". Over 44 days is outlined, not filled: it is spare time, not danger. */
+  --float-neg: #b42318;
+  --float-zero: #e8890c;
+  --float-near: #f2b56b;
+  --float-near2: #f8d7a6;
+  --float-fine: #c4cdd9;
+  --float-fine2: #7d8da3;
+  /* Heat: how many flagged activities, light to dark */
+  --heat-1: #fbd9d6;
+  --heat-2: #f4a8a3;
+  --heat-3: #e5574f;
+  --heat-4: #b42318;
   --radius: 8px;
   --radius-sm: 6px;
   --sans: 'Geist Variable', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -59,6 +72,16 @@
     --slate: #6f7f95;
     --slate-soft: #3a4556;
     --slate-deep: #aab5c6;
+    --float-neg: #f2645d;
+    --float-zero: #f0a23b;
+    --float-near: #b97d2a;
+    --float-near2: #6d5223;
+    --float-fine: #3a4556;
+    --float-fine2: #6f7f95;
+    --heat-1: #4a2326;
+    --heat-2: #7b2f31;
+    --heat-3: #b8433f;
+    --heat-4: #f2645d;
     color-scheme: dark;
   }
 }

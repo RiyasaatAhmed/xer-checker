@@ -19,6 +19,10 @@ export interface WbsGroup {
   checked: number // activities DCMA checks, in this group and the groups inside it
   flagged: number // how many of those any rule flags
   by_rule: number[] // flagged per rule, in the order of CheckResult.rules
+  by_group?: Record<string, number> // activities flagged by at least one check of each group
+  complete?: number // finished activities in the group
+  total?: number // all activities in the group, checked or not
+  heat?: number[][] // flagged activities starting in each month: heat[rule][month]
   start: string | null // earliest start; site-local, no time zone
   finish: string | null // latest finish
 }
@@ -37,6 +41,8 @@ export interface ActivityRow {
   after: Neighbor[] // up to 4 of the activities linked after it
   start: string | null // actual start, else early start
   finish: string | null // actual finish, else early finish
+  kind?: string // which kind of this check's activities it is: a key in RuleResult.kinds
+  fails?: number // how many checks flag it
 }
 
 /** One P6 project in the file. */
@@ -71,18 +77,73 @@ export interface Overview {
   by_constraint: Part[]
   float_profile: { key: string; label: string; count: number }[] // the checked activities by total float
   no_float: number
+  float_bands?: { key: string; label: string; count: number }[] // finer bands for the float picture
+  lowest_float?: number | null // the least float of any checked activity, in days
+  left_out?: { key: string; label: string; count: number }[] // activities DCMA leaves out, by reason
 }
 
-/** One DCMA rule's result. */
+export type Measure = 'percent' | 'index' | 'test'
+
+/** One kind of activity behind a check, with its color tone (a CSS class suffix). */
+export interface Kind {
+  key: string
+  label: string
+  tone: string
+}
+
+/** One check's result. Its activities come from getCheck. */
 export interface RuleResult {
+  id: string // a stable slug, like "missing-links"
   name: string // like "Missing links"
-  dcma_section: string // like "4.1"
-  limit_percent: number // DCMA flags the schedule above this %
+  group: string // Logic, Constraints, Float, Duration, Dates, Resources or Execution
+  measure: Measure // a share of activities, a ratio, or pass or fail
+  direction: 'above' | 'below' // flagged above the limit, or under it
+  severity: number // 1 minor, 2 serious, 3 critical
+  dcma_section: string // like "4.1"; blank for a check that isn't DCMA's
+  limit_percent: number // the limit: a % of activities, or an index
   count: number // activities that break the rule
   percent: number // count as a % of the activities checked, 1 decimal
-  status: RuleStatus // n/a when nothing was checked
-  activities: string[] // the activity IDs that break the rule
-  details?: ActivityRow[] // the same activities with name, WBS, float and dates; missing on older uploads
+  status: RuleStatus // n/a when nothing was checked or the file can't support the check
+  na_reason?: string | null // why the check could not run
+  kinds: Kind[] // the kinds of activity behind this check
+  activities?: string[] // empty in the upload answer; see getCheck
+  details?: ActivityRow[]
+}
+
+/** The activities behind one check. */
+export interface CheckActivities {
+  id: string
+  activities: string[] // the activity IDs, in the order the checker found them
+  details: ActivityRow[]
+}
+
+/** The last earlier upload of the same file. */
+export interface Previous {
+  upload_id: string
+  uploaded_at: string
+  values: Record<string, number> // its percent for each check, by check ID
+}
+
+/** An activity with nothing after it, and the flagged activities that lead only into it. */
+export interface OpenEnd {
+  code: string
+  name: string
+  wbs: string
+  clears: number
+}
+
+/** An activity that more than one check flags. */
+export interface Repeat {
+  code: string
+  name: string
+  wbs: string
+  fails: number
+}
+
+/** Where one fix helps most. */
+export interface FixFirst {
+  open_ends: OpenEnd[]
+  repeat_offenders: Repeat[]
 }
 
 /** A row the checker couldn't use, or read with blanks. */
@@ -105,6 +166,17 @@ export interface CheckResult {
   projects?: ProjectInfo[] // missing on older uploads
   overview?: Overview | null
   structure?: WbsGroup[] // the WBS tree in tree order; missing on older uploads
+  months?: string[] // the month axis of WbsGroup.heat, like "2026-07"
+  previous?: Previous | null // the last earlier upload of the same file
+  fix_first?: FixFirst
+}
+
+/** One check's status, for the strip on the upload list. */
+export interface CheckStatus {
+  id: string
+  name: string
+  group: string
+  status: RuleStatus
 }
 
 /** One upload in the list of recent uploads. */
@@ -115,5 +187,10 @@ export interface UploadSummary {
   status: 'ready' | 'failed'
   failure_reason: string | null // why the file couldn't be checked
   checked: number | null // null when the upload failed
-  flags: number | null // rules over their DCMA limit; null when the upload failed
+  flags: number | null // checks over their limit; null when the upload failed
+  checks?: CheckStatus[] // every check's status, in report order
+  project?: string | null
+  data_date?: string | null
+  forecast_finish?: string | null
+  deadline?: string | null
 }

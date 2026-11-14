@@ -9,6 +9,11 @@ and/or a successor" ... "should not exceed 5%".
 NAME = "Missing links"  # shown in the report, the chart, the summary and the API
 LIMIT = 5  # %: DCMA flags the schedule above this
 DCMA_SECTION = "4.1"  # Logic
+GROUP = "Logic"  # the set it belongs to on the check board
+MEASURE = "percent"  # a share of the activities checked
+DIRECTION = "above"  # flagged above the limit
+SEVERITY = 3  # 1 minor, 2 serious, 3 critical: breaks ties between checks over their limit
+NEEDS = None  # what the file must hold for the check to run; None means nothing extra
 
 
 def fails(activity):

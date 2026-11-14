@@ -34,6 +34,12 @@ describe('tree', () => {
     expect(visibleGroups(TREE, new Set(['a'])).map((g) => g.name)).toEqual(['A', 'A1', 'B'])
   })
 
+  it('puts the heaviest siblings first when asked, and keeps the rest in order', () => {
+    const weight = (g: WbsGroup) => (g.name === 'B' ? 5 : 1)
+    expect(visibleGroups(TREE, new Set(['a']), weight).map((g) => g.name)).toEqual(['B', 'A', 'A1'])
+    expect(visibleGroups(TREE, new Set(), () => 1).map((g) => g.name)).toEqual(['A', 'B']) // equal weights keep tree order
+  })
+
   it('names a group and everything inside it', () => {
     expect([...namesIn(TREE, 'a')].sort()).toEqual(['A', 'A1'])
     expect(namesIn(TREE, 'missing').size).toBe(0)

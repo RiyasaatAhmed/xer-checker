@@ -8,10 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .checks import DEFAULT_HOURS_PER_DAY, float_days, hours_per_day_of, is_checked, number
-
-# ---------- Constants ----------
-
-DATE_FORMATS = ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y")  # P6 export styles
+from .dates import date
 
 
 @dataclass(frozen=True)
@@ -120,12 +117,3 @@ def activity(task, hours_per_day, wbs):
         finish=date(task.get("act_end_date")) or date(task.get("early_end_date")),
         constraint_type=task.get("cstr_type", ""), line=task["_line"])
 
-
-def date(text):
-    """A P6 date or date-time, or None when blank or in a style not listed in DATE_FORMATS."""
-    for style in DATE_FORMATS:
-        try:
-            return datetime.strptime((text or "").strip(), style)
-        except ValueError:
-            continue
-    return None

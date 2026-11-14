@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from database.db import get_session
 from modules.uploads import service
-from modules.uploads.schema import CheckResult, UploadSummary
+from modules.uploads.schema import CheckActivities, CheckResult, UploadSummary
 from xer_checker.reader import FileError
 
 # ---------- Constants ----------
@@ -46,4 +46,13 @@ def get_upload(upload_id: uuid.UUID, session: Session = Depends(get_session)) ->
     result = service.get_upload(session, upload_id)
     if result is None:
         raise HTTPException(status_code=404, detail="no checked upload with this ID")
+    return result
+
+
+@router.get("/{upload_id}/checks/{check_id}", response_model=CheckActivities)
+def get_check_activities(upload_id: uuid.UUID, check_id: str, session: Session = Depends(get_session)) -> CheckActivities:
+    """The activities behind one check, with their logic. Answers 404 if the upload or the check doesn't exist."""
+    result = service.get_check(session, upload_id, check_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="no such check in this upload")
     return result

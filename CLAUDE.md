@@ -22,7 +22,7 @@ No exceptions, even for one line. The skill says how much checking a one-line te
 A checker for Primavera P6 schedule files (`.xer`). You upload a file in the browser and see a dashboard. For each file, it:
 
 1. Flags broken rows, with their line numbers.
-2. Runs 3 DCMA checks on unfinished work: missing links, negative float, high float.
+2. Runs 16 checks on unfinished work, in 7 sets (logic, constraints, float, duration, dates, resources, execution). 4 of them need a baseline or a delay test and say why they can't run.
 3. Draws one chart of the results.
 4. Writes a short summary. Gemini picks the words; code computes every number.
 5. Saves the upload and its results, so they can be opened again.
@@ -32,7 +32,7 @@ A checker for Primavera P6 schedule files (`.xer`). You upload a file in the bro
 | Folder | What it holds | Status |
 |---|---|---|
 | `backend/` | The FastAPI app and the checker: code, tests, `data/` and `results-from-kazinex/` | Works |
-| `frontend/` | Vite, React and TypeScript, in a calm, neutral design: the 3 checks, the schedule map, the activities behind each number. nginx serves it in Docker and passes `/api` to the backend | Works |
+| `frontend/` | Vite, React and TypeScript, in a calm, neutral design: the verdict, the check board, the schedule map, the activities behind each check. nginx serves it in Docker and passes `/api` to the backend | Works |
 | `database/` | PostgreSQL 17. The backend creates the tables at start | Works |
 
 Each folder has a `Dockerfile`. `docker-compose.yml` runs all three. `.env` and `.env.example` stay at the repo root, and Docker Compose reads `.env` too.
@@ -73,7 +73,11 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 | `reader.py` | `read_xer`: reads a file, flags broken rows, or raises `FileError` with a plain reason |
 | `checks.py` | `check(tables)`: picks the activities DCMA checks, works out links and float in days, runs every rule |
 | `activity.py` | `Activity`: what a rule sees about one activity |
-| `rules/` | One file per DCMA rule: `NAME`, `LIMIT`, `DCMA_SECTION`, `fails(activity)`. `RULES` and `LIMITS` are in `__init__.py` |
+| `rules/` | One file per check: `NAME`, `LIMIT`, `DCMA_SECTION`, `GROUP`, `MEASURE`, `DIRECTION`, `SEVERITY`, `NEEDS`, `fails(activity)`. `RULES`, `LIMITS` and `rule_id()` are in `__init__.py` |
+| `availability.py` | Which checks a file can support, and the plain reason when one can't (`NEEDS`) |
+| `kinds.py` | How each check names the kinds of its activities, for the list |
+| `causes.py` | Open ends: one missing link that many flagged activities lead only into |
+| `dates.py` | Reads a P6 date |
 | `schedule.py` | `read_schedule(tables)`: projects, activities (name, WBS, float, dates) and every link row, with the counted ones marked |
 | `overview.py` | `overview(...)`: what's in the schedule, counted. Facts, not pass or fail; locked to Kazinex in `test_overview.py` |
 | `structure.py` | `structure(...)`: the WBS tree with checked and flagged counts and date spans rolled up, for the schedule map |
@@ -108,10 +112,13 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 - Tests use the `db_session` and `client` fixtures in `tests/conftest.py`: a fresh in-memory SQLite database each.
 - The tables are made with `create_all` at start. Once a table needs a change, add Alembic migrations first.
 - Frontend: the activities behind a check are grouped lines with their logic inline, in a fixed-height virtual list (`VirtualList`). Never render them all: a file can have 20,000. Checking one must not need a click. There is no table view.
-- Frontend: keep the page glanceable: pictures first (the 3 checks, the schedule map, the logic diagram), words behind a click. New text on a check page needs a reason.
+- Frontend: keep the page glanceable: pictures first (the verdict, the check board, the schedule map, the logic line), words behind a click. New text on a schedule page needs a reason.
+- Frontend: show failing checks, fold the rest. With 6 checks or fewer, every check is a row. Never lay out one card per check: a file can have 25.
+- A new check is one rule file with its `GROUP`, `MEASURE`, `DIRECTION`, `SEVERITY` and `NEEDS`, and its words in `frontend/src/rules.ts` by ID. Nothing else in the frontend changes.
+- The upload answer holds no activities. A check's activities come from `GET /api/uploads/{id}/checks/{check id}`, loaded when it is opened.
 - A new column on an existing table must be optional (nullable): `add_missing_columns` in `database/db.py` adds it on start. A required column needs Alembic first.
 - Frontend: one component per file in `src/components/`. Status shows an icon and a word, never color alone.
-- Frontend look: every color, font and shape is a token in `frontend/src/theme.css`. One accent (blue), red only for flagged, green only for within the limit, 8px corners, no uppercase labels. A status always has an icon and a word.
+- Frontend look: every color, font and shape is a token in `frontend/src/theme.css`. One accent (blue), red only for flagged, green only for within the limit, 8px corners, no uppercase labels. A status always has an icon and a word. One exception: the float bar colors float by how close to critical it is (`--float-*`), and the heat cells use `--heat-*`.
 - Frontend words around the numbers live in `frontend/src/rules.ts`: what a check means, and what to do in P6. The numbers always come from the API.
 - `frontend/src/kit/` is Stageshow's kit, copied in: don't edit it, except as its README records.
 - To change `HeroDemo.tsx`, use the `stageshow` skill. Restore it with `npx skills experimental_install`. Film it with `--gate` at both widths until it ends `rehearsal passed`, then update `REHEARSAL.md`.

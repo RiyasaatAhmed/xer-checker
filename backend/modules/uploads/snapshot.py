@@ -9,8 +9,9 @@ from sqlmodel import select
 
 from modules.uploads.model import Activity, Relationship, ScheduleProject, WbsNode
 from modules.uploads.schema import ActivityRow, Neighbor, Overview, ProjectInfo, WbsGroup
+from xer_checker.kinds import kind_of
 from xer_checker.overview import STATUS, overview
-from xer_checker.structure import structure
+from xer_checker.structure import month_axis, structure
 
 # ---------- Constants ----------
 
@@ -41,24 +42,33 @@ def bulk_insert(session, model, rows):
         session.execute(insert(model), rows)
 
 
-def read_schedule(session, upload_id):
-    """(projects, overview, {activity code: ActivityRow}) for one upload, from its saved rows.
-
-    An upload saved before the schedule was kept has no rows: no projects, no overview, no details.
-    """
+def read_overview(session, upload_id):
+    """(projects, overview) for one upload, from its saved rows. An upload saved before the schedule was kept has none."""
     projects = session.exec(select(ScheduleProject).where(ScheduleProject.upload_id == upload_id)
                             .order_by(ScheduleProject.id)).all()
+    activities = session.exec(select(Activity).where(Activity.upload_id == upload_id)).all()
+    if not activities:
+        return [], None
+    links = session.exec(select(Relationship).where(Relationship.upload_id == upload_id)).all()
+    counted = [l for l in links if l.counted]
+    return [project_info(p) for p in projects], Overview(**overview(activities, counted, len(links) - len(counted)))
+
+
+def read_rows(session, upload_id):
+    """{activity code: ActivityRow} for one upload: every activity, with its link counts and a few neighbors.
+
+    An upload saved before the schedule was kept has no rows: the answer is empty.
+    """
     activities = session.exec(select(Activity).where(Activity.upload_id == upload_id)
                               .order_by(Activity.source_line)).all()
     if not activities:
-        return [], None, {}
-    links = session.exec(select(Relationship).where(Relationship.upload_id == upload_id)).all()
-    counted = [l for l in links if l.counted]
-    before = Counter(l.succ_p6_task_id for l in counted)  # links into each activity
-    after = Counter(l.pred_p6_task_id for l in counted)  # links out of each activity
+        return {}
+    links = session.exec(select(Relationship).where(Relationship.upload_id == upload_id, Relationship.counted)).all()
+    before = Counter(l.succ_p6_task_id for l in links)  # links into each activity
+    after = Counter(l.pred_p6_task_id for l in links)  # links out of each activity
     by_id = {a.p6_task_id: a for a in activities}
     ins, outs = {}, {}  # activity -> the links into it, and out of it
-    for l in counted:
+    for l in links:
         ins.setdefault(l.succ_p6_task_id, []).append(l)
         outs.setdefault(l.pred_p6_task_id, []).append(l)
     details = {}
@@ -66,7 +76,18 @@ def read_schedule(session, upload_id):
         details.setdefault(a.activity_code, row_of(
             a, before[a.p6_task_id], after[a.p6_task_id],
             neighbors(ins.get(a.p6_task_id, []), by_id, "pred_p6_task_id"), neighbors(outs.get(a.p6_task_id, []), by_id, "succ_p6_task_id")))
-    return ([project_info(p) for p in projects], Overview(**overview(activities, counted, len(links) - len(counted))), details)
+    return details
+
+
+def read_schedule(session, upload_id):
+    """(projects, overview, {activity code: ActivityRow}) for one upload, from its saved rows."""
+    projects, schedule_overview = read_overview(session, upload_id)
+    return projects, schedule_overview, read_rows(session, upload_id)
+
+
+def kinded(row, rule_id, fails):
+    """The row for one check: its kind in that check, and how many checks flag it."""
+    return row.model_copy(update={"kind": kind_of(rule_id, row.predecessors, row.successors, row.float_days), "fails": fails})
 
 
 def project_info(p):
@@ -81,19 +102,21 @@ def neighbors(links, by_id, side):
             for l in links[:NEIGHBORS_SHOWN] if getattr(l, side) in by_id]
 
 
-def read_structure(session, upload_id, flags, rule_count):
-    """The WBS tree with counts and dates rolled up. Empty for an upload saved before the tree was kept."""
+def read_structure(session, upload_id, flags, rule_groups):
+    """(the WBS tree with counts, dates and heat rolled up, its month axis). Empty for an upload saved before the tree was kept."""
     nodes = session.exec(select(WbsNode).where(WbsNode.upload_id == upload_id)).all()
     if not nodes:
-        return []
-    activities = session.exec(select(Activity).where(Activity.upload_id == upload_id)).all()
+        return [], []
+    activities = [wbs_activity(a) for a in session.exec(select(Activity).where(Activity.upload_id == upload_id)).all()]
     nodes = [SimpleNamespace(p6_id=n.p6_wbs_id, parent_id=n.parent_p6_wbs_id, name=n.name, seq=n.seq) for n in nodes]
-    return [WbsGroup(**group) for group in structure(nodes, [wbs_activity(a) for a in activities], flags, rule_count)]
+    months = month_axis(activities)
+    groups = structure(nodes, activities, flags, len(rule_groups), rule_groups, months)
+    return [WbsGroup(**group) for group in groups], months
 
 
 def wbs_activity(a):
     """The fields of a saved activity that the roll-up reads."""
-    return SimpleNamespace(code=a.activity_code, p6_wbs_id=a.p6_wbs_id, checked=a.checked, start=a.start, finish=a.finish)
+    return SimpleNamespace(code=a.activity_code, p6_wbs_id=a.p6_wbs_id, checked=a.checked, start=a.start, finish=a.finish, status=a.status)
 
 
 def row_of(a, predecessors, successors, before=(), after=()):

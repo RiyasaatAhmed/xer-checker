@@ -13,7 +13,7 @@ import { fileProblem } from './validate'
 // ---------- Constants ----------
 
 const APP_NAME = 'XER checker'
-const OPENING = 'Opening the saved check…'
+const OPENING = 'Opening the saved schedule…'
 
 type View =
   | { step: 'empty' }
@@ -21,9 +21,10 @@ type View =
   | { step: 'done'; result: CheckResult }
   | { step: 'failed'; message: string }
 
-/** The page: upload a file, see what needs attention, open earlier checks again. */
+/** The page: upload a file, see what needs attention, open earlier schedules again. */
 export function App() {
-  const [uploadId, go] = useUploadRoute()
+  const [route, go] = useUploadRoute()
+  const uploadId = route.uploadId
   const [state, setView] = useState<View>(() => (uploadId ? { step: 'loading', text: OPENING } : { step: 'empty' }))
   const [uploads, setUploads] = useState<UploadSummary[] | null>(null) // null until the list has loaded
   const shownId = useRef<string | null>(null) // the upload on screen, so a fresh upload isn't fetched again
@@ -34,7 +35,7 @@ export function App() {
   }, [])
   useEffect(refreshList, [refreshList])
 
-  // Open the check named in the address bar: on load, on Back and Forward, and from the list.
+  // Open the schedule named in the address bar: on load, on Back and Forward, and from the list.
   useEffect(() => {
     if (uploadId === null) {
       shownId.current = null // Back to "/": the render below shows the empty screen
@@ -50,7 +51,7 @@ export function App() {
         setView({ step: 'done', result })
       },
       (error) => {
-        if (!cancelled) setView({ step: 'failed', message: `Couldn’t open this check. ${messageOf(error)}` })
+        if (!cancelled) setView({ step: 'failed', message: `Couldn’t open this schedule. ${messageOf(error)}` })
       },
     )
     return () => {
@@ -89,17 +90,17 @@ export function App() {
     go(null)
   }
 
-  // On "/" a finished result gives way to the empty screen (Back from a check, or the wordmark).
+  // On "/" a finished result gives way to the empty screen (Back from a schedule, or the wordmark).
   const view = uploadId === null && state.step === 'done' ? ({ step: 'empty' } as View) : state
   const busy = view.step === 'loading'
 
-  // A new page starts at its top: on a new address, and again once a check has drawn. Without it,
-  // a check opened from the list at the foot of the page keeps that scroll, and the browser's
-  // scroll anchoring holds the list in view while the check draws above it.
+  // A new page starts at its top: on a new schedule, and again once it has drawn. Without it,
+  // a schedule opened from the list at the foot of the page keeps that scroll, and the browser's
+  // scroll anchoring holds the list in view while the schedule draws above it.
   const shownCheck = view.step === 'done' ? view.result.upload_id : null
   useEffect(() => {
     window.scrollTo({ top: 0 })
-  }, [uploadId, shownCheck])
+  }, [uploadId, shownCheck])  // the address's check is not a new page: picking one keeps the scroll
   return (
     <div className="app">
       <DropOverlay onFile={check} />
@@ -120,10 +121,10 @@ export function App() {
         {view.step === 'done' && (
           <>
             <a href="/" className="back" onClick={home}>
-              ← All checks
+              ← All schedules
             </a>
-            {/* key: each upload starts a fresh dashboard, with its own selected rule */}
-            <Dashboard key={view.result.upload_id} result={view.result} />
+            {/* key: each upload starts a fresh dashboard; the check in the address is picked in it */}
+            <Dashboard key={view.result.upload_id} result={view.result} checkId={route.checkId} onCheck={(id) => go(view.result.upload_id, id)} />
           </>
         )}
       </main>

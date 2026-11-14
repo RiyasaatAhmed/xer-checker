@@ -9,6 +9,7 @@ from .rules import LIMITS
 
 MAX_BROKEN_SHOWN = 10  # broken rows printed per file
 EXAMPLES_SHOWN = 3  # failing activity codes printed per check
+NAME_WIDTH = 22  # characters of a check name, so the columns line up
 SUMMARY_WRAP = 100  # characters per line of the summary, like the report above it
 
 
@@ -25,9 +26,12 @@ def report(result):
         for line, note in result.notes[:MAX_BROKEN_SHOWN]:
             print(f"    line {line}: {note}")
     for check_name, codes in result.failures.items():
+        if check_name in result.unavailable:  # say why, instead of a misleading "pass"
+            print(f"  {check_name:<{NAME_WIDTH}} can't check: {result.unavailable[check_name]}")
+            continue
         pct = percent(len(codes), result.checked)  # share that failed (0 if nothing checked)
         examples = ", ".join(codes[:EXAMPLES_SHOWN])  # a few failing activity codes
-        print(f"  {check_name:<15} {len(codes):>4}  {pct:5.1f}%  {verdict(check_name, pct, result.checked)} "
+        print(f"  {check_name:<{NAME_WIDTH}} {len(codes):>4}  {pct:5.1f}%  {verdict(check_name, pct, result.checked)} "
               f"(limit {LIMITS[check_name]}%)  {examples}")
     print(f"  Summary, written by {result.author}:")
     for point in result.points:  # one finding per bullet

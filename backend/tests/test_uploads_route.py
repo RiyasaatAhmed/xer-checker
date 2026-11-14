@@ -18,7 +18,8 @@ def test_upload_gives_the_results(client):
     response = upload(client, "CSTv2.4.xer", CST)
     assert response.status_code == 200
     body = response.json()
-    assert body["checked"] == 133 and [r["count"] for r in body["rules"]] == [20, 0, 78]
+    counts = {r["id"]: r["count"] for r in body["rules"]}
+    assert body["checked"] == 133 and [counts[i] for i in ("missing-links", "negative-float", "high-float")] == [20, 0, 78]
 
 
 def test_an_upload_can_be_opened_again_by_its_id(client):
@@ -51,3 +52,11 @@ def test_a_file_over_the_limit_gets_413(client, monkeypatch):
 
 def test_no_file_gets_422(client):
     assert client.post("/api/uploads").status_code == 422
+
+
+def test_a_checks_activities_come_from_its_own_call(client):
+    saved = upload(client, "CSTv2.4.xer", CST).json()
+    response = client.get(f"/api/uploads/{saved['upload_id']}/checks/high-float")
+    assert response.status_code == 200 and len(response.json()["activities"]) == 78
+    assert client.get(f"/api/uploads/{saved['upload_id']}/checks/nope").status_code == 404
+    assert client.get(f"/api/uploads/{uuid.uuid4()}/checks/high-float").status_code == 404

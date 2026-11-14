@@ -1,4 +1,4 @@
-"""Draw the one chart: a bar per file per check, a line at each DCMA limit, and the summaries underneath."""
+"""Draw the one chart: a bar per file per check over its limit, a line at each DCMA limit, and the summaries underneath."""
 
 import textwrap  # wraps the summary points to fit under the chart
 
@@ -7,13 +7,15 @@ import matplotlib
 matplotlib.use("Agg")  # draw straight to a file; no window
 import matplotlib.pyplot as plt  # noqa: E402  (must come after matplotlib.use)
 
-from .checks import percent  # noqa: E402
+from .checks import percent, within_limit  # noqa: E402
 from .rules import LIMITS  # noqa: E402
 
 # ---------- Constants ----------
 
 # Bars
 CHART_SIZE = (9, 4.8)  # inches
+MAX_BARS = 6  # checks drawn: the ones over their limit in any file, else the first ones
+FIRST_CHECKS = 3  # checks drawn when none is over its limit
 CHART_DPI = 150  # pixels per inch, so the bars are 1350 x 720 (the summaries add height)
 BAR_WIDTH = 0.35  # width of one file's group slot; each bar fills 90% of it
 FILE_COLORS = ["#2a78d6", "#eb6834"]  # one per file (blue, orange), so the chart supports 2 files
@@ -31,7 +33,7 @@ SUMMARY_NOTE = "Every figure in the summaries is filled in by code. Gemini, when
 def draw_chart(results, path):
     """Save the chart to `path`: % failing per check, one bar per file, a dashed line at each DCMA limit,
     and the summaries under it."""
-    names = list(LIMITS)  # the three checks, in a fixed order
+    names = chart_checks(results)  # the checks worth a bar, in report order
     # Wrap each point first, because the number of lines sets how tall the text panel is.
     summaries = [(r.name, r.author, [textwrap.wrap(point, CHART_WRAP) for point in r.points]) for r in results]
     rows = sum(sum(map(len, points)) + 2 for _, _, points in summaries) + 1  # per file: header, points, blank row
@@ -60,6 +62,13 @@ def draw_chart(results, path):
     fig.tight_layout()  # stop labels from being cut off
     fig.savefig(path)
     plt.close(fig)  # free the figure's memory
+
+
+def chart_checks(results):
+    """The checks the chart draws: those over their limit in any file, at most MAX_BARS, else the first few."""
+    ran = [n for n in LIMITS if all(n in r.failures and n not in r.unavailable for r in results)]  # a check that couldn't run has no bar
+    over = [n for n in ran if any(r.checked and not within_limit(n, percent(len(r.failures[n]), r.checked)) for r in results)]
+    return (over or ran[:FIRST_CHECKS])[:MAX_BARS]
 
 
 def draw_summaries(ax, summaries, rows):

@@ -1,4 +1,4 @@
-import type { CheckResult, UploadSummary } from './types'
+import type { CheckActivities, CheckResult, UploadSummary } from './types'
 
 // ---------- Constants ----------
 
@@ -23,6 +23,11 @@ export function listUploads(): Promise<UploadSummary[]> {
 /** One saved upload's results. */
 export function getUpload(uploadId: string): Promise<CheckResult> {
   return request<CheckResult>(`${UPLOADS_URL}/${encodeURIComponent(uploadId)}`)
+}
+
+/** The activities behind one check of one upload, with their logic. */
+export function getCheck(uploadId: string, checkId: string): Promise<CheckActivities> {
+  return request<CheckActivities>(`${UPLOADS_URL}/${encodeURIComponent(uploadId)}/checks/${encodeURIComponent(checkId)}`)
 }
 
 /** fetch, with every failure turned into an UploadError with a plain message. */

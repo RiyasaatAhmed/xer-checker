@@ -3,7 +3,7 @@
 import json  # shows Gemini its last answer on the retry
 
 from . import gemini
-from .rules import OVERVIEW, fill, problems
+from .rules import LIMIT_SUFFIX, OVERVIEW, check_names, fill, problems
 from .settings import SettingsError, read_settings
 
 # ---------- Constants ----------
@@ -21,6 +21,14 @@ CODE_SUMMARY = [
                                     "({high_float_pct}), {high_float_vs_limit}."},
     {"about": OVERVIEW, "text": "Broken rows in the file: {broken_rows}."},
 ]
+TEMPLATES = {point["about"]: point for point in CODE_SUMMARY}  # the worded points, by topic
+
+
+def code_summary(facts):
+    """The points code writes from these facts: one per check the facts cover, then the overview."""
+    points = [TEMPLATES.get(key) or {"about": key, "text": f"{{{key}_name}}: {{{key}}} of {{checked}} activities ({{{key}_pct}}), {{{key}{LIMIT_SUFFIX}}}."}
+              for key in check_names(facts)]
+    return points + [TEMPLATES[OVERVIEW]]
 
 
 def summarize(facts):
@@ -28,16 +36,16 @@ def summarize(facts):
     try:
         settings = read_settings()
     except SettingsError as problem:  # the AI is off or set up wrong: code writes it, and says why
-        return fill(CODE_SUMMARY, facts), f"code ({problem})"
+        return fill(code_summary(facts), facts), f"code ({problem})"
     feedback = ""  # empty on the first try
     for _ in range(MAX_TRIES):
         try:
             sentences = gemini.ask_gemini(settings, facts, feedback)
         except Exception as error:  # no internet, bad key, quota, timeout, empty reply: fall back, never crash
-            return fill(CODE_SUMMARY, facts), f"code (Gemini failed: {gemini.reason(error)[:MAX_REASON_SHOWN]})"
+            return fill(code_summary(facts), facts), f"code (Gemini failed: {gemini.reason(error)[:MAX_REASON_SHOWN]})"
         issues = problems(sentences, facts)
         if not issues:  # every rule holds, so every figure will come from code
             return fill(sentences, facts), f"Gemini ({settings.model})"
         # Show Gemini its answer and what was wrong with it, then try once more.
         feedback = f"Your last answer was:\n{json.dumps(sentences)}\nIt broke these rules:\n" + "\n".join(issues)
-    return fill(CODE_SUMMARY, facts), f"code (Gemini broke a rule twice: {issues[0][:MAX_REASON_SHOWN]})"
+    return fill(code_summary(facts), facts), f"code (Gemini broke a rule twice: {issues[0][:MAX_REASON_SHOWN]})"

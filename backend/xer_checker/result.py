@@ -15,3 +15,4 @@ class FileResult:
     author: str  # who wrote the summary: Gemini, or code (and why)
     facts: dict = field(default_factory=dict)  # the named numbers the summary was written from
     schedule: object = None  # schedule.Schedule: projects, activities and links, for the API to save
+    unavailable: dict = field(default_factory=dict)  # {check name: why it could not run on this file}

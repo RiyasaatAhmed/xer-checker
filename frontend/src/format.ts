@@ -19,6 +19,11 @@ export function dateText(iso: string): string {
   return new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
+/** (1, "day") -> "day", (3, "day") -> "days". */
+export function plural(count: number, noun: string): string {
+  return count === 1 ? noun : `${noun}s`
+}
+
 /** One CSV file: a header row, then the rows. Values with commas or quotes are quoted. */
 export function csvText(header: string[], rows: string[][]): string {
   const cell = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)

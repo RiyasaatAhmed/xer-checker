@@ -79,7 +79,8 @@ class MetricResult(SQLModel, table=True):
     value: float  # numerator as a % of denominator
     numerator: int  # activities that break the rule
     denominator: int  # activities checked
-    verdict: str  # pass, flag, or not_applicable when nothing was checked
+    verdict: str  # pass, flag, or not_applicable when nothing was checked or the file can't support the check
+    na_reason: str | None = None  # why the check could not run; None when it did
     computed_at: datetime = created_at_field()
 
 

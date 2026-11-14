@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { countText, csvText, percentText, rangeText } from './format'
-import { pathFor, uploadIdIn } from './route'
+import { pathFor, routeIn, uploadIdIn } from './route'
 import { ruleText } from './rules'
 import { fileProblem } from './validate'
 
@@ -34,6 +34,14 @@ describe('route', () => {
     expect(uploadIdIn('/uploads/not-an-id')).toBeNull()
     expect([pathFor(ID), pathFor(null)]).toEqual([`/uploads/${ID}`, '/'])
   })
+
+  it('reads a check from its path too, and writes one', () => {
+    expect(routeIn(`/uploads/${ID}/checks/high-float`)).toEqual({ uploadId: ID, checkId: 'high-float' })
+    expect(routeIn(`/uploads/${ID}`)).toEqual({ uploadId: ID, checkId: null })
+    expect(routeIn(`/uploads/${ID}/checks/`)).toEqual({ uploadId: null, checkId: null })
+    expect(pathFor(ID, 'leads')).toBe(`/uploads/${ID}/checks/leads`)
+    expect(pathFor(null, 'leads')).toBe('/')
+  })
 })
 
 describe('validate', () => {
@@ -47,8 +55,9 @@ describe('validate', () => {
 })
 
 describe('rules', () => {
-  it('has plain words for every check, and for one it does not know yet', () => {
-    expect(ruleText('High float').short).toBe('More than 44 working days of spare time')
-    expect(ruleText('Hard constraints').action).toBe('Review them in P6.')
+  it('has plain words for every check by its ID, and for one it does not know yet', () => {
+    expect(ruleText('high-float').short).toBe('More than 44 working days of spare time')
+    expect(ruleText('hard-constraints').action).toBe('Replace each with logic, or a soft constraint.')
+    expect(ruleText('a-new-check').action).toBe('Review them in P6.')
   })
 })

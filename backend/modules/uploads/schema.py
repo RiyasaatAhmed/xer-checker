@@ -29,18 +29,41 @@ class ActivityRow(BaseModel):
     after: list[Neighbor] = Field(default=[], description="Up to 4 of the activities linked after it")
     start: datetime | None = Field(description="Actual start, else early start; site-local, no time zone")
     finish: datetime | None = Field(description="Actual finish, else early finish; site-local, no time zone")
+    kind: str = Field(default="", description="Which kind of this check's activities it is; the keys are in RuleResult.kinds")
+    fails: int = Field(default=1, description="How many checks flag this activity")
+
+
+class Kind(BaseModel):
+    """One kind of activity behind a check, with the color tone it is drawn in."""
+    key: str
+    label: str
+    tone: str = Field(description="A CSS class suffix: t-<tone>")
 
 
 class RuleResult(BaseModel):
-    """One DCMA rule's result."""
+    """One check's result. The activities behind it come from GET /api/uploads/{id}/checks/{check id}."""
+    id: str = Field(description="A stable slug, like 'missing-links'. Links and words use it")
     name: str = Field(description="The check, like 'Missing links'")
-    dcma_section: str = Field(description="Where the rule is in DCMA-EA PAM 200.1, like '4.1'")
-    limit_percent: float = Field(description="DCMA flags the schedule above this %")
+    group: str = Field(description="The set it belongs to: Logic, Constraints, Float, Duration, Dates, Resources or Execution")
+    measure: Literal["percent", "index", "test"] = Field(description="A share of activities, a ratio, or pass or fail")
+    direction: Literal["above", "below"] = Field(description="Flagged above the limit, or under it")
+    severity: int = Field(description="1 minor, 2 serious, 3 critical. Ranks checks over their limit")
+    dcma_section: str = Field(description="Where the rule is in DCMA-EA PAM 200.1, like '4.1'. Blank for a check that isn't DCMA's")
+    limit_percent: float = Field(description="The limit: a % of activities, or an index for the 'index' measure")
     count: int = Field(description="Activities that break the rule")
     percent: float = Field(description="count as a % of the activities checked, rounded to 1 decimal")
-    status: Literal["pass", "flag", "n/a"] = Field(description="n/a when nothing was checked")
-    activities: list[str] = Field(description="The activity IDs that break the rule")
-    details: list[ActivityRow] = Field(default=[], description="The same activities, with name, WBS, float and dates")
+    status: Literal["pass", "flag", "n/a"] = Field(description="n/a when nothing was checked or the file can't support the check")
+    na_reason: str | None = Field(default=None, description="Why the check could not run. Only when status is n/a")
+    kinds: list[Kind] = Field(default=[], description="The kinds of activity behind this check")
+    activities: list[str] = Field(default=[], description="Empty here. The activity IDs are in the check's own call")
+    details: list[ActivityRow] = Field(default=[], description="Empty here. The rows are in the check's own call")
+
+
+class CheckActivities(BaseModel):
+    """The activities behind one check, with their logic."""
+    id: str
+    activities: list[str] = Field(description="The activity IDs that break the rule, in the order the checker found them")
+    details: list[ActivityRow] = Field(description="The same activities, with name, WBS, float, dates and kind")
 
 
 class RowNote(BaseModel):
@@ -67,6 +90,10 @@ class WbsGroup(BaseModel):
     checked: int = Field(description="Activities DCMA checks, in this group and the groups inside it")
     flagged: int = Field(description="How many of those any DCMA rule flags")
     by_rule: list[int] = Field(description="Flagged, per rule, in the order of CheckResult.rules")
+    by_group: dict[str, int] = Field(default={}, description="Activities flagged by at least one check of each group")
+    complete: int = Field(default=0, description="Finished activities in the group")
+    total: int = Field(default=0, description="All activities in the group, checked or not")
+    heat: list[list[int]] = Field(default=[], description="Flagged activities starting in each month: heat[rule][month]")
     start: datetime | None = Field(description="Earliest start in the group; site-local, no time zone")
     finish: datetime | None = Field(description="Latest finish in the group")
 
@@ -100,6 +127,38 @@ class Overview(BaseModel):
     by_constraint: list[Part]
     float_profile: list[FloatBand] = Field(description="The checked activities by total float")
     no_float: int = Field(description="Checked activities with a blank float")
+    float_bands: list[FloatBand] = Field(default=[], description="Finer float bands for the float picture")
+    lowest_float: float | None = Field(default=None, description="The least float of any checked activity, in days")
+    left_out: list[FloatBand] = Field(default=[], description="Activities DCMA leaves out of the checks, by reason")
+
+
+class Previous(BaseModel):
+    """The last earlier upload of the same file, for the change since then."""
+    upload_id: uuid.UUID
+    uploaded_at: datetime
+    values: dict[str, float] = Field(description="Its percent for each check, by check ID. A check that couldn't run is left out")
+
+
+class OpenEnd(BaseModel):
+    """An activity with nothing after it, and the flagged activities that lead only into it."""
+    code: str
+    name: str
+    wbs: str
+    clears: int = Field(description="Flagged activities that lead only into it, itself included")
+
+
+class Repeat(BaseModel):
+    """An activity that more than one check flags."""
+    code: str
+    name: str
+    wbs: str
+    fails: int = Field(description="How many checks flag it")
+
+
+class FixFirst(BaseModel):
+    """Where one fix helps most."""
+    open_ends: list[OpenEnd] = Field(default=[], description="One missing link that may clear many flags")
+    repeat_offenders: list[Repeat] = Field(default=[], description="Activities that fail the most checks")
 
 
 class CheckResult(BaseModel):
@@ -108,7 +167,7 @@ class CheckResult(BaseModel):
     uploaded_at: datetime
     file_name: str
     checked: int = Field(description="Unfinished work activities checked")
-    rules: list[RuleResult] = Field(description="One result per DCMA rule, in report order")
+    rules: list[RuleResult] = Field(description="One result per check, in report order")
     broken_rows: list[RowNote] = Field(description="Rows that couldn't be used, in line order")
     notes: list[RowNote] = Field(description="Rows that ended early and were read with blanks")
     summary: list[str] = Field(description="Short points; every number in them is filled in by code")
@@ -116,6 +175,17 @@ class CheckResult(BaseModel):
     projects: list[ProjectInfo] = Field(default=[], description="The P6 projects in the file")
     overview: Overview | None = Field(default=None, description="None for an upload saved before the schedule was kept")
     structure: list[WbsGroup] = Field(default=[], description="The WBS tree, in tree order. Empty for an upload saved before it was kept")
+    months: list[str] = Field(default=[], description="The month axis of WbsGroup.heat, like '2026-07'")
+    previous: Previous | None = Field(default=None, description="The last earlier upload of the same file, if any")
+    fix_first: FixFirst = Field(default=FixFirst(), description="Where one fix helps most")
+
+
+class CheckStatus(BaseModel):
+    """One check's status, for the strip on the upload list."""
+    id: str
+    name: str
+    group: str
+    status: Literal["pass", "flag", "n/a"]
 
 
 class UploadSummary(BaseModel):
@@ -126,4 +196,9 @@ class UploadSummary(BaseModel):
     status: Literal["ready", "failed"]
     failure_reason: str | None = Field(description="Why the file couldn't be checked")
     checked: int | None = Field(description="Activities checked; None when the upload failed")
-    flags: int | None = Field(description="Rules over their DCMA limit; None when the upload failed")
+    flags: int | None = Field(description="Checks over their limit; None when the upload failed")
+    checks: list[CheckStatus] = Field(default=[], description="Every check's status, in report order")
+    project: str | None = Field(default=None, description="The first P6 project's name")
+    data_date: datetime | None = Field(default=None, description="The first project's data date")
+    forecast_finish: datetime | None = None
+    deadline: datetime | None = None

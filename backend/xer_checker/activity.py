@@ -10,3 +10,12 @@ class Activity:
     has_predecessor: bool  # a link before it
     has_successor: bool  # a link after it
     float_days: float | None  # total float in working days; None when blank or not a number
+    has_lead: bool = False  # a link into it with a negative lag
+    has_lag: bool = False  # a link into it with a positive lag
+    has_odd_link: bool = False  # a link into it that is not finish to start
+    has_duplicate_link: bool = False  # the file links a pair of activities twice, into this one
+    out_of_sequence: bool = False  # in progress while a finish to start predecessor is not finished
+    duration_days: float | None = None  # remaining duration in working days; None when blank
+    constraint_type: str = ""  # cstr_type, blank when none
+    invalid_date: bool = False  # an actual date after the data date, or a forecast date before it
+    has_resource: bool = False  # at least one resource is assigned

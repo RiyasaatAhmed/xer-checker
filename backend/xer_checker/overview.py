@@ -32,6 +32,32 @@ FLOAT_BANDS = (
     ("high", f"Over {HIGH_FLOAT_DAYS} days", lambda d: d > HIGH_FLOAT_DAYS),
 )
 
+# Finer float bands for the float picture: close to critical work is the buffer a scheduler watches.
+FINE_BANDS = (
+    ("negative", "Below 0", lambda d: d < 0),
+    ("zero", "0", lambda d: d == 0),
+    ("d1_5", "1 to 5", lambda d: 0 < d <= 5),
+    ("d6_10", "6 to 10", lambda d: 5 < d <= 10),
+    ("d11_20", "11 to 20", lambda d: 10 < d <= 20),
+    ("d21_44", "21 to 44", lambda d: 20 < d <= HIGH_FLOAT_DAYS),
+    ("d45_90", "45 to 90", lambda d: HIGH_FLOAT_DAYS < d <= 90),
+    ("d90", "Over 90", lambda d: d > 90),
+)
+# Why an activity is left out of the checks, in the order the reasons are tried
+NOT_CHECKED = (("finished", "Finished", lambda a: a.status == "TK_Complete"),
+               ("milestone", "Milestones", lambda a: a.task_type in ("TT_Mile", "TT_FinMile")),
+               ("loe", "Level of effort", lambda a: a.task_type == "TT_LOE"),
+               ("wbs", "WBS summaries", lambda a: a.task_type == "TT_WBS"))
+
+
+def left_out(activities):
+    """[{key, label, count}] for the activities DCMA leaves out, by the first reason that applies."""
+    counts = {key: 0 for key, _, _ in NOT_CHECKED}
+    for a in activities:
+        if not a.checked:
+            counts[next((key for key, _, test in NOT_CHECKED if test(a)), "finished")] += 1
+    return [{"key": key, "label": label, "count": counts[key]} for key, label, _ in NOT_CHECKED if counts[key]]
+
 
 def overview(activities, links, duplicate_links):
     """The counts behind the "What's in the file" section. Every share is a % of its own total.
@@ -54,6 +80,9 @@ def overview(activities, links, duplicate_links):
         "by_constraint": parts(Counter(a.constraint_type for a in activities if a.constraint_type), CONSTRAINTS, len(activities)),
         "float_profile": [{"key": key, "label": label, "count": sum(1 for d in floats if test(d))} for key, label, test in FLOAT_BANDS],
         "no_float": len(checked) - len(floats),  # checked activities with a blank float
+        "float_bands": [{"key": key, "label": label, "count": sum(1 for d in floats if test(d))} for key, label, test in FINE_BANDS],
+        "lowest_float": min(floats) if floats else None,  # in days: how close to critical the schedule is
+        "left_out": left_out(activities),
     }
 
 

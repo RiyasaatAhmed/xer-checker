@@ -20,15 +20,17 @@ export function topLevel(groups: WbsGroup[]): WbsGroup[] {
   return level
 }
 
-/** The groups on screen: the top level, and the children of every expanded group, in order. */
-export function visibleGroups(groups: WbsGroup[], expanded: Set<string>): WbsGroup[] {
+/** The groups on screen: the top level, and the children of every expanded group, in order.
+ *  With `weight`, siblings go heaviest first (stable); without it, in tree order. */
+export function visibleGroups(groups: WbsGroup[], expanded: Set<string>, weight?: (g: WbsGroup) => number): WbsGroup[] {
   const children = childrenOf(groups)
   const out: WbsGroup[] = []
+  const order = (list: WbsGroup[]) => (weight ? list.map((g, i) => ({ g, i })).sort((a, b) => weight(b.g) - weight(a.g) || a.i - b.i).map(({ g }) => g) : list)
   const walk = (group: WbsGroup) => {
     out.push(group)
-    if (expanded.has(group.id)) (children.get(group.id) ?? []).forEach(walk)
+    if (expanded.has(group.id)) order(children.get(group.id) ?? []).forEach(walk)
   }
-  topLevel(groups).forEach(walk)
+  order(topLevel(groups)).forEach(walk)
   return out
 }
 

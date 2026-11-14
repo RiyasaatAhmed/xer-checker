@@ -1,5 +1,7 @@
 """The command line (xer_checker/cli.py): what it prints, and its exit code."""
 
+import re
+
 from helpers import GOOD, ROOT, save
 
 from xer_checker import cli
@@ -33,7 +35,12 @@ def test_real_file_prints_the_numbers_in_the_readme(capsys):
     exit_code, out = run_checker(capsys, ROOT / "data" / "CSTv2.4.xer")
     assert exit_code == 0
     assert "CSTv2.4.xer: 133 activities checked" in out
-    assert "Missing links     20   15.0%  FLAG (limit 5%)" in out
-    assert "Negative float     0    0.0%  pass (limit 0%)" in out
-    assert "High float        78   58.6%  FLAG (limit 5%)" in out
+    assert re.search(r"Missing links\s+20\s+15\.0%\s+FLAG \(limit 5%\)", out)
+    assert re.search(r"Negative float\s+0\s+0\.0%\s+pass \(limit 0%\)", out)
+    assert re.search(r"High float\s+78\s+58\.6%\s+FLAG \(limit 5%\)", out)
     assert "    • Missing links: 20 of 133 activities (15.0%), over DCMA's 5% limit." in out
+
+
+def test_a_check_that_cant_run_says_why_instead_of_passing(capsys):
+    exit_code, out = run_checker(capsys, ROOT / "data" / "CSTv2.4.xer")
+    assert re.search(r"BEI\s+can't check: Needs a baseline schedule", out)
