@@ -76,6 +76,7 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 | `rules/` | One file per DCMA rule: `NAME`, `LIMIT`, `DCMA_SECTION`, `fails(activity)`. `RULES` and `LIMITS` are in `__init__.py` |
 | `schedule.py` | `read_schedule(tables)`: projects, activities (name, WBS, float, dates) and every link row, with the counted ones marked |
 | `overview.py` | `overview(...)`: what's in the schedule, counted. Facts, not pass or fail; locked to Kazinex in `test_overview.py` |
+| `structure.py` | `structure(...)`: the WBS tree with checked and flagged counts and date spans rolled up, for the schedule map |
 | `facts.py` | `summary_facts`: the named numbers a summary may use |
 | `result.py` | `FileResult`: one file's results |
 | `report.py`, `chart.py` | Print one file's results; draw the chart |
@@ -106,6 +107,8 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 - The API answers from the database, never straight from the checker: save first, then read back. A saved upload is never changed.
 - Tests use the `db_session` and `client` fixtures in `tests/conftest.py`: a fresh in-memory SQLite database each.
 - The tables are made with `create_all` at start. Once a table needs a change, add Alembic migrations first.
+- Frontend: keep the page glanceable: pictures first (the schedule map, the checks band, the logic diagram), words behind a click. New text on a check page needs a reason.
+- A new column on an existing table must be optional (nullable): `add_missing_columns` in `database/db.py` adds it on start. A required column needs Alembic first.
 - Frontend: one component per file in `src/components/`. Status shows an icon and a word, never color alone.
 - Frontend look: every color, font and shape is a token in `frontend/src/theme.css`, from thecritpath.com. Square corners, mono capitals for small labels, orange only for actions and checks over their limit.
 - Frontend words around the numbers live in `frontend/src/rules.ts`: what a check means, and what to do in P6. The numbers always come from the API.

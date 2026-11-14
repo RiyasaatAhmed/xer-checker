@@ -38,12 +38,14 @@ The command line draws the same results as one chart, for both files:
 | **API** | Upload a file, list saved checks, open one. Clear errors: 404, 413, 422 |
 | **Saving** | PostgreSQL in Docker (8 tables), SQLite without it. A result looks the same every time it's opened |
 | **Home page** | The demo and an upload button when there are no checks, else the list of recent checks. Drop a file anywhere |
-| **A check** | Project dates, what needs attention, the 3 checks, the activities behind each (sort, filter, copy IDs, CSV), what's in the file, the summary, file issues |
+| **Schedule map** | One picture of the WBS tree: a row per group, how many of its activities are flagged, and when its work happens. The project's data date, forecast finish and deadline are marked on the same time axis. Open a group to see what's inside, or click it to list its activities |
+| **Logic diagram** | Click any flagged activity's links: what comes before it, it, and what comes after. A missing link is an empty orange box |
+| **A check** | Project dates, what needs attention (one line per check), the 3 checks and the map. Then the activities behind each (sort, filter, copy IDs, CSV), 5 counts and 2 bars, the summary and file issues |
 | **Details** | Each check has its own link. Works on phones, in dark mode and with the keyboard |
-| **Proof** | Tests compare every number with Kazinex on each run: 129 backend, 27 frontend |
+| **Proof** | Tests compare every number with Kazinex on each run: 134 backend, 35 frontend |
 | **Tooling** | `docker compose up` runs everything. `CLAUDE.md` and a writing skill keep the docs short |
 
-**Not yet:** login (the list isn't per user), leads, lags and constraints as pass or fail checks, splitting a file with several projects, checks that need a baseline.
+**Not yet:** login (the list isn't per user), and leads, lags and constraints as pass or fail checks. Also splitting a file with several projects, and checks that need a baseline.
 
 ## Results
 
@@ -231,7 +233,8 @@ curl -F "file=@backend/data/CSTv2.4.xer" http://localhost:8000/api/uploads
 - **`summary` and `summary_author`:** the short points, and who wrote them.
 - **`projects`:** each P6 project's data date, planned start, forecast finish and deadline.
 - **`overview`:** what's in the file, counted: activities by status and type, links by type, leads, lags, constraints, and the float profile.
-- **`rules[].details`:** each flagged activity's name, WBS, predecessors and successors, float, remaining duration, start, finish and status.
+- **`rules[].details`:** each flagged activity's name, WBS, predecessors, successors, float, remaining duration, dates and status. Also up to 4 activities linked before it, and 4 after.
+- **`structure`:** the WBS tree in tree order. Each group has its checked and flagged counts, flagged per rule, and the dates its work spans.
 
 **It's read back from the database**, so a result looks the same now and later.
 
@@ -361,7 +364,7 @@ The backend's code is in `backend/`, one job per file, each with its own tests i
 | `main.py` | Create the API and add each module's routes | `test_main.py` |
 | `modules/uploads/route.py` | The 3 upload endpoints: answer 404, 413 or 422 on errors | `test_uploads_route.py` |
 | `modules/uploads/service.py` | Check the upload, save it with its results, read saved ones back (`schema.py`) | `test_uploads_service.py` |
-| `modules/uploads/model.py` | The 8 tables, described in the [database README](database/README.md) | `test_database.py` |
+| `modules/uploads/model.py` | The 9 tables, described in the [database README](database/README.md) | `test_database.py` |
 | `modules/uploads/snapshot.py` | Save the schedule's rows; read back the project dates, the overview and each activity's details | `test_uploads_service.py` |
 | `database/db.py` | Connect to PostgreSQL, or SQLite without Docker; create the tables | `test_database.py` |
 | `reader.py` | Read a `.xer` file into tables; say why a broken one can't be checked | `test_reader.py` |
@@ -369,6 +372,7 @@ The backend's code is in `backend/`, one job per file, each with its own tests i
 | `activity.py` | What a rule sees about one activity | |
 | `schedule.py` | Read the projects, activities and links a scheduler needs to see: names, WBS, dates, float in days | `test_schedule.py` |
 | `overview.py` | Count what's in the schedule: status, types, links, leads and lags, constraints, float profile | `test_overview.py`, against Kazinex |
+| `structure.py` | Roll the WBS tree up: checked and flagged per group, and the dates each group's work spans | `test_structure.py` |
 | `rules/*.py` | One DCMA rule each | `test_rule_*.py` |
 | `facts.py` | Turn the results into the named numbers a summary may use | `test_facts.py` |
 | `summary/settings.py` | Read the Gemini settings from `.env`, and check them | `test_summary_settings.py` |
