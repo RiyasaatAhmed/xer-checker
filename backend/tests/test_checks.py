@@ -81,6 +81,12 @@ def test_blank_float_is_skipped_and_text_is_a_problem():
     assert failures["Negative float"] == [] and failures["High float"] == []
 
 
+def test_infinite_or_nan_float_is_a_problem_and_never_flagged():
+    _, failures, problems = check(schedule([task("1", "inf"), task("2", "-inf"), task("3", "NaN")]))
+    assert [line for line, _ in problems] == [1, 2, 3]
+    assert failures["Negative float"] == [] and failures["High float"] == []
+
+
 def test_unknown_calendar_falls_back_to_8_hours():
     _, failures, _ = check(schedule([task("1", "360", calendar="no-such-calendar")]))
     assert failures["High float"] == ["A1"]

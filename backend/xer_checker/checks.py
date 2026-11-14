@@ -1,5 +1,7 @@
 """Run the DCMA rules on unfinished work activities. Each rule is its own file in rules/."""
 
+import math  # tells a finite number from "inf" and "NaN"
+
 from .activity import Activity
 from .availability import data_dates, unavailable
 from .dates import date
@@ -24,11 +26,12 @@ FINISH_TO_START = "PR_FS"  # the link type DCMA wants most links to be
 # ---------- Small helpers, shared with the report, the chart and the summary ----------
 
 def number(text):
-    """float(text), or None if text isn't a number."""
+    """float(text), or None if text isn't a finite number."""
     try:
-        return float(text)  # "12.5" -> 12.5
+        value = float(text)  # "12.5" -> 12.5
     except ValueError:
         return None  # "TBD" -> None, instead of crashing
+    return value if math.isfinite(value) else None  # "inf" and "NaN" parse, but no P6 value is either
 
 
 def percent(count, checked):
