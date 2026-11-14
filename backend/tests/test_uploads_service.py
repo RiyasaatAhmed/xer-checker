@@ -60,6 +60,11 @@ def test_folders_in_the_file_name_are_dropped(db_session):
     assert check_upload(db_session, "../../CSTv2.4.xer", CST).file_name == "CSTv2.4.xer"
 
 
+def test_a_file_name_the_disk_refuses_is_still_checked(db_session):
+    for name in ("..", "x" * 300 + ".xer", "a\x00b.xer"):
+        assert check_upload(db_session, name, CST).checked == 133
+
+
 def test_a_file_that_cant_be_checked_is_saved_as_failed(db_session):
     with pytest.raises(FileError, match="the file is empty"):
         check_upload(db_session, "empty.xer", b"")

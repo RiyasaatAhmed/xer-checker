@@ -41,7 +41,7 @@ def check_upload(session, file_name, content):
     name = Path(file_name or "").name or DEFAULT_FILE_NAME  # drop any folders: "../x.xer" -> "x.xer"
     upload = Upload(file_name=name, size_bytes=len(content), sha256=hashlib.sha256(content).hexdigest(), status=READY)
     try:
-        result = run_checker(name, content)
+        result = run_checker(content)
     except FileError as problem:
         upload.status, upload.failure_reason = FAILED, str(problem)
         session.add(upload)
@@ -54,10 +54,13 @@ def check_upload(session, file_name, content):
     return get_upload(session, upload.id)
 
 
-def run_checker(name, content):
-    """The same steps as the command line (read, check, summarize), on a temporary copy of the file."""
+def run_checker(content):
+    """The same steps as the command line (read, check, summarize), on a temporary copy of the file.
+
+    The copy has a fixed name: the user's name can be "..", too long, or hold characters the disk refuses.
+    """
     with tempfile.TemporaryDirectory() as folder:
-        path = Path(folder) / name
+        path = Path(folder) / DEFAULT_FILE_NAME
         path.write_bytes(content)
         return check_file(path)
 
