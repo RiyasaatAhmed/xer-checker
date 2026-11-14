@@ -1,8 +1,8 @@
 """Link types: an activity with a link into it that is not finish to start.
 
 DCMA-EA PAM 200.1, section 4.4 (Relationship Types): at least 90% of links should be finish to start.
-The checker counts activities, not links, so the limit is the other 10%: an activity fails when any link into it is
-start to start, finish to finish or start to finish.
+The checker counts activities, not links, so the limit is the other 10%.
+An activity fails when any link into it is start to start, finish to finish or start to finish.
 """
 
 # ---------- Constants ----------

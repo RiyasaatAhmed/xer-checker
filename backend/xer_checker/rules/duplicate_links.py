@@ -1,7 +1,7 @@
 """Duplicate links: a pair of activities linked twice, with this activity second.
 
-Not a DCMA check. The limit and the check are ours: two link rows between the same pair of activities are
-almost always a mistake, and Kazinex counts such a pair once.
+Not a DCMA check: the limit and the check are ours. 2 link rows between the same pair of activities
+are almost always a mistake. Kazinex counts such a pair once.
 """
 
 # ---------- Constants ----------

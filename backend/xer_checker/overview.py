@@ -1,5 +1,7 @@
-"""What's in the schedule, counted: activities by status and type, links by type, leads and lags,
-constraints, and the float profile of the activities DCMA checks.
+"""What's in the schedule, counted.
+
+It counts activities by status and type, links by type, leads, lags and constraints.
+It also gives the float profile of the activities DCMA checks.
 
 These are facts read from the file, not pass or fail. They take plain records with the fields of
 schedule.Activity and schedule.Link, so the same counts work on a fresh file or on saved rows.

@@ -4,9 +4,9 @@ import { Badge, Bar, Collapse, Count, Meter, Stage, States, Window, type Act, ty
 import './hero-demo.css'
 
 // The empty screen's demo, built with Stageshow from its `upload` gold example.
-// A P6 export is carried in from outside the frame, already held, as a file dragged
-// from the desktop is: the drop area lights up, and on the drop the file's row opens
-// under it, checking.
+// A P6 export is carried in from outside the frame, already held, like a file dragged
+// from the desktop. The drop area lights up. On the drop, the file's row opens under it,
+// checking.
 // Then the 5 headline DCMA checks arrive one by one, each with its figure and its limit;
 // the 2 over their limit are flagged. That result is the payoff, and it holds.
 // The checks and the file then leave as one reverse stagger, and the hand goes back out

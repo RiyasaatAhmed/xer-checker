@@ -17,8 +17,8 @@ export interface ShownCheck {
   na_reason?: string | null
 }
 
-/** The headline checks as the demo draws them: each arrives in turn with its figure and a bar with the limit
- *  marked, red when over the limit and green when within it. */
+/** The headline checks as the demo draws them. Each arrives in turn with its figure and a bar with the limit marked.
+ *  The bar is red when over the limit and green when within it. */
 export function HeadlineChecks({ checks }: { checks: ShownCheck[] }) {
   return (
     <ul className="live-checks">

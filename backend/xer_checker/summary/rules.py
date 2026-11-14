@@ -1,7 +1,7 @@
 """The rules a summary must pass before it's used, and filling in the facts.
 
 A reply is a list of points, each {"about": a topic, "text": one sentence with {facts} in it}.
-problems() lists every rule a reply breaks; fill() swaps each {fact} for its value from code.
+problems() lists every rule a reply breaks. fill() swaps each {fact} for its value from code.
 """
 
 import re  # finds {facts}, digits and amount words in a sentence

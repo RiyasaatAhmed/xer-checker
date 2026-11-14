@@ -121,9 +121,9 @@ export function App() {
   const view = uploadId === null && state.step === 'done' ? ({ step: 'empty' } as View) : state
   const busy = view.step === 'loading'
 
-  // A new page starts at its top: on a new schedule, and again once it has drawn. Without it,
-  // a schedule opened from the list at the foot of the page keeps that scroll, and the browser's
-  // scroll anchoring holds the list in view while the schedule draws above it.
+  // A new page starts at its top: on a new schedule, and again once it has drawn.
+  // Without it, a schedule opened from the foot of the list keeps that scroll.
+  // The browser's scroll anchoring would then hold the list in view while the schedule draws above it.
   const shownCheck = view.step === 'done' ? view.result.upload_id : null
   useEffect(() => {
     window.scrollTo({ top: 0 })

@@ -1,12 +1,12 @@
 """Read a Primavera P6 schedule file (.xer) into tables, and say clearly what's wrong with a broken one.
 
-Two kinds of problem:
-  - A broken row (wrong number of values, a stray line, no end marker) is listed with its line
-    number, and the rest of the file is still checked.
-  - A row that only ends early, missing optional values at the end, is read with those values
-    blank and listed as a note. Other P6 versions, and editors that strip trailing tabs, do this.
-  - A file that can't be checked at all (missing, empty, not an XER export, no activities, or a
-    column the checks need is missing) raises FileError, with the reason in plain words.
+Three kinds of problem:
+  - Broken row: wrong number of values, a stray line, or no end marker. The reader lists it with
+    its line number, then checks the rest of the file.
+  - Short row: it ends early, missing optional values at the end. The reader fills those values
+    with blanks and lists a note. Other P6 versions, and editors that strip trailing tabs, do this.
+  - File that can't be checked: missing, empty, not an XER export, no activities, or a needed
+    column is missing. The reader raises FileError, with the reason in plain words.
 """
 
 import csv  # splits each line into values

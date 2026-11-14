@@ -17,8 +17,8 @@ interface Props {
   onIssues: () => void // show the broken rows
 }
 
-/** The answer in 3 seconds: can the file be trusted, how many checks are over the limit, what drives the finish,
- *  will it finish on time, and how far along it is. Under them, every check over the limit, worst first. */
+/** The answer in 3 seconds: can the file be trusted, and how many checks are over the limit?
+ *  What drives the finish, will it finish on time, and how far along is it? Under them, every check over the limit, worst first. */
 export function Verdict({ result, project, onPick, onIssues }: Props) {
   const counts = tally(result.rules)
   const runnable = counts.flag + counts.pass

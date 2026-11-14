@@ -17,8 +17,8 @@ DEFAULT_HOURS_PER_DAY = 8  # used when a calendar is missing or has no hours per
 NOT_STARTED, ACTIVE = "TK_NotStart", "TK_Active"  # statuses of work that hasn't started, and work in progress
 FINISH_TO_START = "PR_FS"  # the link type DCMA wants most links to be
 
-# The rules come from the DCMA 14-Point Assessment: section 4 of DCMA-EA PAM 200.1 (Oct 2012),
-# the last published version of the checklist (copy hosted by Mosaic Projects):
+# The rules come from the DCMA 14-Point Assessment, section 4 of DCMA-EA PAM 200.1 (Oct 2012).
+# That is the last published version of the checklist. Mosaic Projects hosts a copy:
 #   https://mosaicprojects.com.au/PDF-Gen/DCMA-PAM-200-1.pdf
 #   https://www.mosaicprojects.com.au/WhitePapers/WP1088_DCMA-14-Point.pdf
 
@@ -104,8 +104,8 @@ def check(tables):
 class LinkFacts:
     """What the links say about each activity, counting one link per pair (the later row), as Kazinex does.
 
-    Each set holds the IDs of the later activities: leads, lags, links that aren't finish to start,
-    pairs linked twice, and work started before a finish to start predecessor finished.
+    Each set holds the IDs of the later activities. The sets: leads, lags, links that aren't finish to start,
+    pairs linked twice, and work started before its finish to start predecessor finished.
     """
 
     def __init__(self, tables, tasks):

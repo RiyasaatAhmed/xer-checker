@@ -1,5 +1,7 @@
-"""Save an upload's schedule (projects, activities, links), and read it back for the API:
-the project dates, the schedule overview, and the details of the activities behind each number."""
+"""Save an upload's schedule (projects, activities, links), and read it back for the API.
+
+The API reads back the project dates, the schedule overview, and the activities behind each number.
+"""
 
 from collections import Counter
 from types import SimpleNamespace

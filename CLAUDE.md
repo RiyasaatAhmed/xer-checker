@@ -61,7 +61,7 @@ Run the Python commands from `backend/`: `checker.py` finds `data/` from the cur
 |---|---|
 | `main.py` | Creates the FastAPI app, with a health route at `/`, and adds each module's router |
 | `modules/<feature>/` | One API feature: `route.py` (HTTP only), `schema.py` (pydantic answers), `service.py` (the work), `model.py` (its tables) |
-| `modules/uploads/` | `POST /api/uploads` checks and saves a file; `GET /api/uploads` lists them; `GET /api/uploads/{id}` opens one; `DELETE /api/uploads/{id}` deletes one with its results. Reuses `cli.check_file`. `snapshot.py` saves and reads the schedule rows |
+| `modules/uploads/` | `POST /api/uploads` checks and saves a file. `GET /api/uploads` lists them. `GET /api/uploads/{id}` opens one. `DELETE /api/uploads/{id}` deletes one with its results. Reuses `cli.check_file`. `snapshot.py` saves and reads the schedule rows |
 | `database/db.py` | `DATABASE_URL` (PostgreSQL in Docker, else SQLite), `get_session` per request, `init_db` creates missing tables |
 | `checker.py` | Starts the command line |
 | `xer_checker/` | The checker, shared by the API and the command line |

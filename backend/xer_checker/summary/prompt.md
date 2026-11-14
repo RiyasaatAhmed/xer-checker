@@ -18,8 +18,8 @@ Then write its "text": one short sentence that states one finding.
 - One sentence, one idea, under 25 words. No second sentence, and no semicolon joining two ideas.
 - Plain, direct words. No filler or transitions (additionally, furthermore, meanwhile, overall,
   notably, it's worth noting), no hedging, no praise, no closing remarks.
-- For a check over its limit, you may end the sentence with what the result usually means, in a
-  few words: "..., which usually points to missing links."
+- For a check over its limit, you may end with what the result usually means, in a few words:
+  "..., which usually points to missing links."
 - Say exactly what was found. For high float, name the threshold: "more than {high_float_days}
   working days of float", never "exceed the float limit". For any other check, you may name it with
   its _name fact, like {leads_name}.

@@ -7,8 +7,11 @@ How it stops the AI from inventing a figure:
   3. rules.py checks every point. If one breaks a rule, Gemini gets one more try and is told
      exactly what was wrong.
   4. Code swaps each {fact} for its value, so every figure in the summary comes from code.
-If a setting is missing, the call fails, or both tries break a rule, code writes the summary from
-the same facts instead, and says why. The checker never depends on the AI.
+Code writes the summary from the same facts instead, and says why, when:
+  - a setting is missing
+  - the call fails
+  - both tries break a rule
+The checker never depends on the AI.
 
 Gemini only sees the facts: no activity names and nothing else from the file, so text inside
 a schedule can't give it instructions.

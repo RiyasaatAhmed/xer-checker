@@ -1,7 +1,7 @@
 """Read the Gemini settings from the environment, and check them.
 
-Settings live in the environment, not in the code: copy .env.example to .env and fill it in.
-.env is gitignored, so the key stays on your machine.
+Settings live in the environment, not in the code. Copy .env.example to .env and fill it in.
+Git ignores .env, so the key stays on your machine.
 """
 
 import os  # reads the settings from environment variables

@@ -1,6 +1,7 @@
-// The timing behind the tooltip layer, from the portfolio's Astryx Tooltip: hover with a delay, keyboard
-// focus at once, Escape to dismiss, and a short grace period so the pointer can move onto the bubble
-// (WCAG 1.4.13). One layer serves every element that has a data-tip, so a page of thousands of cells is cheap.
+// The timing behind the tooltip layer, from the portfolio's Astryx Tooltip.
+// Hover shows it after a delay, and keyboard focus at once. Escape hides it.
+// A short grace period lets the pointer move onto the bubble (WCAG 1.4.13).
+// One layer serves every element that has a data-tip, so a page of thousands of cells stays cheap.
 
 import { useEffect, useRef, useState } from 'react'
 
