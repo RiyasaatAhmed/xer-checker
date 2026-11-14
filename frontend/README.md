@@ -56,7 +56,7 @@ All colors, type and shapes are tokens in [`src/theme.css`](src/theme.css). The 
 | `--flag` | `#d92d20` | Flagged by a DCMA check. Nothing else is red |
 | `--ok` | `#12a150` | Within the limit |
 | `--slate` | `#7d8da3` | Neutral bars and work periods |
-| Fonts | Geist, Geist Mono | Bundled with the app, so no call to a font service |
+| Fonts | Inter, and the system's monospace font | Inter is bundled with the app, so no call to a font service |
 
 **Rules:** one accent, red only for flagged, 8px corners, no uppercase labels. A status always shows an icon and a word, never color alone. Dark mode has its own tokens.
 
