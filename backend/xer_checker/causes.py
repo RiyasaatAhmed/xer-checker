@@ -53,4 +53,4 @@ def open_ends(checked, flagged, links):
         clears = sum(1 for code in inside if code in flagged)
         if clears >= MIN_CLEARS:
             found.append((end, clears))
-    return sorted(found, key=lambda pair: -pair[1])
+    return sorted(found, key=lambda pair: (-pair[1], pair[0]))  # ties by ID, so every reload shows the same list

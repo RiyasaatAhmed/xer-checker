@@ -27,3 +27,9 @@ def test_most_cleared_comes_first():
     links = [("1", "2"), ("2", "3"), ("4", "5"), ("5", "6"), ("6", "7"), ("8", "9"), ("9", "10")]
     found = open_ends(set("123456789") | {"10", "7"}, set("123456789") | {"10", "7"}, links)
     assert [clears for _, clears in found] == [4, 3, 3]
+
+
+def test_ties_come_in_id_order_so_every_reload_shows_the_same_list():
+    links = [("1", "2"), ("2", "3"), ("4", "5"), ("5", "6"), ("7", "8"), ("8", "9"), ("10", "11"), ("11", "12"), ("12", "13")]
+    every = {str(n) for n in range(1, 14)}
+    assert open_ends(every, every, links) == [("13", 4), ("3", 3), ("6", 3), ("9", 3)]
