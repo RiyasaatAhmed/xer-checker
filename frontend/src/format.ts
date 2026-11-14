@@ -2,6 +2,7 @@
 
 import type { Neighbor } from './types'
 
+const FORMULA_START = /^[=+\-@\t\r]/ // a spreadsheet runs a cell that starts like this as a formula
 const LINK_TYPE: Record<string, string> = { PR_FS: 'FS', PR_SS: 'SS', PR_FF: 'FF', PR_SF: 'SF' } // finish to start, ...
 
 /** 15 -> "15.0%". */
@@ -26,7 +27,10 @@ export function plural(count: number, noun: string): string {
 
 /** One CSV file: a header row, then the rows. Values with commas or quotes are quoted. */
 export function csvText(header: string[], rows: string[][]): string {
-  const cell = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
+  const cell = (raw: string) => {
+    const value = FORMULA_START.test(raw) && !Number.isFinite(Number(raw)) ? `'${raw}` : raw // text, never a formula; "-3.5" stays a number
+    return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+  }
   return [header, ...rows].map((row) => row.map(cell).join(',')).join('\n') + '\n'
 }
 

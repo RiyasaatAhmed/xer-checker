@@ -17,6 +17,12 @@ describe('format', () => {
       'Check,Activity ID\nHigh float,"A,1"\nHigh float,"say ""hi"""\n',
     )
   })
+
+  it('keeps a CSV value that looks like a formula as text, and a negative number as a number', () => {
+    expect(csvText(['Name', 'Float'], [['=HYPERLINK("x")', '-3.5'], ['@SUM(A1)', '+1']])).toBe(
+      `Name,Float\n"'=HYPERLINK(""x"")",-3.5\n'@SUM(A1),+1\n`,
+    )
+  })
 })
 
 describe('rangeText', () => {
