@@ -2,6 +2,12 @@
 
 Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and see what needs attention first, then the checks and the activities behind each number.
 
+<p align="center">
+  <img src="frontend/empty-state.gif" width="680" alt="Empty-state demo: a dropped .xer file and its 5 headline checks">
+</p>
+
+**The empty state:** before the first upload, the home page plays this demo. It shows the real results for `CSTv2.4.xer`.
+
 ![Dashboard](frontend/dashboard.png)
 
 For each file, it:
@@ -12,7 +18,7 @@ For each file, it:
    - **Constraints:** hard constraints. **Float:** negative float, high float.
    - **Duration, dates, resources:** long durations, invalid dates, resources.
    - **Execution:** missed tasks, critical path test, CPLI and BEI. These need a baseline or a delay test, so they say why they can't run.
-   - **Locked numbers:** missing links (limit 5%), negative float (0%) and high float (5%) match Kazinex.
+   - **Locked numbers:** missing links (limit 5%), leads (0%), lags (5%), negative float (0%) and high float (5%) match Kazinex.
 3. **Draws one chart** of the results.
 4. **Writes a short summary.** Gemini picks the words; code computes every number.
 5. **Saves the upload and its results**, so you can open them again.
@@ -37,16 +43,16 @@ The command line draws the same results as one chart, for both files:
 | **Schedule** | Reads each project's dates, every activity (name, WBS, float, duration, dates) and every link |
 | **Overview** | Counts what's in the file: status, types, links, leads, lags, constraints, float profile. Matched to Kazinex |
 | **Summary** | A short written summary. Gemini picks the words, code fills every number; code writes it if the AI is off or breaks a rule |
-| **API** | Upload a file, list saved schedules, open one, and open one check's activities on its own. Clear errors: 404, 413, 422 |
-| **Saving** | PostgreSQL in Docker (8 tables), SQLite without it. A result looks the same every time it's opened |
-| **Home page** | The demo and an upload button when there are no schedules, else the list. Each row has a strip of its checks, finish against deadline and the data date. Repeat uploads of one file sit together |
+| **API** | Upload a file, list saved schedules, open one, delete one, and open one check's activities on its own. Clear errors: 404, 413, 422 |
+| **Saving** | PostgreSQL in Docker (9 tables), SQLite without it. A result looks the same every time it's opened |
+| **Home page** | The demo and an upload button when there are no schedules. Else a drop area and the saved files, newest first. Each file is a row that opens on its 5 headline checks, drawn as the demo draws them. Each row opens its report in one click, and deletes the file after a confirm. A new upload stays on this page and opens at the top |
 | **Schedule map** | The WBS tree as rows, worst first. It counts the picked check, a set of checks, or all flags. Cells show the month flagged work starts, a thin bar shows the span and finished share. A second view is a matrix of groups against sets of checks. Click a group to list its activities |
 | **Activity lines** | Flagged activities grouped by WBS group, one line each. The line shows the logic: what's before, what's after, and a red `none` where a link is missing. The list is a fixed-height window with only the lines on screen in the page, and the group name stays pinned while you scroll. Sort and filter it |
 | **Scale** | Tested with a real 20,000-activity file (16,783 missing links). The page holds about 650 elements and scrolls at 60 fps. A filter updates in under 0.1 s, and a saved check reopens in under 1 s. Saving the upload takes about 10 s |
 | **A schedule** | The verdict first: checks over the limit, finish against deadline, what changed since the last upload. Then the checks: a strip of cells and a row for each failing check, with passing ones and ones that can't run folded away. Then the float bar, the map, "Fix first" and the activities behind the picked check. A small file profile and the folded summary come last |
 | **Fix first** | One open end that many flagged activities lead only into, and the activities that fail the most checks |
 | **Details** | Each schedule and each check in it has its own link. Works on phones, in dark mode and with the keyboard |
-| **Proof** | Tests compare the three locked numbers with Kazinex on each run: 213 backend, 72 frontend |
+| **Proof** | Tests compare the 5 locked checks with Kazinex on each run: 237 backend, 114 frontend |
 | **Tooling** | `docker compose up` runs everything. `CLAUDE.md` and a writing skill keep the docs short |
 
 **Not yet:** login (the list isn't per user), splitting a file with several projects, and the checks that need a baseline or a delay test. The leads, lags and link types checks count activities, not links.
