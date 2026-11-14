@@ -5,13 +5,12 @@ The answer is always read back from the database, so a result looks the same now
 
 import hashlib  # the file's fingerprint
 import tempfile  # a folder that's deleted after the check
-from datetime import timezone
 from pathlib import Path
 
 from sqlmodel import col, select
 
 from modules.uploads.insights import fix_first, previous_of
-from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, ScheduleProject, Upload
+from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, ScheduleProject, Upload, as_utc
 from modules.uploads.schema import CheckActivities, CheckResult, CheckStatus, RowNote, RuleResult, UploadSummary
 from modules.uploads.snapshot import bulk_insert, kinded, read_overview, read_rows, read_structure, save_schedule
 from xer_checker.checks import percent
@@ -190,8 +189,3 @@ def summary(upload, metrics, project=None):
                             status=TO_STATUS[m.verdict]) for m in metrics] if ready else [],
         project=project.name if project else None, data_date=project.data_date if project else None,
         forecast_finish=project.forecast_finish if project else None, deadline=project.deadline if project else None)
-
-
-def as_utc(moment):
-    """The time marked as UTC. SQLite drops the time zone, so the browser would read UTC as local time."""
-    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)

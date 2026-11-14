@@ -25,6 +25,11 @@ def now():
     return datetime.now(timezone.utc)
 
 
+def as_utc(moment):
+    """The time marked as UTC. SQLite drops the time zone, so the browser would read UTC as local time."""
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
 def created_at_field():
     """A time column, saved with its time zone."""
     return Field(default_factory=now, sa_column=Column(DateTime(timezone=True), nullable=False))

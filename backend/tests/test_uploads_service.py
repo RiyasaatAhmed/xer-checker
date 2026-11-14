@@ -157,6 +157,7 @@ def test_an_upload_shows_the_change_since_the_last_one_of_the_same_file(db_sessi
     assert first.previous is None
     second = check_upload(db_session, "CSTv2.4.xer", CST)
     assert second.previous.upload_id == first.upload_id
+    assert second.previous.uploaded_at.utcoffset().total_seconds() == 0  # "...Z", like uploaded_at
     assert second.previous.values["high-float"] == 58.6 and "bei" not in second.previous.values  # n/a has no value to compare
     assert check_upload(db_session, "other.xer", CST).previous is None  # matched by file name
 

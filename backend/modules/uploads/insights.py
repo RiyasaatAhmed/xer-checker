@@ -4,7 +4,7 @@ from collections import Counter
 
 from sqlmodel import col, select
 
-from modules.uploads.model import Activity, MetricResult, Relationship, Upload
+from modules.uploads.model import Activity, MetricResult, Relationship, Upload, as_utc
 from modules.uploads.schema import FixFirst, OpenEnd, Previous, Repeat
 from xer_checker.causes import open_ends
 from xer_checker.rules import BY_METRIC, rule_id
@@ -25,7 +25,7 @@ def previous_of(session, upload):
     metrics = session.exec(select(MetricResult).where(MetricResult.upload_id == earlier.id)).all()
     values = {rule_id(BY_METRIC[m.metric_id]): round(m.value, 1) for m in metrics
               if m.metric_id in BY_METRIC and m.verdict != "not_applicable"}
-    return Previous(upload_id=earlier.id, uploaded_at=earlier.created_at, values=values)
+    return Previous(upload_id=earlier.id, uploaded_at=as_utc(earlier.created_at), values=values)
 
 
 def fix_first(session, upload_id, flag_counts):
