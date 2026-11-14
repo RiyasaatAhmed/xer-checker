@@ -121,9 +121,6 @@ button.smap-toggle:hover { background: var(--sunken); color: var(--ink); }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px; border-top: 1px solid var(--line); vertical-align: middle; }
 th { position: sticky; top: 0; background: var(--surface); border-top: 0; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 500; color: var(--muted); z-index: 1; }
-td.right, th.right { text-align: right; }
-.sort { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
-.sort:hover { color: var(--ink); }
 .nowrap { white-space: nowrap; }
 .who { display: grid; gap: 1px; min-width: 0; }
 .who-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
@@ -132,30 +129,8 @@ td.right, th.right { text-align: right; }
 .who .wbs { color: var(--faint); font-size: 12px; }
 .fbar { display: inline-block; height: 6px; margin-right: 8px; border-radius: 2px; background: var(--slate); vertical-align: middle; }
 .float-cell { white-space: nowrap; text-align: right; font-weight: 600; }
-.float-cell.neg { color: var(--flag-ink); }
-.zero-link { color: var(--flag-ink); font-weight: 800; }
-.logic-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 3px 6px; border: 1px solid transparent; border-radius: 4px; background: none; cursor: pointer; }
-.logic-toggle:hover, .logic-toggle[aria-expanded='true'] { border-color: var(--line-strong); background: var(--sunken); }
-.logic-toggle svg { color: var(--faint); }
-tr.sel td, .logic-row td { background: var(--sunken); }
-.logic-row td { padding: 14px 12px; }
-@media (max-width: 640px) {
-  /* Phones: the activity, its links and float. Dates are in the CSV */
-  .activity-table th:nth-child(n+4), .activity-table td:nth-child(n+4) { display: none; }
-  .who-top { flex-direction: column; gap: 0; }
-}
 
 /* The logic around one activity: before, it, after. An empty side is the missing link. */
-.logic { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.logic-arrow { flex: none; color: var(--faint); }
-.logic-side { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.logic-box { display: grid; gap: 1px; min-width: 150px; max-width: 240px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-size: 13px; }
-.logic-box.this { border: 2px solid var(--ink); }
-.logic-box.missing { align-content: center; min-height: 52px; border: 2px dashed var(--flag); color: var(--flag-ink); font-weight: 600; background: var(--flag-soft); }
-.logic-code { font-size: 12px; font-weight: 700; }
-.logic-name { color: var(--muted); overflow-wrap: anywhere; }
-.logic-meta { color: var(--faint); font-size: 12px; font-family: var(--mono); }
-.logic-more { color: var(--muted); font-size: 12px; padding-left: 4px; }
 
 /* ---------- The file: counts, and two bars ---------- */
 
@@ -212,16 +187,9 @@ tr.sel td, .logic-row td { background: var(--sunken); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .t-violet { background: #9d83ff; } }
 
 /* The activities, grouped: a header per WBS group, then one line per activity with its logic inline */
-.agroups { display: grid; }
-.agroup { border-top: 1px solid var(--line); }
-.agroup:first-child { border-top: 0; }
-.agroup-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 0; border: 0; background: none; text-align: left; font-weight: 600; cursor: pointer; }
-.agroup-head:hover .agroup-name { color: var(--accent); }
-.agroup-head svg { color: var(--muted); flex: none; }
 .kindbar { display: flex; gap: 2px; width: 120px; height: 8px; margin-left: auto; }
 .kindbar .segment { min-width: 3px; }
-.arows { list-style: none; margin: 0; padding: 0; }
-.arow { display: grid; grid-template-columns: minmax(190px, 1.1fr) minmax(300px, 1.6fr) 150px; gap: 12px; align-items: center; padding: 7px 0 7px 22px; border-top: 1px solid var(--line); }
+.arow { display: grid; grid-template-columns: minmax(190px, 1.1fr) minmax(300px, 1.6fr) 150px; gap: 12px; align-items: center; height: 100%; padding: 0 12px 0 22px; border-top: 1px solid var(--line); }
 .chain { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .chain-side { display: inline-flex; align-items: center; gap: 4px; }
 .chain-chip { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--surface); font-size: 11px; white-space: nowrap; }
@@ -233,9 +201,21 @@ tr.sel td, .logic-row td { background: var(--sunken); }
 .afloat .float-cell { font-weight: 600; }
 .adates { display: block; font-size: 12px; color: var(--muted); }
 .neg { color: var(--flag-ink); }
-.more { display: flex; align-items: center; gap: 10px; padding: 6px 0 10px 22px; }
 @media (max-width: 760px) {
   .arow { grid-template-columns: 1fr; gap: 4px; padding-left: 0; }
   .afloat { text-align: left; }
-  .more { padding-left: 0; }
 }
+
+/* The scroll window: a fixed height, with only the rows on screen in the page */
+.vlist { position: relative; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.vlist-inner { position: relative; }
+.vitem { position: absolute; left: 0; right: 0; }
+.vlist-pin { position: sticky; top: 0; z-index: 3; height: 0; }
+.vlist-pin .agroup-head { position: absolute; left: 0; right: 0; top: 0; height: 40px; padding: 0 12px; background: var(--sunken); border-bottom: 1px solid var(--line); }
+.agroup-head { display: flex; align-items: center; gap: 8px; width: 100%; height: 100%; padding: 0 12px; border: 0; background: var(--surface); text-align: left; font-weight: 600; cursor: pointer; }
+.agroup-head:hover .agroup-name { color: var(--accent); }
+.agroup-head svg { color: var(--muted); flex: none; }
+.vitem:has(.agroup-head) { background: var(--surface); border-top: 1px solid var(--line); }
+.vitem:first-child { border-top: 0; }
+.id-only { display: block; padding: 5px 12px; font-size: 13px; }
+.select { height: 34px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); font-size: 13px; }

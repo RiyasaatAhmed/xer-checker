@@ -35,7 +35,11 @@ function Side({ items, total, none }: { items: Neighbor[]; total: number; none: 
           {n.code}
         </span>
       ))}
-      {total > CHIPS && <span className="chain-more">+{total - CHIPS}</span>}
+      {total > CHIPS && (
+        <span className="chain-more" title={items.slice(CHIPS).map((n) => `${n.code}: ${n.name} (${linkText(n)})`).join('\n') || undefined}>
+          +{total - CHIPS}
+        </span>
+      )}
     </span>
   )
 }

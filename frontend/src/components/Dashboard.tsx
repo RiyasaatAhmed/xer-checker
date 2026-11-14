@@ -1,5 +1,5 @@
 import { Check, TriangleAlert } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { countText, dateText } from '../format'
 import { namesIn } from '../tree'
 import type { CheckResult } from '../types'
@@ -19,8 +19,9 @@ export function Dashboard({ result }: { result: CheckResult }) {
   const flagged = new Set(result.rules.filter((r) => r.status === 'flag').map((r) => r.name))
   const [project] = result.projects ?? []
   const [groupId, setGroupId] = useState<string | null>(null) // the WBS group picked on the map
-  const groups = result.structure ?? []
+  const groups = useMemo(() => result.structure ?? [], [result.structure])
   const group = groups.find((g) => g.id === groupId)
+  const wbs = useMemo(() => (group ? { names: namesIn(groups, group.id), label: group.name } : null), [groups, group])
   const issues = result.broken_rows.length + result.notes.length
 
   /** Bring a section into view and move focus to it, for keyboard and screen reader users too. */
@@ -72,7 +73,7 @@ export function Dashboard({ result }: { result: CheckResult }) {
           rule={rule}
           fileName={result.file_name}
           groups={groups}
-          wbs={group ? { names: namesIn(groups, group.id), label: group.name } : null}
+          wbs={wbs}
           onClearWbs={() => setGroupId(null)}
         />
       )}

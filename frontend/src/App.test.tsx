@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -145,21 +145,18 @@ describe('App', () => {
     expect(within(map).getByText('Deadline 30 Oct 2027')).toBeInTheDocument()
   })
 
-  it('shows each flagged activity with its name, WBS, links, float and dates, and sorts by float', async () => {
+  it('shows each flagged activity with its name, WBS, float and dates, and sorts by float', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
-    await user().click(within(list).getByRole('button', { name: 'Table' })) // the sortable view
     expect(within(list).getByText('Calendar placeholder 1')).toBeInTheDocument()
     expect(within(list).getAllByText('Utility Notifications & Meetings')).toHaveLength(2)
     expect(within(list).getAllByText('22 Jan – 20 Feb 2026')).toHaveLength(2)
-    expect(within(list).getByRole('button', { name: /ContractNo_CAL01: 0 before, 1 after/ })).toBeInTheDocument()
+    const codes = () => within(list).getAllByText(/^ContractNo_CAL\d+$/).map((e) => e.textContent)
+    expect(codes()).toEqual(['ContractNo_CAL01', 'ContractNo_CAL03']) // file order
 
-    await user().click(within(list).getByRole('button', { name: 'Float (days)' })) // largest first
-    const firstRow = within(list).getAllByRole('row')[1]
-    expect(firstRow).toHaveTextContent('ContractNo_CAL03')
-    expect(firstRow).toHaveTextContent('60.0')
+    await user().selectOptions(within(list).getByRole('combobox', { name: 'Sort' }), 'float-desc')
+    expect(codes()).toEqual(['ContractNo_CAL03', 'ContractNo_CAL01']) // 60 days before 12
   })
-
   it('profiles the file in one card, and links a flagged float band to its activities', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const profile = await screen.findByRole('region', { name: 'File profile' })
@@ -203,27 +200,41 @@ describe('App', () => {
   it('groups the activities under their top-level WBS group, tells the kinds apart, and folds a group away', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
-    const group = within(list).getByRole('region', { name: 'Utility: 2' }) // both sit under Utility
-    const head = within(group).getByRole('button', { name: /Utility/ })
+    const head = within(list).getByRole('button', { name: /^Utility 2/ }) // both sit under Utility
     expect(head).toHaveAttribute('aria-expanded', 'true') // a small result opens by itself
     await user().click(head)
-    expect(within(group).queryByText('ContractNo_CAL01')).not.toBeInTheDocument()
+    expect(within(list).queryByText('ContractNo_CAL01')).not.toBeInTheDocument()
+    await user().click(within(list).getByRole('button', { name: /^Utility 2/ }))
+    expect(within(list).getAllByText('ContractNo_CAL01').length).toBeGreaterThan(0)
 
     await user().click(within(list).getByRole('button', { name: /Nothing after 1/ })) // only the activities with nothing after them
-    expect(within(list).queryByRole('region', { name: 'Utility: 2' })).not.toBeInTheDocument()
-    expect(within(list).getByRole('region', { name: 'Utility: 1' })).toBeInTheDocument()
+    expect(within(list).getByRole('button', { name: /^Utility 1/ })).toBeInTheDocument()
+    expect(within(list).queryByText('ContractNo_CAL01')).not.toBeInTheDocument()
+  })
+  it('keeps the page light for any number of activities: a fixed window with only the lines on screen', async () => {
+    await uploadWith(() => reply(200, manyMissing(5000)))
+    const list = await screen.findByRole('region', { name: /Missing links: 5,000 activities/ })
+    const window = within(list).getByRole('list', { name: 'Activities' })
+    const lines = () => within(window).getAllByRole('listitem')
+    expect(lines().length).toBeLessThan(40) // 5,000 activities, about 15 in the page
+    expect(lines()[0]).toHaveAttribute('aria-setsize', '5001') // the header and every activity: the list still knows its size
+    expect(window).toHaveStyle({ height: '520px' }) // fixed height
+
+    fireEvent.scroll(window, { target: { scrollTop: 40 + 56 * 1000 } }) // deep into the list
+    expect(within(window).getByText('A1001')).toBeInTheDocument()
+    expect(within(window).queryByText('A1')).not.toBeInTheDocument()
+    expect(lines().length).toBeLessThan(40)
+    // The group's header is out of sight, so its name is pinned at the top
+    expect(within(window).getAllByRole('button', { name: /^Utility 5,000/ })).toHaveLength(1)
   })
 
-  it('shows a big group 20 rows at a time, so it never becomes a long scroll', async () => {
-    await uploadWith(() => reply(200, manyMissing(30)))
-    const list = await screen.findByRole('region', { name: /Missing links: 30 activities/ })
-    const codes = () => within(list).getAllByText(/^A\d+$/)
-    expect(codes()).toHaveLength(20)
-    await user().click(within(list).getByRole('button', { name: 'Show 10 more' }))
-    expect(codes()).toHaveLength(30)
-    expect(within(list).queryByRole('button', { name: /Show/ })).not.toBeInTheDocument()
+  it('lists just the IDs for an older upload that kept nothing else', async () => {
+    const older = { ...CST_RESULT, rules: CST_RESULT.rules.map((r) => ({ ...r, details: undefined })) }
+    await uploadWith(() => reply(200, older))
+    const list = await screen.findByRole('region', { name: /Missing links: 20 activities/ })
+    expect(within(list).getByText('ContractNo_CAL01')).toBeInTheDocument()
+    expect(within(list).queryByRole('combobox', { name: 'Sort' })).not.toBeInTheDocument() // nothing to sort by
   })
-
   it('folds the summary away, so the picture comes first', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const summary = (await screen.findByText('Summary')).closest('details')!
