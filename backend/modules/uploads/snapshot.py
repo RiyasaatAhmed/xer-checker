@@ -4,6 +4,7 @@ the project dates, the schedule overview, and the details of the activities behi
 from collections import Counter
 from types import SimpleNamespace
 
+from sqlalchemy import insert
 from sqlmodel import select
 
 from modules.uploads.model import Activity, Relationship, ScheduleProject, WbsNode
@@ -22,15 +23,22 @@ def save_schedule(session, upload_id, schedule):
     session.add_all(ScheduleProject(upload_id=upload_id, **{
         "p6_id": p.p6_id, "name": p.name, "data_date": p.data_date, "planned_start": p.planned_start,
         "deadline": p.deadline, "forecast_finish": p.forecast_finish}) for p in schedule.projects)
-    session.add_all(Activity(
+    bulk_insert(session, Activity, [dict(
         upload_id=upload_id, p6_task_id=a.p6_id, activity_code=a.code, name=a.name, wbs=a.wbs, p6_wbs_id=a.p6_wbs_id, task_type=a.task_type,
         status=a.status, checked=a.checked, float_days=a.float_days, duration_days=a.duration_days, start=a.start,
-        finish=a.finish, constraint_type=a.constraint_type, source_line=a.line) for a in schedule.activities)
+        finish=a.finish, constraint_type=a.constraint_type, source_line=a.line) for a in schedule.activities])
     session.add_all(WbsNode(upload_id=upload_id, p6_wbs_id=n.p6_id, parent_p6_wbs_id=n.parent_id, name=n.name, seq=n.seq)
                     for n in schedule.wbs_nodes)
-    session.add_all(Relationship(
+    bulk_insert(session, Relationship, [dict(
         upload_id=upload_id, pred_p6_task_id=l.pred_p6_id, succ_p6_task_id=l.succ_p6_id, link_type=l.link_type,
-        lag_hours=l.lag_hours, counted=l.line in schedule.counted, source_line=l.line) for l in schedule.links)
+        lag_hours=l.lag_hours, counted=l.line in schedule.counted, source_line=l.line) for l in schedule.links])
+
+
+def bulk_insert(session, model, rows):
+    """Add many rows in one statement per batch. Far faster than adding them one object at a time:
+    a file with 20,000 activities has tens of thousands of rows to save."""
+    if rows:
+        session.execute(insert(model), rows)
 
 
 def read_schedule(session, upload_id):

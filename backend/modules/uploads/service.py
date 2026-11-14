@@ -12,7 +12,7 @@ from sqlmodel import col, select
 
 from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, Upload
 from modules.uploads.schema import CheckResult, RowNote, RuleResult, UploadSummary
-from modules.uploads.snapshot import read_schedule, read_structure, save_schedule
+from modules.uploads.snapshot import bulk_insert, read_schedule, read_structure, save_schedule
 from xer_checker.checks import percent
 from xer_checker.cli import check_file
 from xer_checker.reader import FileError
@@ -71,12 +71,10 @@ def save_results(session, upload_id, result):
             verdict=TO_VERDICT[verdict(rule.NAME, pct, result.checked)])
         session.add(metric)
         session.flush()  # write the result first, so its activities can point to it
-        session.add_all(MetricResultActivity(metric_result_id=metric.id, position=n, activity_code=code)
-                        for n, code in enumerate(codes))
-    session.add_all(FileIssue(upload_id=upload_id, line_number=line, severity="error", message=text)
-                    for line, text in result.broken)
-    session.add_all(FileIssue(upload_id=upload_id, line_number=line, severity="note", message=text)
-                    for line, text in result.notes)
+        bulk_insert(session, MetricResultActivity, [
+            dict(metric_result_id=metric.id, position=n, activity_code=code) for n, code in enumerate(codes)])
+    bulk_insert(session, FileIssue, [dict(upload_id=upload_id, line_number=line, severity="error", message=text) for line, text in result.broken]
+                + [dict(upload_id=upload_id, line_number=line, severity="note", message=text) for line, text in result.notes])
     written_by = "ai" if result.author.startswith(AI_AUTHOR) else "code"
     session.add(Review(upload_id=upload_id, written_by=written_by, author_note=result.author,
                        facts=result.facts, points=result.points))
