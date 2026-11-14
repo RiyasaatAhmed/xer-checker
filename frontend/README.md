@@ -2,7 +2,7 @@
 
 The page where you upload a `.xer` file and see where its problems are. Vite, React and TypeScript, in a calm, neutral tool design: little text, mostly pictures.
 
-![A report: the verdict for example_xer_file.xer](dashboard.png)
+![A report: the verdict for example_xer_file.xer](screenshots/report.png)
 
 ## What a scheduler gets
 
@@ -23,11 +23,11 @@ The page where you upload a `.xer` file and see where its problems are. Vite, Re
 
 **The home page is simple.** With no checks yet it shows a short looping demo, built with [Stageshow](https://github.com/benjitaylor/skills/tree/main/stageshow), and one upload button. Once there are checks it shows the drop area and the saved files. A schedule has an "All schedules" link back.
 
-![Home: the saved files, the newest open on its 5 headline checks](home.png)
+![Home: the saved files, the newest open on its 5 headline checks](screenshots/home.png)
 
-![Schedule map](map.png)
+![Schedule map](screenshots/map.png)
 
-![Activities](activities.png)
+![Activities](screenshots/activities.png)
 
 
 ## Run it

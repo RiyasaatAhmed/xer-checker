@@ -3,14 +3,14 @@
 Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and see what needs attention first, then the checks and the activities behind each number.
 
 <p align="center">
-  <img src="frontend/empty-state.gif" width="680" alt="Empty-state demo: a dropped .xer file and its 5 headline checks">
+  <img src="frontend/screenshots/empty-state.gif" width="680" alt="Empty-state demo: a dropped .xer file and its 5 headline checks">
 </p>
 
 **The empty state:** before the first upload, the home page plays this demo. It shows the real results for `CSTv2.4.xer`.
 
 **A report:** the verdict comes first. It says whether the file reads cleanly, how many checks are over the limit, and the finish against the deadline.
 
-![A report: the verdict for example_xer_file.xer](frontend/dashboard.png)
+![A report: the verdict for example_xer_file.xer](frontend/screenshots/report.png)
 
 For each file, it:
 
