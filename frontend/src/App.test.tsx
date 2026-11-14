@@ -53,6 +53,14 @@ describe('App', () => {
     expect(within(verdict).getAllByRole('button').map((b) => b.textContent)).toEqual(['Missing links', 'High float', 'Long durations']) // the most serious first
   })
 
+  it('says no check could run, not that all are within the limit, when nothing was checked', async () => {
+    const nothing = { ...CST_RESULT, checked: 0, rules: CST_RESULT.rules.map((r) => ({ ...r, count: 0, percent: 0, status: 'n/a' as const })) }
+    await uploadWith(() => reply(200, nothing))
+    const verdict = await screen.findByRole('region', { name: 'Verdict' })
+    expect(verdict).toHaveTextContent('No check could run')
+    expect(verdict).not.toHaveTextContent('within the limit')
+  })
+
   it('shows all the checks as a strip, and only the failing ones as rows, with the rest folded away', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const board = await screen.findByRole('region', { name: 'Checks' })

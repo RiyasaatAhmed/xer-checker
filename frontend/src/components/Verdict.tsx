@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CalendarCheck, CalendarX, Check, Flag } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarCheck, CalendarX, Check, Flag, Minus } from 'lucide-react'
 import { MAX_WORST, changes, ratio, tally, worstFirst } from '../board'
 import { countText, dayText, daysBetween, plural } from '../format'
 import type { CheckResult } from '../types'
@@ -18,13 +18,16 @@ export function Verdict({ result, onPick }: Props) {
   const change = changes(result.rules, result.previous)
   const gap = project?.forecast_finish && project.deadline ? daysBetween(project.deadline, project.forecast_finish) : null // forecast minus deadline
   const bad = counts.flag > 0
+  const none = runnable === 0 // nothing to check: not a pass
   return (
     <section className="verdict" aria-label="Verdict">
       <div className="verdict-checks">
-        <p className={`verdict-line ${bad ? 'flag' : 'pass'}`}>
-          {bad ? <Flag size={20} strokeWidth={2.5} aria-hidden /> : <Check size={20} strokeWidth={2.5} aria-hidden />}
+        <p className={`verdict-line ${none ? 'none' : bad ? 'flag' : 'pass'}`}>
+          {none ? <Minus size={20} strokeWidth={2.5} aria-hidden /> : bad ? <Flag size={20} strokeWidth={2.5} aria-hidden /> : <Check size={20} strokeWidth={2.5} aria-hidden />}
           <span>
-            {bad ? (
+            {none ? (
+              <>No check could run</>
+            ) : bad ? (
               <>
                 <b className="num">{counts.flag}</b> of <b className="num">{runnable}</b> checks over the limit
               </>
