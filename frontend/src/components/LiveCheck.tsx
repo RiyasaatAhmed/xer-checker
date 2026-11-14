@@ -1,8 +1,8 @@
-import { threeOf } from '../board'
+import { headlineOf } from '../board'
 import { pathFor } from '../route'
 import type { CheckResult } from '../types'
-import { ThreeBadge } from './ThreeBadge'
-import { ThreeChecks } from './ThreeChecks'
+import { HeadlineBadge } from './HeadlineBadge'
+import { HeadlineChecks } from './HeadlineChecks'
 
 export interface Fresh {
   name: string // the file being checked
@@ -14,11 +14,11 @@ interface Props {
   onOpen: (uploadId: string) => void
 }
 
-/** The file just uploaded, drawn as the demo draws it: its row with a bar while it is checked, then its 3 checks.
+/** The file just uploaded, drawn as the demo draws it: its row with a bar while it is checked, then its 5 headline checks.
  *  Once the file is in the saved list, the list shows it instead. */
 export function LiveCheck({ fresh, onOpen }: Props) {
   const { name, result } = fresh
-  const three = result ? threeOf(result.rules) : []
+  const headline = result ? headlineOf(result.rules) : []
   return (
     <section className="live" aria-label="Latest check" aria-live="polite" aria-busy={result === null}>
       <div className={`live-file${result ? ' done' : ''}`}>
@@ -42,14 +42,14 @@ export function LiveCheck({ fresh, onOpen }: Props) {
           <span className="live-name">{name}</span>
         )}
         {result ? (
-          <ThreeBadge checks={three} />
+          <HeadlineBadge checks={headline} />
         ) : (
           <span className="live-track" role="progressbar" aria-label="Checking">
             <span />
           </span>
         )}
       </div>
-      {result && <ThreeChecks checks={three} />}
+      {result && <HeadlineChecks checks={headline} />}
     </section>
   )
 }

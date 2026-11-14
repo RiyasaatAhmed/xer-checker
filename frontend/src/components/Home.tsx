@@ -14,7 +14,7 @@ interface Props {
 }
 
 /** The home page, laid out as the demo: the drop area, the file being checked, then the saved schedules,
- *  the newest open on its 3 checks. Before anything is uploaded: the demo and the upload button. */
+ *  the newest open on its 5 headline checks. Before anything is uploaded: the demo and the upload button. */
 export function Home({ uploads, onFile, onOpen, fresh }: Props) {
   const listed = fresh?.result != null && (uploads ?? []).some((u) => u.upload_id === fresh.result?.upload_id) // the list then shows it, open
   if (uploads === null && !fresh) return null // the list is loading: show nothing, not a demo that then disappears

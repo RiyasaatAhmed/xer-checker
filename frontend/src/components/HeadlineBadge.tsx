@@ -1,8 +1,8 @@
 import { Check, Flag } from 'lucide-react'
 import type { RuleStatus } from '../types'
 
-/** How the demo's 3 checks came out, in one pill: "2 of 3 over the limit" or "All 3 within the limit". */
-export function ThreeBadge({ checks }: { checks: { status: RuleStatus }[] }) {
+/** How the headline checks came out, in one pill: "2 of 5 over the limit" or "All 5 within the limit". */
+export function HeadlineBadge({ checks }: { checks: { status: RuleStatus }[] }) {
   const ran = checks.filter((c) => c.status !== 'n/a')
   const over = ran.filter((c) => c.status === 'flag').length
   if (ran.length === 0) return <span className="pill none">No check could run</span>

@@ -17,9 +17,9 @@ export interface ShownCheck {
   na_reason?: string | null
 }
 
-/** The 3 checks as the demo draws them: each arrives in turn with its figure and a bar with the limit
+/** The headline checks as the demo draws them: each arrives in turn with its figure and a bar with the limit
  *  marked, red when over the limit and green when within it. */
-export function ThreeChecks({ checks }: { checks: ShownCheck[] }) {
+export function HeadlineChecks({ checks }: { checks: ShownCheck[] }) {
   return (
     <ul className="live-checks">
       {checks.map((check, i) => (

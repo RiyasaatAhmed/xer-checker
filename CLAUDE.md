@@ -95,10 +95,12 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 
 `backend/tests/test_baseline.py` locks these and compares them with Kazinex's reports in `backend/results-from-kazinex/`. A change that moves one needs a reason the user agrees with.
 
-| File | Checked | Missing links | Negative float | High float |
-|---|---|---|---|---|
-| `CSTv2.4.xer` | 133 | 20 (15.0%) | 0 | 78 (58.6%) |
-| `example_xer_file.xer` | 365 | 6 (1.6%) | 0 | 170 (46.6%) |
+| File | Checked | Missing links | Leads | Lags | Negative float | High float |
+|---|---|---|---|---|---|---|
+| `CSTv2.4.xer` | 133 | 20 (15.0%) | 0 | 1 (0.8%) | 0 | 78 (58.6%) |
+| `example_xer_file.xer` | 365 | 6 (1.6%) | 11 (3.0%) | 26 (7.1%) | 0 | 170 (46.6%) |
+
+These 5 are the headline checks the home page and the demo show (`HEADLINE` in `frontend/src/board.ts`). Leads and lags are matched to Kazinex link by link: Kazinex lists each link under its earlier activity, and we flag the later one.
 
 ## Code rules
 

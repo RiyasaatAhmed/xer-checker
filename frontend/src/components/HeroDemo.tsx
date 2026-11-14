@@ -7,12 +7,12 @@ import './hero-demo.css'
 // A P6 export is carried in from outside the frame, already held, as a file dragged
 // from the desktop is: the drop area lights up, and on the drop the file's row opens
 // under it, checking.
-// Then the 3 DCMA checks arrive one by one, each with its figure and its limit;
+// Then the 5 headline DCMA checks arrive one by one, each with its figure and its limit;
 // the 2 over their limit are flagged. That result is the payoff, and it holds.
 // The checks and the file then leave as one reverse stagger, and the hand goes back out
 // for the next file: back to the start.
 //
-// Real words only where the story is: the file, the 3 checks, their figures and
+// Real words only where the story is: the file, the 5 checks, their figures and
 // flags. The recent checks under them are placeholder bars. The window runs off the
 // right edge, so every word sits on the left and only the bars bleed.
 
@@ -22,11 +22,13 @@ type S = { up: boolean; progress: number; done: boolean; shown: number; ghost: G
 const FILE = 'CSTv2.4.xer'
 const NO_GHOST: Ghost = { on: false, dropped: false, off: { x: 0, y: 0 }, at: { x: 0, y: 0 } }
 const initial: S = { up: false, progress: 0, done: false, shown: 0, ghost: NO_GHOST }
-const poster: S = { up: true, progress: 1, done: true, shown: 3, ghost: NO_GHOST }
+const poster: S = { up: true, progress: 1, done: true, shown: 5, ghost: NO_GHOST }
 
 // The README numbers for CSTv2.4.xer: the demo shows what the app really finds.
 const CHECKS = [
   { name: 'Missing links', value: 15.0, limit: 5, over: true },
+  { name: 'Leads', value: 0.0, limit: 0, over: false },
+  { name: 'Lags', value: 0.8, limit: 5, over: false },
   { name: 'Negative float', value: 0.0, limit: 0, over: false },
   { name: 'High float', value: 58.6, limit: 5, over: true },
 ]
@@ -34,8 +36,8 @@ const RECENT = [118, 92, 136, 104, 126] // widths of the placeholder rows
 
 // Corner bleed: one gutter above and left of the window, which runs off the right and bottom.
 const GEO: Record<Layout, { x: number; y: number; w: number; h: number }> = {
-  wide: { x: 40, y: 40, w: 720, h: 440 },
-  compact: { x: 16, y: 16, w: 420, h: 320 },
+  wide: { x: 40, y: 40, w: 720, h: 480 },
+  compact: { x: 16, y: 16, w: 420, h: 360 },
 }
 const OUTSIDE: Point = { x: -60, y: 230 } // the hand rests past the left edge, where the next file comes from
 const GRIP: Point = { x: 56, y: 26 } // where the hand holds the drag image: the middle of the icon
@@ -67,14 +69,14 @@ async function script(a: Act<S>) {
   a.mark('result')
   await a.set({ done: true })
   await a.wait(250)
-  await a.stagger([1, 2, 3], (n) => a.set({ shown: n }), 220)
+  await a.stagger([1, 2, 3, 4, 5], (n) => a.set({ shown: n }), 220)
   await a.wait(2800)
 
   // 5. The checks leave last first, then the file's row, while the hand goes back out
   //    for the next file: back to the start
   a.mark('reset')
   void a.move(OUTSIDE, { duration: 700 }) // lands before the reset ends, so the loop's seam is clean
-  await a.stagger([2, 1, 0], (n) => a.set({ shown: n }), 70)
+  await a.stagger([4, 3, 2, 1, 0], (n) => a.set({ shown: n }), 70)
   await a.set({ up: false, ghost: NO_GHOST })
   await a.wait(600)
   await a.snap({ progress: 0, done: false })
@@ -84,8 +86,8 @@ export function HeroDemo() {
   return (
     <Stage<S>
       width={680}
-      height={400}
-      compact={{ below: 560, width: 358, height: 300 }}
+      height={440}
+      compact={{ below: 560, width: 358, height: 340 }}
       initial={initial}
       poster={poster}
       script={script}
@@ -154,7 +156,7 @@ function FileRow({ progress, done }: { progress: number; done: boolean }) {
           checking: <Meter className="hd-track" value={progress} />,
           done: (
             <Badge tone="danger" icon={<Flag size={12} strokeWidth={2.5} />}>
-              2 of 3 over the limit
+              2 of 5 over the limit
             </Badge>
           ),
         }}
@@ -189,7 +191,9 @@ function XerIcon({ small }: { small?: boolean }) {
 }
 
 /** The drag image follows the cursor on the drag's own frame callback, and lights the
- *  [data-drop] under it. Copied from the `upload` gold example. */
+ *  [data-drop] under it. Copied from the `upload` gold example.
+ *  data-crop: it enters from past the stage's left edge, so the edge may cut it on the way in.
+ *  The script moves it, not a CSS animation, so the film can't tell it is in flight. */
 function DragImage({ ghost, children }: { ghost: Ghost; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   const over = useRef<HTMLElement | null>(null)
@@ -213,7 +217,7 @@ function DragImage({ ghost, children }: { ghost: Ghost; children: ReactNode }) {
   }, [following, x, y])
   useLayoutEffect(() => () => over.current?.removeAttribute('data-over'), [])
   return (
-    <div ref={ref} className="hd-drag" data-show={following || undefined} data-dropped={ghost.dropped || undefined} style={{ transform: `translate(${x - ox}px, ${y - oy}px)` }} aria-hidden>
+    <div ref={ref} className="hd-drag" data-crop data-show={following || undefined} data-dropped={ghost.dropped || undefined} style={{ transform: `translate(${x - ox}px, ${y - oy}px)` }} aria-hidden>
       <div className="hd-drag__inner" style={{ transformOrigin: `${ox}px ${oy}px` }}>
         {children}
       </div>

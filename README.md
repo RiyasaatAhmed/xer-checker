@@ -53,10 +53,12 @@ The command line draws the same results as one chart, for both files:
 
 ## Results
 
-| File | Activities checked | Broken rows | Missing links | Negative float | High float |
-|---|---|---|---|---|---|
-| `CSTv2.4.xer` | 133 | 0 | 20 (15.0%) | 0 | 78 (58.6%) |
-| `example_xer_file.xer` | 365 | 0 | 6 (1.6%) | 0 | 170 (46.6%) |
+| File | Activities checked | Broken rows | Missing links | Leads | Lags | Negative float | High float |
+|---|---|---|---|---|---|---|---|
+| `CSTv2.4.xer` | 133 | 0 | 20 (15.0%) | 0 | 1 (0.8%) | 0 | 78 (58.6%) |
+| `example_xer_file.xer` | 365 | 0 | 6 (1.6%) | 11 (3.0%) | 26 (7.1%) | 0 | 170 (46.6%) |
+
+These 5 are the headline checks: the home page and the demo show them for every file. Each one is matched to Kazinex in [Validation](#validation).
 
 **What the numbers mean:**
 
@@ -64,6 +66,8 @@ The command line draws the same results as one chart, for both files:
 |---|---|---|
 | Broken rows | None. | None. One calendar spans 100 lines inside quotes, and it's read correctly. |
 | Missing links | All 20 are placeholder rows from the MassDOT template. No real work activity is missing a link. | 6 activities have nothing after them. Under the 5% limit. |
+| Leads | None. | 11 activities have a link with a lead into them. DCMA allows none, so this is a flag. |
+| Lags | 1 activity has a link with a lag into it. Under the 5% limit. | 26 activities have a link with a lag into them. Over the 5% limit. |
 | Negative float | None. The lowest float is 0 days, on the critical path. | None. Every unfinished activity has at least 6 days of float. The forecast finish, 6 May 2027, is before the 16 May deadline. |
 | High float | 20 of the 78 are the same placeholder rows. | 170 activities have more than 44 days of float. |
 
@@ -94,6 +98,8 @@ The link and constraint figures equal Kazinex's, to the last decimal. The demo f
 | Kazinex flags every activity we flag | we flag an activity Kazinex doesn't |
 | Every extra activity Kazinex flags is one DCMA leaves out | Kazinex flags real work we missed |
 | Our float in days equals Kazinex's, for all 272 high-float activities it lists | float is read or converted wrong |
+| Kazinex counts the same lead and lag links, and lists the same ones with the same lag in days | a link or its lag is read wrong |
+| We flag the later activity of each of those links, when DCMA checks it | leads or lags flag the wrong activity |
 
 [`test_overview.py`](backend/tests/test_overview.py) does the same for "What's in the files": links, the finish-to-start share, leads, lags, start-to-finish links and constraints, against Kazinex's Logic and Constraint sheets.
 
@@ -124,6 +130,16 @@ Every extra activity Kazinex flags is one DCMA leaves out:
 | `example_xer_file.xer` | High float | 193 | 170 | 21 finish milestones, 2 WBS summaries |
 
 - **Negative float:** neither finds any.
+
+**Leads and lags count links in Kazinex, and activities here.** Kazinex lists each link under its earlier activity. We flag the later one, as DCMA counts the activity a lead or lag delays. The links themselves are the same:
+
+| File | Check | Kazinex (links) | This checker (activities) | Why the counts differ |
+|---|---|---|---|---|
+| `CSTv2.4.xer` | Lags | 1 | 1 | They don't |
+| `example_xer_file.xer` | Leads | 18 | 11 | 6 activities have 2 lead links into them. 1 is a finish milestone |
+| `example_xer_file.xer` | Lags | 29 | 26 | 2 finish milestones and 1 finished activity |
+
+- **Leads limit:** Kazinex's own leads check allows 5% of links. DCMA allows none, as does Kazinex's negative lag check, which lists all 18.
 - **Percentages differ** for the same reason: 79 of 145 is 54.5%, and 78 of 133 is 58.6%.
 - **Missing-links limit:** Kazinex uses 0%. DCMA uses 5%.
 

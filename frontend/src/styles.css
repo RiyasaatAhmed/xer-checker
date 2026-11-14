@@ -409,7 +409,7 @@ html { background: var(--bg); scrollbar-color: var(--scroll) transparent; }
 .check > *:nth-child(2) { animation-delay: 0.04s; } .check > *:nth-child(3) { animation-delay: 0.08s; } .check > *:nth-child(4) { animation-delay: 0.12s; }
 .check > *:nth-child(5) { animation-delay: 0.16s; } .check > *:nth-child(n+6) { animation-delay: 0.2s; }
 
-/* ---- The home page after an upload, laid out as the demo (hero-demo.css): drop area, file row, 3 checks ---- */
+/* ---- The home page after an upload, laid out as the demo (hero-demo.css): drop area, file row, 5 headline checks ---- */
 .home-panel { display: grid; width: 100%; max-width: 720px; margin: 8px auto 0; }
 .drop-area {
   display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 16px; margin-bottom: 12px;
@@ -453,7 +453,7 @@ html { background: var(--bg); scrollbar-color: var(--scroll) transparent; }
 @keyframes live-grow { from { width: 0; } }
 .live-limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); }
 .home-recent { padding-top: 24px; display: grid; gap: 6px; }
-/* Saved files: each a file row as in the demo, opening on its 3 checks */
+/* Saved files: each a file row as in the demo, opening on its 5 headline checks */
 .files { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .file-head {
   display: grid; grid-template-columns: 15px auto auto minmax(0, 1fr) 16px; align-items: center; justify-items: start; gap: 12px;

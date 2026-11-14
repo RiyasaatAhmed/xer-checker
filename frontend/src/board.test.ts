@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barAt, changes, flaggedIn, groupsOf, heatFor, isSerious, limitParts, ratio, shade, tally, threeOf, trendOf, worstFirst, worstSort } from './board'
+import { barAt, changes, flaggedIn, groupsOf, heatFor, isSerious, limitParts, ratio, shade, tally, headlineOf, trendOf, worstFirst, worstSort } from './board'
 import type { RuleResult } from './types'
 
 function rule(id: string, over: Partial<RuleResult> = {}): RuleResult {
@@ -116,8 +116,8 @@ describe('shade', () => {
   })
 })
 
-describe('threeOf', () => {
-  it('picks the demo\'s 3 checks in its order, and leaves out one the file lacks', () => {
-    expect(threeOf([rule('high-float'), rule('leads'), rule('missing-links')]).map((r) => r.id)).toEqual(['missing-links', 'high-float'])
+describe('headlineOf', () => {
+  it('picks the 5 headline checks in the demo\'s order, and leaves out one the file lacks', () => {
+    expect(headlineOf([rule('high-float'), rule('link-types'), rule('lags'), rule('leads'), rule('missing-links')]).map((r) => r.id)).toEqual(['missing-links', 'leads', 'lags', 'high-float'])
   })
 })

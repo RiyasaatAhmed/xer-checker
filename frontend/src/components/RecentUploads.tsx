@@ -1,18 +1,18 @@
 import { ArrowRight, ChevronDown, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { dateText } from '../format'
-import { threeOf } from '../board'
+import { headlineOf } from '../board'
 import { pathFor } from '../route'
 import type { UploadSummary } from '../types'
-import { ThreeBadge } from './ThreeBadge'
-import { ThreeChecks } from './ThreeChecks'
+import { HeadlineBadge } from './HeadlineBadge'
+import { HeadlineChecks } from './HeadlineChecks'
 
 interface Props {
   uploads: UploadSummary[] // newest first
   onOpen: (uploadId: string) => void
 }
 
-/** Saved schedules, drawn as the demo draws a file: its row, and under it the 3 checks. Each row opens and
+/** Saved schedules, drawn as the demo draws a file: its row, and under it the 5 headline checks. Each row opens and
  *  closes; the newest opens by default, and again when a new file arrives. */
 export function RecentUploads({ uploads, onOpen }: Props) {
   const first = uploads.find((u) => u.status === 'ready')?.upload_id ?? null
@@ -52,9 +52,9 @@ export function RecentUploads({ uploads, onOpen }: Props) {
   )
 }
 
-/** A checked file: a row that opens to show its 3 checks, and a link to its full report. */
+/** A checked file: a row that opens to show its 5 headline checks, and a link to its full report. */
 function Ready({ upload, open, onToggle, onOpen }: { upload: UploadSummary; open: boolean; onToggle: () => void; onOpen: (uploadId: string) => void }) {
-  const three = threeOf(upload.checks ?? [])
+  const headline = headlineOf(upload.checks ?? [])
   const panel = `file-${upload.upload_id}`
   return (
     <>
@@ -63,13 +63,13 @@ function Ready({ upload, open, onToggle, onOpen }: { upload: UploadSummary; open
           <span />
         </span>
         <span className="file-name">{upload.file_name}</span>
-        <ThreeBadge checks={three} />
+        <HeadlineBadge checks={headline} />
         <span className="file-when">{dateText(upload.uploaded_at)}</span>
         <ChevronDown className="file-chevron" size={16} aria-hidden />
       </button>
       {open && (
         <div id={panel} className="file-panel">
-          <ThreeChecks checks={three} />
+          <HeadlineChecks checks={headline} />
           <a
             className="file-report"
             href={pathFor(upload.upload_id)}

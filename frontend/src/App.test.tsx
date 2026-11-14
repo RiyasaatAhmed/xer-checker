@@ -24,7 +24,7 @@ async function uploadWith(upload: () => Response, name = 'CSTv2.4.xer', backend:
   await user().upload(input, new File(['ERMHDR'], name))
   const live = await screen.findByRole('region', { name: 'Latest check' }).catch(() => null)
   const link = live && (await within(live).findByRole('link', { name }).catch(() => null))
-  if (link) await user().click(link) // the 3 checks show on the home page first; the file's name opens the report
+  if (link) await user().click(link) // the 5 headline checks show on the home page first; the file's name opens the report
   return fetch
 }
 
@@ -46,16 +46,18 @@ describe('App', () => {
     expect(screen.getAllByRole('button', { name: 'Drop a .xer file to check it' })).toHaveLength(1) // not repeated in the header
   })
 
-  it('after an upload, stays on the home page and shows the 3 checks as the demo does, over the limit or within it', async () => {
+  it('after an upload, stays on the home page and shows the 5 headline checks as the demo does, over the limit or within it', async () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT)))
     render(<App />)
     const [input] = await screen.findAllByTestId('file-input')
     await user().upload(input, new File(['ERMHDR'], 'CSTv2.4.xer'))
     const live = await screen.findByRole('region', { name: 'Latest check' })
-    expect(live).toHaveTextContent('2 of 3 over the limit')
+    expect(live).toHaveTextContent('2 of 5 over the limit')
     const rows = Array.from(live.querySelectorAll<HTMLElement>('.live-row'))
     expect(rows.map((r) => `${r.querySelector('.live-check-name')?.textContent} ${r.className.split(' ')[1]} ${r.getAttribute('data-tip')}`)).toEqual([
       'Missing links flag 15.0% of activities, over the 5% limit',
+      'Leads pass 0.0% of activities, within the 0% limit',
+      'Lags pass 0.8% of activities, within the 5% limit',
       'Negative float pass 0.0% of activities, within the 0% limit',
       'High float flag 58.6% of activities, over the 5% limit',
     ])
@@ -190,15 +192,17 @@ describe('App', () => {
     expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
   })
 
-  it('lists recent schedules as file rows with the 3 checks, the newest open, and opens a saved one at its own address', async () => {
+  it('lists recent schedules as file rows with the 5 headline checks, the newest open, and opens a saved one at its own address', async () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     const recent = await screen.findByRole('region', { name: 'Recent schedules' })
     const head = within(recent).getByRole('button', { name: /CSTv2\.4\.xer/ })
     expect(head).toHaveAttribute('aria-expanded', 'true') // the newest opens by default
-    expect(head).toHaveTextContent('2 of 3 over the limit')
+    expect(head).toHaveTextContent('2 of 5 over the limit')
     expect(Array.from(recent.querySelectorAll('.live-row')).map((r) => r.getAttribute('data-tip'))).toEqual([
       '15.0% of activities, over the 5% limit',
+      '0.0% of activities, within the 0% limit',
+      '0.8% of activities, within the 5% limit',
       '0.0% of activities, within the 0% limit',
       '58.6% of activities, over the 5% limit',
     ])

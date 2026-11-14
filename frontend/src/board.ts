@@ -13,7 +13,7 @@ export const MAX_WORST = 3 // failing checks the verdict writes out as sentences
 export const SERIOUS = 2 // a check of this severity or more is serious: 1 minor, 2 serious, 3 critical
 export const SMALL_SAMPLE = 30 // with fewer activities checked, a share says "1 of 4", not "25.0%"
 export const TIMES_SHOWN = 10 // every check bar ends at this many times its limit, so bars compare down the board
-const SHOWN = ['missing-links', 'negative-float', 'high-float'] // the 3 checks the home page shows, as the demo does, in its order
+const HEADLINE = ['missing-links', 'leads', 'lags', 'negative-float', 'high-float'] // the 5 checks the home page shows, as the demo does: logic, then float
 const SHADE_STEPS = [0.05, 0.15, 0.4] // share flagged that steps a matrix cell's shade up: up to 5%, 15%, 40%, then more
 
 export type Trend = { delta: number; better: boolean | null } // better is null when nothing changed
@@ -122,7 +122,7 @@ export function shade(share: number): number {
 }
 
 
-/** The demo's 3 checks from a file's checks, in the demo's order. A check the file lacks is left out. */
-export function threeOf<T extends { id: string }>(checks: T[]): T[] {
-  return SHOWN.map((id) => checks.find((c) => c.id === id)).filter((c): c is T => c !== undefined)
+/** The 5 headline checks from a file's checks, in the demo's order. A check the file lacks is left out. */
+export function headlineOf<T extends { id: string }>(checks: T[]): T[] {
+  return HEADLINE.map((id) => checks.find((c) => c.id === id)).filter((c): c is T => c !== undefined)
 }

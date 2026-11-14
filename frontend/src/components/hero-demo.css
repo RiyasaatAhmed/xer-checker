@@ -68,11 +68,11 @@
 .hd .hd-track .ss-meter__fill { background: var(--ss-accent); transition-duration: 0.42s; }
 .hd .ss-badge { font-weight: 700; }
 
-/* ---- The 3 checks: name, a bar with the limit marked, the figure ---- */
+/* ---- The 5 headline checks: name, a bar with the limit marked, the figure ---- */
 .hd .hd-checks { display: grid; }
 .hd .hd-check {
   display: grid; grid-template-columns: 116px 56px minmax(0, 1fr); align-items: center; gap: 12px;
-  height: 40px; padding: 0 12px; border-bottom: 1px solid var(--ss-line);
+  height: 36px; padding: 0 12px; border-bottom: 1px solid var(--ss-line);
   font-size: 13px; color: var(--ss-text-strong);
 }
 .hd .hd-check__name { font-weight: 600; white-space: nowrap; }
@@ -112,8 +112,8 @@
 .hd .hd-drag[data-dropped] .hd-drag__inner { transform: scale(0.5); transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
 .hd .hd-drag__name { padding: 1px 5px; border-radius: 4px; background: var(--ss-accent); color: #09090b; white-space: nowrap; line-height: 1.35; }
 
-/* ---- Compact (a phone column): shorter rows, so the window stays wider than tall with all 3 checks whole ---- */
+/* ---- Compact (a phone column): shorter rows, so all 5 checks stay whole and the window stays wider than tall ---- */
 .hd .hd-page[data-compact] { padding: 12px; }
-.hd .hd-page[data-compact] .hd-drop { height: 52px; margin-bottom: 10px; }
-.hd .hd-page[data-compact] .hd-file { height: 44px; margin-bottom: 10px; }
-.hd .hd-page[data-compact] .hd-check { height: 36px; grid-template-columns: 104px 52px minmax(0, 1fr); }
+.hd .hd-page[data-compact] .hd-drop { height: 46px; margin-bottom: 10px; }
+.hd .hd-page[data-compact] .hd-file { height: 42px; margin-bottom: 10px; }
+.hd .hd-page[data-compact] .hd-check { height: 32px; grid-template-columns: 104px 52px minmax(0, 1fr); }
