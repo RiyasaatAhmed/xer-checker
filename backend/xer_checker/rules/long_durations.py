@@ -1,7 +1,7 @@
-"""Long durations: more than 44 working days of work left in one activity.
+"""Long durations: an activity planned to last more than 44 working days.
 
-DCMA-EA PAM 200.1, section 4.8 (High Duration): duration greater than 44 working days ... should not exceed 5%.
-The checker reads the remaining duration: the file holds no baseline to read the planned one from.
+DCMA-EA PAM 200.1, section 4.8 (High Duration): baseline duration greater than 44 working days, should not exceed 5%.
+The file holds no baseline, so the checker reads the original duration, the nearest thing to it.
 """
 
 # ---------- Constants ----------
@@ -15,9 +15,9 @@ DIRECTION = "above"  # flagged above the limit
 SEVERITY = 1  # 1 minor, 2 serious, 3 critical: breaks ties between checks over their limit
 NEEDS = None  # what the file must hold for the check to run; None means nothing extra
 
-LONG_DAYS = 44  # a remaining duration over 44 working days is "long"; exactly 44 is not
+LONG_DAYS = 44  # an original duration over 44 working days is "long"; exactly 44 is not
 
 
 def fails(activity):
-    """True when the activity has more than 44 working days left. A blank duration can't fail."""
-    return activity.duration_days is not None and activity.duration_days > LONG_DAYS
+    """True when the activity's original duration is over 44 working days. A blank duration can't fail."""
+    return activity.original_days is not None and activity.original_days > LONG_DAYS

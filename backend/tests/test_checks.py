@@ -165,6 +165,57 @@ def test_a_hard_second_constraint_is_counted():
     assert check(tables)[1]["Hard constraints"] == ["A1"]
 
 
+# ---------- The checks a scheduler adds to DCMA's ----------
+
+def test_a_loop_flags_each_activity_on_it():
+    tables = schedule([task("1"), task("2"), task("3"), task("4")],
+                      [typed("1", "2"), typed("2", "3"), typed("3", "2"), typed("3", "4")])
+    assert check(tables)[1]["Logic loops"] == ["A2", "A3"]
+
+
+def test_an_open_start_or_finish_is_a_side_with_links_that_dont_drive():
+    tables = schedule([task("1"), task("2"), task("3"), task("4")],
+                      [typed("1", "2", kind="PR_FF"), typed("2", "3", kind="PR_SS"), typed("3", "4", kind="PR_SS")])
+    assert check(tables)[1]["Open start or finish"] == ["A2", "A3"]  # 2: only finish to finish in; 3: only start to start out
+
+
+def test_a_driving_row_of_a_pair_linked_twice_still_drives():
+    tables = schedule([task("1"), task("2")], [typed("1", "2", kind="PR_FS", line=5), typed("1", "2", kind="PR_FF", line=6)])
+    assert check(tables)[1]["Open start or finish"] == []
+
+
+def test_a_long_lag_is_counted_on_the_earlier_activitys_calendar():
+    tables = schedule([task("1", calendar="8h"), task("2"), task("3", calendar="24h"), task("4")],
+                      [{**typed("1", "2"), "lag_hr_cnt": "80"}, {**typed("3", "4"), "lag_hr_cnt": "80"}])
+    assert check(tables)[1]["Long lags"] == ["A2"]  # 10 days on 8 hours; 3.3 days on 24 hours
+
+
+def test_a_long_lead_counts_as_well():
+    tables = schedule([task("1"), task("2")], [{**typed("1", "2"), "lag_hr_cnt": "-96"}])
+    assert check(tables)[1]["Long lags"] == ["A2"]
+
+
+def test_an_activity_on_a_calendar_the_file_lacks_is_flagged():
+    tables = schedule([task("1"), task("2", calendar="gone")])
+    assert check(tables)[1]["Missing calendars"] == ["A2"]
+
+
+def test_a_status_must_agree_with_the_actual_dates():
+    started = {"act_start_date": "2026-06-01 08:00", "remain_drtn_hr_cnt": "8"}
+    tables = schedule([dated("1", act_start_date="2026-06-01 08:00"),  # not started, yet started
+                       dated("2", status_code="TK_Active", remain_drtn_hr_cnt="8"),  # in progress with no actual start
+                       dated("3", status_code="TK_Active", act_end_date="2026-06-05 17:00", **started),  # in progress, yet finished
+                       dated("4", status_code="TK_Active", act_start_date="2026-06-01 08:00", remain_drtn_hr_cnt="0"),  # nothing left
+                       dated("5", status_code="TK_Active", **started), dated("6")])  # both fine
+    assert check(tables)[1]["Status conflicts"] == ["A1", "A2", "A3", "A4"]
+
+
+def test_a_file_without_actual_date_columns_cant_show_a_status_conflict():
+    tables = schedule([dated("1", status_code="TK_Active", remain_drtn_hr_cnt="8")])  # in progress, but no act_start_date column
+    _, failures, _ = check(tables)
+    assert failures["Status conflicts"] == []  # can't run: availability says why
+
+
 def test_a_check_the_file_cant_support_gets_no_result():
     _, failures, _ = check(schedule([dated("1", remain_drtn_hr_cnt="16", cstr_type="CS_MEO")]))  # no PROJECT, no TASKRSRC
     assert failures["Invalid dates"] == [] and failures["Resources"] == []
@@ -172,11 +223,16 @@ def test_a_check_the_file_cant_support_gets_no_result():
 
 
 def test_long_durations_use_the_activitys_own_calendar():
-    tables = schedule([dated("1", remain_drtn_hr_cnt="360", clndr_id="8h"), dated("2", remain_drtn_hr_cnt="360", clndr_id="24h")])
+    tables = schedule([dated("1", target_drtn_hr_cnt="360", clndr_id="8h"), dated("2", target_drtn_hr_cnt="360", clndr_id="24h")])
     assert check(tables)[1]["Long durations"] == ["A1"]  # 45 days on 8 hours, 15 days on 24 hours
 
 
+def test_long_durations_judge_work_in_progress_by_its_original_duration():  # DCMA 4.8 reads the planned length
+    tables = schedule([dated("1", status_code="TK_Active", act_start_date="2026-06-01 08:00", target_drtn_hr_cnt="400", remain_drtn_hr_cnt="40")])
+    assert check(tables)[1]["Long durations"] == ["A1"]  # 50 days planned, 5 left
+
+
 def test_work_with_a_resource_is_not_flagged_by_the_resource_check():
-    tables = schedule([dated("1", remain_drtn_hr_cnt="16"), dated("2", remain_drtn_hr_cnt="16")])
+    tables = schedule([dated("1", target_drtn_hr_cnt="16"), dated("2", target_drtn_hr_cnt="16"), dated("3", target_drtn_hr_cnt="0")])
     tables["TASKRSRC"] = [{"task_id": "2"}]
-    assert check(tables)[1]["Resources"] == ["A1"]
+    assert check(tables)[1]["Resources"] == ["A1"]  # 3 has no duration, so it needs no resource

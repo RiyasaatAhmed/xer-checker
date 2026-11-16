@@ -16,6 +16,18 @@ const TEXT: Record<string, RuleText> = {
     impact: 'Work with an open end can slip without moving the finish date.',
     action: 'Add the missing link in P6, then re-export.',
   },
+  'open-start-finish': {
+    short: 'Its links don’t drive its start, or its finish drives nothing',
+    problem: { one: 'has a start nothing drives, or a finish that drives nothing', many: 'have a start nothing drives, or a finish that drives nothing' },
+    impact: 'A slip there can stay hidden, because the logic doesn’t pass it on.',
+    action: 'Add a finish to start link where the logic is open, then re-export.',
+  },
+  'logic-loops': {
+    short: 'On a circular chain of links',
+    problem: { one: 'is on a logic loop', many: 'are on logic loops' },
+    impact: 'P6 can’t schedule a loop, so none of these dates can be trusted.',
+    action: 'Break the loop: delete or reverse the link that closes it.',
+  },
   leads: {
     short: 'A link into it that overlaps its predecessor',
     problem: { one: 'has a lead (a negative lag) on a link into it', many: 'have a lead (a negative lag) on a link into them' },
@@ -27,6 +39,12 @@ const TEXT: Record<string, RuleText> = {
     problem: { one: 'has a lag on a link into it', many: 'have a lag on a link into them' },
     impact: 'Waiting time inside a link is hard to see and track.',
     action: 'Model the wait as its own activity, so it can be seen and tracked.',
+  },
+  'long-lags': {
+    short: 'A lead or lag of 10 working days or more',
+    problem: { one: 'has a lead or lag of 10 working days or more', many: 'have a lead or lag of 10 working days or more' },
+    impact: 'A long wait inside a link is work no one can see or status.',
+    action: 'Model the wait as its own activity, such as curing or an approval.',
   },
   'link-types': {
     name: 'Not finish to start',
@@ -66,10 +84,16 @@ const TEXT: Record<string, RuleText> = {
     action: 'Check what follows each one, and link it to its real successor.',
   },
   'long-durations': {
-    short: 'More than 44 working days of work left',
-    problem: { one: 'has more than 44 working days of work left', many: 'have more than 44 working days of work left' },
+    short: 'Planned to last more than 44 working days',
+    problem: { one: 'is planned to last more than 44 working days', many: 'are planned to last more than 44 working days' },
     impact: 'Progress on work this long is hard to measure.',
     action: 'Split each into shorter activities, so progress can be measured.',
+  },
+  'missing-calendars': {
+    short: 'Its calendar isn’t in the file',
+    problem: { one: 'uses a calendar that isn’t in the file', many: 'use calendars that aren’t in the file' },
+    impact: 'Their float and durations are counted at 8 hours a day, a guess.',
+    action: 'Export the file again with its calendars, or reassign the activities.',
   },
   'invalid-dates': {
     short: 'Dates that contradict the data date',
@@ -77,10 +101,16 @@ const TEXT: Record<string, RuleText> = {
     impact: 'The status can’t be trusted until these dates are fixed.',
     action: 'Correct the progress dates, then recalculate.',
   },
+  'status-conflicts': {
+    short: 'Its status disagrees with its actual dates',
+    problem: { one: 'has a status that disagrees with its actual dates', many: 'have a status that disagrees with their actual dates' },
+    impact: 'Progress that contradicts itself can’t be trusted.',
+    action: 'Fix the status or the actual dates in P6, then recalculate.',
+  },
   resources: {
     name: 'No resources',
-    short: 'A day or more of work with no resource',
-    problem: { one: 'has a day or more of work with no resource', many: 'have a day or more of work with no resource' },
+    short: 'Work with no resource',
+    problem: { one: 'has work but no resource', many: 'have work but no resource' },
     impact: 'Without resources, cost and crew needs can’t be planned.',
     action: 'Assign the resource, or confirm that the activity needs none.',
   },

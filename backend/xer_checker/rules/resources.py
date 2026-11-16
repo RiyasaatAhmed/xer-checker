@@ -1,6 +1,7 @@
-"""Resources: work of a day or more with no resource assigned.
+"""Resources: an activity with a duration and no resource assigned.
 
-DCMA-EA PAM 200.1, section 4.10 (Resources): tasks with durations of at least one day that have no resources.
+DCMA-EA PAM 200.1, section 4.10 (Resources): tasks with durations greater than zero should have dollars or hours.
+The PAM sets no limit, so any hit is flagged.
 Only runs when the file holds resource assignments.
 """
 
@@ -15,9 +16,6 @@ DIRECTION = "above"  # flagged above the limit
 SEVERITY = 1  # 1 minor, 2 serious, 3 critical: breaks ties between checks over their limit
 NEEDS = "resources"  # what the file must hold for the check to run; None means nothing extra
 
-MIN_DAYS = 1  # work shorter than this needs no resource
-
-
 def fails(activity):
-    """True when the activity lasts a day or more and has no resource."""
-    return activity.duration_days is not None and activity.duration_days >= MIN_DAYS and not activity.has_resource
+    """True when the activity has a duration greater than zero and no resource."""
+    return activity.original_days is not None and activity.original_days > 0 and not activity.has_resource

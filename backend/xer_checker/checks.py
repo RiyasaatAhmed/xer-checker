@@ -5,6 +5,7 @@ import math  # tells a finite number from "inf" and "NaN"
 from .activity import Activity
 from .availability import data_dates, unavailable
 from .dates import date
+from .loops import in_loops
 from .rules import DIRECTIONS, LIMITS, RULES
 
 # ---------- Constants ----------
@@ -16,6 +17,8 @@ NOT_CHECKED_TYPES = ("TT_LOE", "TT_WBS", "TT_Mile", "TT_FinMile")
 DEFAULT_HOURS_PER_DAY = 8  # used when a calendar is missing or has no hours per day
 NOT_STARTED, ACTIVE = "TK_NotStart", "TK_Active"  # statuses of work that hasn't started, and work in progress
 FINISH_TO_START = "PR_FS"  # the link type DCMA wants most links to be
+DRIVES_START = ("", FINISH_TO_START, "PR_SS")  # link types that drive the later activity's start; blank reads as finish to start
+DRIVEN_BY_FINISH = ("", FINISH_TO_START, "PR_FF")  # link types the earlier activity's finish drives
 SMALLEST_SHOWN = 0.05  # a share under this prints as "0.0%", so a nonzero one says "<0.1%" instead
 
 # The rules come from the DCMA 14-Point Assessment, section 4 of DCMA-EA PAM 200.1 (Oct 2012).
@@ -86,7 +89,7 @@ def check(tables):
 
     open_tasks = [t for t in tasks.values() if is_checked(t)]  # unfinished work only, as DCMA says
     skipped = unavailable(RULES, tables)  # checks this file can't support: they get no result, only a reason
-    extra = LinkFacts(tables, tasks)
+    extra = LinkFacts(tables, tasks, hours_per_day)
     dates_of = data_dates(tables)
     with_resource = {r["task_id"] for r in tables.get("TASKRSRC", []) if "task_id" in r}
 
@@ -94,14 +97,20 @@ def check(tables):
     for t in open_tasks:
         task_id = t["task_id"]
         remaining = number(t.get("remain_drtn_hr_cnt") or "")
-        per_day = hours_per_day.get(t["clndr_id"], DEFAULT_HOURS_PER_DAY)
+        original = number(t.get("target_drtn_hr_cnt") or "")
+        per_day = hours_per_day.get(t.get("clndr_id"), DEFAULT_HOURS_PER_DAY)
         activity = Activity(
             t["task_code"], task_id in has_pred, task_id in has_succ, float_days(t, hours_per_day, problems),
             has_lead=task_id in extra.leads, has_lag=task_id in extra.lags, has_odd_link=task_id in extra.odd,
             has_duplicate_link=task_id in extra.duplicates, out_of_sequence=task_id in extra.out_of_sequence,
             duration_days=remaining / per_day if remaining is not None else None, constraint_type=t.get("cstr_type", ""),
             secondary_constraint_type=t.get("cstr_type2", ""),
-            invalid_date=invalid_date(t, dates_of.get(t.get("proj_id"))), has_resource=task_id in with_resource)
+            invalid_date=invalid_date(t, dates_of.get(t.get("proj_id"))), has_resource=task_id in with_resource,
+            original_days=original / per_day if original is not None else None, in_loop=task_id in extra.looped,
+            open_start=task_id in has_pred and task_id not in extra.start_driven,
+            open_finish=task_id in has_succ and task_id not in extra.finish_drives,
+            longest_lag_days=extra.longest_lag.get(task_id), calendar_missing=t.get("clndr_id") not in hours_per_day,
+            status_conflict=status_conflict(t, remaining))
         for rule in RULES:  # each rule decides on its own; see rules/
             if rule.NAME not in skipped and rule.fails(activity):
                 failures[rule.NAME].append(activity.code)
@@ -113,11 +122,13 @@ class LinkFacts:
 
     Each set holds the IDs of the later activities. The sets: leads, lags, links that aren't finish to start,
     pairs linked twice, and work started before its finish to start predecessor finished.
+    Every row of a pair counts for what drives an activity: a finish to start row drives it even when a later row doesn't.
     """
 
-    def __init__(self, tables, tasks):
+    def __init__(self, tables, tasks, hours_per_day):
         last, rows = {}, tables.get("TASKPRED", [])
         seen, self.duplicates = set(), set()
+        self.start_driven, self.finish_drives = set(), set()  # starts something drives; finishes that drive something
         for link in rows:
             pair = (link.get("pred_task_id"), link.get("task_id"))
             if pair[0] in tasks and pair[1] in tasks:
@@ -125,9 +136,19 @@ class LinkFacts:
                     self.duplicates.add(pair[1])
                 seen.add(pair)
                 last[pair] = link  # the later row of a pair wins
+                kind = link.get("pred_type", "")
+                if kind in DRIVES_START:
+                    self.start_driven.add(pair[1])
+                if kind in DRIVEN_BY_FINISH:
+                    self.finish_drives.add(pair[0])
+        self.looped = in_loops(seen)
+        self.longest_lag = {}  # {later ID: the largest lead or lag on a link into it, in working days}
         self.leads, self.lags, self.odd, self.out_of_sequence = set(), set(), set(), set()
         for (pred, succ), link in last.items():
             lag = number(link.get("lag_hr_cnt") or "0") or 0.0
+            # P6 counts a lag on the earlier activity's calendar by default
+            days = abs(lag) / hours_per_day.get(tasks[pred].get("clndr_id"), DEFAULT_HOURS_PER_DAY)
+            self.longest_lag[succ] = max(days, self.longest_lag.get(succ, 0.0))
             if lag < 0:
                 self.leads.add(succ)
             if lag > 0:
@@ -137,6 +158,19 @@ class LinkFacts:
                 self.odd.add(succ)
             if kind == FINISH_TO_START and tasks[succ]["status_code"] == ACTIVE and tasks[pred]["status_code"] != FINISHED:
                 self.out_of_sequence.add(succ)
+
+
+def status_conflict(task, remaining_hours):
+    """True when the status disagrees with the actual dates, or work in progress has nothing left to do.
+
+    Not started: no actual dates. In progress: an actual start, no actual finish, and some work left.
+    """
+    started, finished = date(task.get("act_start_date")), date(task.get("act_end_date"))
+    if task["status_code"] == NOT_STARTED:
+        return started is not None or finished is not None
+    if task["status_code"] == ACTIVE:
+        return started is None or finished is not None or remaining_hours == 0
+    return False
 
 
 def invalid_date(task, data_date):
@@ -165,4 +199,4 @@ def float_days(task, hours_per_day, problems):
     if hours is None:
         return None
     # Float is stored in hours; convert with the activity's own calendar.
-    return hours / hours_per_day.get(task["clndr_id"], DEFAULT_HOURS_PER_DAY)
+    return hours / hours_per_day.get(task.get("clndr_id"), DEFAULT_HOURS_PER_DAY)

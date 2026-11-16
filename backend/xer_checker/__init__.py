@@ -3,7 +3,7 @@
   reader.py        read a .xer file into tables; say why a broken one can't be checked
   checks.py        pick the activities DCMA checks, and run every rule on them
   activity.py      what a rule sees about one activity
-  rules/           one file per check: 16 checks in 7 sets
+  rules/           one file per check: 21 checks in 7 sets
   availability.py  which checks a file can support, and why not when one can't
   kinds.py         how each check names the kinds of its activities
   causes.py        open ends: one missing link that many flagged activities lead only into

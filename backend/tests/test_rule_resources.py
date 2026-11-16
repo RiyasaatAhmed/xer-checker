@@ -5,16 +5,17 @@ from xer_checker.rules import resources
 
 
 def lasting(days, has_resource):
-    return Activity("A1", has_predecessor=True, has_successor=True, float_days=0, duration_days=days, has_resource=has_resource)
+    return Activity("A1", has_predecessor=True, has_successor=True, float_days=0, original_days=days, has_resource=has_resource)
 
 
-def test_fails_when_work_of_a_day_has_no_resource():
+def test_fails_when_any_work_has_no_resource():  # DCMA 4.10: durations greater than zero
     assert resources.fails(lasting(1, False))
+    assert resources.fails(lasting(0.5, False))
 
 
-def test_passes_with_a_resource_or_under_a_day_or_a_blank_duration():
+def test_passes_with_a_resource_or_no_duration():
     assert not resources.fails(lasting(1, True))
-    assert not resources.fails(lasting(0.5, False))
+    assert not resources.fails(lasting(0, False))
     assert not resources.fails(lasting(None, False))
 
 

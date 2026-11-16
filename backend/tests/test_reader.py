@@ -56,10 +56,18 @@ def test_task_table_missing_a_column(tmp_path):
     assert reason(save(tmp_path, text)) == "its TASK table has no status_code column, which the checks need"
 
 
+def test_a_task_table_without_calendars_is_still_checked(tmp_path):
+    text = GOOD.replace("\tclndr_id", "").replace("\t0\t1\n%E", "\t40\n%E")  # a hand-made file: no calendar column, 40 hours of float
+    tables, broken, _ = read_xer(save(tmp_path, text))
+    _, failures, problems = check(tables)
+    assert (broken, problems) == ([], [])
+    assert failures["Missing calendars"] == ["A1000"]  # counted at 8 hours a day, and flagged
+
+
 def test_no_activity_could_be_read(tmp_path):
-    text = GOOD.replace("\t0\t1\n%E", "\t0\n%E")  # the only activity is one value short
+    text = GOOD.replace("\tTT_Task\t0\t1\n%E", "\tTT_Task\n%E")  # the only activity stops before its float, which the checks need
     assert reason(save(tmp_path, text)) == (
-        "none of its activities could be read; the first broken row is line 4: TASK row has 5 values, expected 6")
+        "none of its activities could be read; the first broken row is line 4: TASK row has 4 values, expected 6")
 
 
 def test_byte_order_mark_is_not_a_broken_row(tmp_path):

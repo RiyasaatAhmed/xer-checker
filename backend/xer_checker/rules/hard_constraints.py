@@ -1,7 +1,8 @@
 """Hard constraints: an activity pinned to a date that overrides its logic.
 
-DCMA-EA PAM 200.1, section 4.5 (Hard Constraints): Must Start On, Must Finish On and their on or before
-forms, should not exceed 5%. Soft constraints (on or after, as late as possible) are fine.
+DCMA-EA PAM 200.1, section 4.5 (Hard Constraints): Must Finish On, Must Start On, Start No Later Than and
+Finish No Later Than, should not exceed 5%. Soft constraints (on or after, as late as possible) are fine.
+The checker also counts P6's Mandatory Start and Mandatory Finish: they override the logic even more.
 """
 
 # ---------- Constants ----------

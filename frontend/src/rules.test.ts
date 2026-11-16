@@ -8,6 +8,13 @@ describe('problemText', () => {
     expect(problemText(rule('high-float', 1))).toEqual({ count: '1', text: 'activity has more than 44 working days of float' })
     expect(problemText(rule('high-float', 1170))).toEqual({ count: '1,170', text: 'activities have more than 44 working days of float' })
   })
+  it('words the checks a scheduler adds to DCMA', () => {
+    const rule = (id: string, count: number) => ({ id, name: id, count, measure: 'percent' })
+    expect(problemText(rule('logic-loops', 2)).text).toBe('activities are on logic loops')
+    expect(problemText(rule('missing-calendars', 1)).text).toBe('activity uses a calendar that isn’t in the file')
+    expect(problemText(rule('long-lags', 8)).text).toBe('activities have a lead or lag of 10 working days or more')
+  })
+
   it('still makes a sentence for a check it has no words for', () => {
     expect(problemText({ id: 'dangling', name: 'Dangling activities', count: 4, measure: 'percent' }).text).toBe('activities are flagged by the Dangling activities check')
   })

@@ -14,16 +14,17 @@ To add a rule: add its file here, then add it to RULES.
 """
 
 from . import (bei, cpli, critical_path_test, duplicate_links, hard_constraints, high_float, invalid_dates, lags, leads,
-               link_types, long_durations, missed_tasks, missing_links, negative_float, out_of_sequence, resources)
+               link_types, logic_loops, long_durations, long_lags, missed_tasks, missing_calendars, missing_links,
+               negative_float, open_start_finish, out_of_sequence, resources, status_conflicts)
 
 # ---------- Constants ----------
 
 # In the order the report and the check board show them: one set after another.
-RULES = (missing_links, leads, lags, link_types, duplicate_links, out_of_sequence,
+RULES = (missing_links, open_start_finish, logic_loops, leads, lags, long_lags, link_types, duplicate_links, out_of_sequence,
          hard_constraints,
          negative_float, high_float,
-         long_durations,
-         invalid_dates,
+         long_durations, missing_calendars,
+         invalid_dates, status_conflicts,
          resources,
          missed_tasks, critical_path_test, cpli, bei)
 LIMITS = {rule.NAME: rule.LIMIT for rule in RULES}  # {check name: limit}

@@ -12,6 +12,8 @@ NO_BASELINE = "Needs a baseline schedule. The checker reads the current file onl
 NO_DELAY_TEST = "Needs a delay test that the checker can't run yet."
 NO_RESOURCES = "The file has no resource assignments."
 NO_DATA_DATE = "The file has no data date."
+NO_ACTUAL_DATES = "The file has no actual dates."
+ACTUAL_START = "act_start_date"  # the TASK column a P6 export always writes, blank or not
 
 
 def data_dates(tables):
@@ -27,6 +29,8 @@ def reasons(tables):
         out["resources"] = NO_RESOURCES
     if not data_dates(tables):
         out["data date"] = NO_DATA_DATE
+    if not any(ACTUAL_START in task for task in tables.get("TASK", [])):  # the column is missing, not just blank
+        out["actual dates"] = NO_ACTUAL_DATES
     return out
 
 

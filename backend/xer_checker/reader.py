@@ -31,7 +31,7 @@ END_OF_FILE = "%E"  # last line of a complete file
 
 # The columns the checks can't run without, per table
 REQUIRED_COLUMNS = {
-    "TASK": ("task_id", "task_code", "task_type", "status_code", "total_float_hr_cnt", "clndr_id"),
+    "TASK": ("task_id", "task_code", "task_type", "status_code", "total_float_hr_cnt"),  # no calendar: Missing calendars flags it
     "TASKPRED": ("task_id", "pred_task_id"),
     "CALENDAR": ("clndr_id",),
 }

@@ -5,7 +5,7 @@ from xer_checker.rules import long_durations
 
 
 def lasting(days):
-    return Activity("A1", has_predecessor=True, has_successor=True, float_days=0, duration_days=days)
+    return Activity("A1", has_predecessor=True, has_successor=True, float_days=0, original_days=days)
 
 
 def test_fails_over_44_days():

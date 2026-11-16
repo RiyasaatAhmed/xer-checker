@@ -17,6 +17,7 @@ from openpyxl import load_workbook
 
 from xer_checker.checks import DEFAULT_HOURS_PER_DAY, FINISHED, NOT_CHECKED_TYPES, check, number
 from xer_checker.reader import read_xer
+from xer_checker.rules.long_lags import LONG_LAG_DAYS
 from xer_checker.schedule import read_schedule
 
 # ---------- Constants ----------
@@ -30,15 +31,16 @@ KAZINEX_SHEETS = {  # our check -> the Kazinex sheet that holds the same check
 LINK_SHEETS = {  # our link check -> the Kazinex sheet that lists the same links, under DCMA's limit
     "Leads": "Logic-Negative Lag Check",  # its 0 limit lists every lead; Kazinex's "Leads Check" allows 5% and lists none
     "Lags": "Logic-Lags Check",
+    "Long lags": "Logic-Long Lags Check",  # a lead or lag of 10 working days or more
 }
 AFFECTED_BLOCK = "Affected Activities"  # Kazinex lists flagged activities under "Issue N - Affected Activities"
 FLOAT_TOLERANCE = 0.01  # Kazinex shows float in days with 2 decimals
 LAG_TOLERANCE = 0.01  # Kazinex shows lag in days on the earlier activity's calendar
 
 # The numbers in the README. Changing one needs a reason.
-EXPECTED = {  # file: (checked, missing links, negative float, high float, leads, lags)
-    "CSTv2.4.xer": (133, 20, 0, 78, 0, 1),
-    "example_xer_file.xer": (365, 6, 0, 170, 11, 26),
+EXPECTED = {  # file: (checked, missing links, negative float, high float, leads, lags, long lags)
+    "CSTv2.4.xer": (133, 20, 0, 78, 0, 1, 0),
+    "example_xer_file.xer": (365, 6, 0, 170, 11, 26, 8),
 }
 FILES = list(EXPECTED)
 CHECKS = list(KAZINEX_SHEETS)
@@ -136,15 +138,17 @@ def kazinex_links(file_name, check_name):
 
 
 def our_links(file_name, check_name):
-    """{(earlier code, later code): lag in days} for our counted links with a lead or a lag, and the tables."""
+    """{(earlier code, later code): lag in days} for our counted links the check picks, and the tables."""
     tables, _, _ = read_xer(ROOT / "data" / file_name)
     schedule = read_schedule(tables)
     code = {a.p6_id: a.code for a in schedule.activities}
     calendar = {t["task_id"]: t["clndr_id"] for t in tables["TASK"]}
     hours_per_day = {c["clndr_id"]: number(c.get("day_hr_cnt", "")) or DEFAULT_HOURS_PER_DAY for c in tables["CALENDAR"]}
-    picked = (lambda hours: hours < 0) if check_name == "Leads" else (lambda hours: hours > 0)
-    return tables, {(code[l.pred_p6_id], code[l.succ_p6_id]): abs(l.lag_hours) / hours_per_day.get(calendar[l.pred_p6_id], DEFAULT_HOURS_PER_DAY)
-                    for l in schedule.links if l.line in schedule.counted and picked(l.lag_hours)}
+    picked = {"Leads": lambda hours, days: hours < 0, "Lags": lambda hours, days: hours > 0,
+              "Long lags": lambda hours, days: days >= LONG_LAG_DAYS}[check_name]
+    days = {l.line: abs(l.lag_hours) / hours_per_day.get(calendar[l.pred_p6_id], DEFAULT_HOURS_PER_DAY) for l in schedule.links}
+    return tables, {(code[l.pred_p6_id], code[l.succ_p6_id]): days[l.line]
+                    for l in schedule.links if l.line in schedule.counted and picked(l.lag_hours, days[l.line])}
 
 
 @pytest.mark.parametrize("file_name", FILES)

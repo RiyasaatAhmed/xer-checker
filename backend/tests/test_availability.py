@@ -24,5 +24,10 @@ def test_invalid_dates_need_a_data_date():
     assert "Invalid dates" not in names({"PROJECT": [PROJECT]})
 
 
+def test_status_conflicts_need_the_actual_date_columns_even_when_blank():
+    assert unavailable(RULES, {"TASK": [{"task_id": "1"}]})["Status conflicts"] == "The file has no actual dates."
+    assert "Status conflicts" not in names({"TASK": [{"task_id": "1", "act_start_date": ""}]})  # the column is there, blank
+
+
 def test_a_project_with_a_bad_date_is_left_out():
     assert data_dates({"PROJECT": [PROJECT, {"proj_id": "P2", "last_recalc_date": "soon"}]}).keys() == {"P1"}
