@@ -68,6 +68,7 @@ cd frontend && npm install && npm test
 | [Results](docs/results.md) | What the numbers on the 2 files mean |
 | [Validation](docs/validation.md) | How every number is tested against Kazinex |
 | [Running it](docs/running.md) | Without Docker, the command line, and broken files |
+| [Deployment](docs/deployment.md) | The live demo on AWS EC2: why, its settings, cost, and the steps taken |
 | [The API](docs/api.md) | The endpoints, their answers and status codes |
 | [The AI summary](docs/ai-summary.md) | How the AI is kept from inventing a number, and how to set it up |
 | [The code](docs/code.md) | The folders, and every file's job |
