@@ -75,3 +75,17 @@ def test_deleting_an_upload_removes_it_and_everything_saved_with_it(client, db_s
 
 def test_deleting_an_unknown_upload_is_404(client):
     assert client.delete(f"/api/uploads/{uuid.uuid4()}").status_code == 404
+
+
+def test_an_upload_named_with_a_progress_id_reports_its_progress(client):
+    progress_id = "4d2c9b1e-0000-4000-8000-000000000042"
+    assert client.get(f"/api/uploads/progress/{progress_id}").status_code == 404  # nothing sent yet
+    response = client.post("/api/uploads", files={"file": ("CSTv2.4.xer", CST)}, headers={"X-Progress-Id": progress_id})
+    assert response.status_code == 200
+    assert client.get(f"/api/uploads/progress/{progress_id}").json() == {"percent": 100, "stage": "Done"}
+
+
+def test_a_file_that_cant_be_checked_ends_its_progress_too(client):
+    progress_id = "4d2c9b1e-0000-4000-8000-000000000043"
+    client.post("/api/uploads", files={"file": ("empty.xer", b"")}, headers={"X-Progress-Id": progress_id})
+    assert client.get(f"/api/uploads/progress/{progress_id}").json() == {"percent": 100, "stage": "Can't be checked"}

@@ -197,6 +197,12 @@ class CheckStatus(BaseModel):
     na_reason: str | None = Field(default=None, description="Why the check could not run")
 
 
+class Progress(BaseModel):
+    """How far one upload has got, for the progress bar."""
+    percent: int = Field(description="45 to 100: the stages after the browser has sent the file")
+    stage: str = Field(description='What the page says, like "Running the checks"')
+
+
 class UploadSummary(BaseModel):
     """One upload in the list of recent uploads."""
     upload_id: uuid.UUID

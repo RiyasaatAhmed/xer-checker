@@ -77,9 +77,9 @@ export function App() {
     // The check runs on the home page, which then shows each check's result; the full report is a click away
     go(null)
     setView({ step: 'empty' })
-    setFresh({ name: file.name, result: null })
+    setFresh({ name: file.name, result: null, progress: { percent: 1, stage: 'Sending the file' } })
     try {
-      const result = await uploadXer(file)
+      const result = await uploadXer(file, (progress) => setFresh((now) => (now && now.result === null ? { ...now, progress } : now)))
       await listUploads().then(setUploads, () => undefined) // the list first, so the page's layout settles before the checks arrive
       setFresh({ name: file.name, result })
     } catch (error) {

@@ -1,6 +1,7 @@
 """Checking, saving and reading back uploads (modules/uploads/service.py)."""
 
 import hashlib
+import logging
 
 import pytest
 from helpers import ROOT
@@ -80,7 +81,7 @@ def test_the_list_shows_the_newest_first_with_headline_numbers(db_session):
     assert (newest.file_name, newest.checked) == ("example_xer_file.xer", 365)
     assert (older.file_name, older.checked) == ("CSTv2.4.xer", 133)
     assert newest.flags == sum(c.status == "flag" for c in newest.checks) > 1  # the strip and the count agree
-    assert [c.id for c in newest.checks][:3] == ["missing-links", "leads", "lags"]  # in report order
+    assert [c.id for c in newest.checks][:3] == ["missing-links", "open-start-finish", "logic-loops"]  # in report order
     assert (older.project, older.data_date.year) == ("CSTv2.4", 2026)
     assert len(list_uploads(db_session, 1)) == 1
 
@@ -194,3 +195,19 @@ def test_the_list_counts_broken_rows_projects_and_check_severity(db_session):
     [line] = list_uploads(db_session, 20)
     assert (line.broken_rows, line.projects) == (0, 1)
     assert {c.id: c.severity for c in line.checks}["missing-links"] == 3
+
+
+def test_an_upload_logs_each_stage_so_it_can_be_followed_live(db_session, caplog):
+    caplog.set_level(logging.INFO, logger="xer.upload")
+    check_upload(db_session, "CSTv2.4.xer", CST)
+    stages = [r.getMessage() for r in caplog.records if r.name == "xer.upload"]
+    assert [m.split(" ")[0] for m in stages] == ["1/3", "2/3", "3/3"]
+    assert stages[0].startswith("1/3 received CSTv2.4.xer") and "checked 133 activities" in stages[1]
+
+
+def test_a_file_that_cant_be_checked_logs_why(db_session, caplog):
+    caplog.set_level(logging.INFO, logger="xer.upload")
+    with pytest.raises(FileError):
+        check_upload(db_session, "empty.xer", b"")
+    assert caplog.records[-1].getMessage().startswith("2/3 can't be checked: the file is empty")
+

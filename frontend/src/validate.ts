@@ -3,7 +3,7 @@
 
 // ---------- Constants ----------
 
-export const MAX_UPLOAD_MB = 50 // the backend's own limit
+export const MAX_UPLOAD_MB = 500 // the backend's own limit
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 const XER = /\.xer$/i // P6's export extension
 

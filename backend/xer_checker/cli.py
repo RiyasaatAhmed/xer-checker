@@ -29,14 +29,20 @@ XER_PATTERN = "*.xer"  # which files in DATA_DIR to read
 CHART_FILE = "chart.png"  # where the chart is saved
 
 
-def check_file(path):
-    """Read one .xer file, run the checks and summarize them. Raises FileError if it can't be checked."""
+def check_file(path, on_stage=lambda stage: None):
+    """Read one .xer file, run the checks and summarize them. Raises FileError if it can't be checked.
+
+    on_stage is told each step as it ends: "read", "checked", then "summarized". The API's progress bar uses it.
+    """
     tables, broken, notes = read_xer(path)  # 1. read
+    on_stage("read")
     checked, failures, problems = check(tables)  # 2. check
+    on_stage("checked")
     broken = broken + problems  # rows the reader couldn't use, then data the checks couldn't use
     skipped = unavailable(RULES, tables)  # checks this file can't support, with the reason
     facts = summary_facts(checked, failures, broken, skipped)  # 3. summarize: code's numbers, AI's words
     points, author = summarize(facts)
+    on_stage("summarized")
     return FileResult(path.name, checked, failures, broken, notes, points, author, facts, read_schedule(tables), skipped)
 
 

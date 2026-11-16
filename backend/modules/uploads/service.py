@@ -4,7 +4,9 @@ The answer is always read back from the database, so a result looks the same now
 """
 
 import hashlib  # the file's fingerprint
+import logging  # one line per stage of an upload, to follow it live (scripts/watch-uploads.sh)
 import tempfile  # a folder that's deleted after the check
+import time  # how long each stage takes
 from collections import Counter  # broken rows per upload
 from pathlib import Path
 
@@ -24,6 +26,7 @@ from xer_checker.rules import BY_METRIC, RULES, rule_id
 # ---------- Constants ----------
 
 DEFAULT_FILE_NAME = "upload.xer"  # used when the upload has no name
+LOG = logging.getLogger("xer.upload")  # the stages of each upload: received, checked, saved
 READY, FAILED = "ready", "failed"  # an upload's status
 OTHER_GROUP = "Other"  # the group of a saved check this version of the checker no longer has
 AI_AUTHOR = "Gemini"  # how the summary's author starts when the AI wrote it
@@ -33,28 +36,39 @@ TO_STATUS = {"pass": "pass", "flag": "flag", "not_applicable": "n/a"}  # databas
 
 # ---------- Check and save ----------
 
-def check_upload(session, file_name, content):
+def check_upload(session, file_name, content, on_stage=lambda stage: None):
     """Check one file, save it with its results, and return them as saved.
 
     A file that can't be checked is saved as failed, then FileError is raised with the plain reason.
+    on_stage is told each stage as it ends, for the progress bar: see progress.py.
     """
     name = Path(file_name or "").name or DEFAULT_FILE_NAME  # drop any folders: "../x.xer" -> "x.xer"
     upload = Upload(file_name=name, size_bytes=len(content), sha256=hashlib.sha256(content).hexdigest(), status=READY)
+    LOG.info("1/3 received %s (%s KB)", name, round(len(content) / 1024))
+    started = time.monotonic()
     try:
-        result = run_checker(content)
+        result = run_checker(content, on_stage)
     except FileError as problem:
         upload.status, upload.failure_reason = FAILED, str(problem)
         session.add(upload)
         session.commit()
+        LOG.info("2/3 can't be checked: %s. Saved as failed", problem)
+        on_stage("failed")
         raise
+    flagged = sum(1 for n, codes in result.failures.items() if n not in result.unavailable and codes)
+    LOG.info("2/3 checked %s activities in %.1f s: %s broken rows, %s checks flag something. Summary by %s",
+             result.checked, time.monotonic() - started, len(result.broken), flagged, result.author)
+    started = time.monotonic()
     session.add(upload)
     session.flush()  # write the upload first, so its results can point to it
     save_results(session, upload.id, result)
     session.commit()  # one transaction: the upload and all its results, or nothing
+    LOG.info("3/3 saved upload %s in %.1f s", upload.id, time.monotonic() - started)
+    on_stage("saved")
     return get_upload(session, upload.id)
 
 
-def run_checker(content):
+def run_checker(content, on_stage=lambda stage: None):
     """The same steps as the command line (read, check, summarize), on a temporary copy of the file.
 
     The copy has a fixed name: the user's name can be "..", too long, or hold characters the disk refuses.
@@ -62,7 +76,7 @@ def run_checker(content):
     with tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / DEFAULT_FILE_NAME
         path.write_bytes(content)
-        return check_file(path)
+        return check_file(path, on_stage)
 
 
 def save_results(session, upload_id, result):
