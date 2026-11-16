@@ -211,3 +211,14 @@ def test_a_file_that_cant_be_checked_logs_why(db_session, caplog):
         check_upload(db_session, "empty.xer", b"")
     assert caplog.records[-1].getMessage().startswith("2/3 can't be checked: the file is empty")
 
+
+def test_each_set_counts_its_flagged_activities_once(db_session):
+    saved = check_upload(db_session, "CSTv2.4.xer", CST)
+    sets = {s.group: s.flagged for s in saved.sets}
+    count = {r.id: r.count for r in saved.rules}
+    assert list(sets) == list(dict.fromkeys(r.group for r in saved.rules))  # every set, in the rules' order
+    assert sets["Float"] == count["high-float"] + count["negative-float"] == 78  # no activity is both
+    assert sets["Duration"] == count["long-durations"] == 23
+    logic = [r.count for r in saved.rules if r.group == "Logic"]
+    assert max(logic) <= sets["Logic"] <= sum(logic)  # an activity failing 2 Logic checks counts once
+    assert sets["Execution"] == 0  # its checks can't run

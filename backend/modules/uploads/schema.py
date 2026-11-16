@@ -159,6 +159,12 @@ class Repeat(BaseModel):
     checks: list[str] = Field(default=[], description="The IDs of the checks that flag it")
 
 
+class SetCount(BaseModel):
+    """How many activities fail at least one check of one set."""
+    group: str = Field(description="The set, like 'Logic'")
+    flagged: int = Field(description="Activities checked that fail at least one check in the set; each counts once")
+
+
 class FixFirst(BaseModel):
     """Where one fix helps most."""
     open_ends: list[OpenEnd] = Field(default=[], description="One missing link that may clear many flags")
@@ -182,6 +188,7 @@ class CheckResult(BaseModel):
     months: list[str] = Field(default=[], description="The month axis of WbsGroup.heat, like '2026-07'")
     previous: Previous | None = Field(default=None, description="The last earlier upload of the same file, if any")
     fix_first: FixFirst = Field(default=FixFirst(), description="Where one fix helps most")
+    sets: list[SetCount] = Field(default=[], description="Activities flagged per set of checks, in the order of the rules")
 
 
 class CheckStatus(BaseModel):

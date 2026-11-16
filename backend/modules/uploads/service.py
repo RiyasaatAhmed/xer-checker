@@ -12,7 +12,7 @@ from pathlib import Path
 
 from sqlmodel import col, select
 
-from modules.uploads.insights import fix_first, named, previous_of
+from modules.uploads.insights import fix_first, flagged_by_set, named, previous_of
 from modules.uploads.model import FileIssue, MetricResult, MetricResultActivity, Review, ScheduleProject, Upload, as_utc
 from modules.uploads.schema import CheckActivities, CheckResult, CheckStatus, RowNote, RuleResult, UploadSummary
 from modules.uploads.snapshot import bulk_insert, kinded, load_schedule, read_overview, read_rows, read_structure, save_schedule
@@ -143,7 +143,8 @@ def get_upload(session, upload_id):
         notes=[RowNote(line=i.line_number, message=i.message) for i in issues if i.severity == "note"],
         summary=review.points, summary_author=review.author_note, projects=projects, overview=schedule_overview,
         structure=groups, months=months, previous=previous_of(session, upload),
-        fix_first=fix_first(activities, links, flags, [rule.id for rule in rules]))
+        fix_first=fix_first(activities, links, flags, [rule.id for rule in rules]),
+        sets=flagged_by_set(flags, [rule.group for rule in rules]))
 
 
 def get_check(session, upload_id, check_id):

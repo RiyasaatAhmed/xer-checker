@@ -5,7 +5,7 @@ from collections import Counter
 from sqlmodel import col, select
 
 from modules.uploads.model import MetricResult, Upload, as_utc
-from modules.uploads.schema import FixFirst, OpenEnd, Previous, Repeat
+from modules.uploads.schema import FixFirst, OpenEnd, Previous, Repeat, SetCount
 from xer_checker.causes import open_ends
 from xer_checker.rules import BY_METRIC, rule_id
 
@@ -53,3 +53,13 @@ def fix_first(activities, links, flags, check_ids=()):
 def named(numbers, check_ids):
     """The IDs of the checks with these numbers, in report order. Empty when the IDs aren't known."""
     return [check_ids[n] for n in sorted(numbers) if n < len(check_ids)]
+
+
+def flagged_by_set(flags, rule_groups):
+    """[SetCount] in the rules' order: how many activities fail at least one check of each set.
+
+    flags: {activity code: the numbers of the checks that flag it}. rule_groups: each check's set, by its number.
+    An activity failing 3 Logic checks counts once for Logic.
+    """
+    return [SetCount(group=group, flagged=sum(1 for numbers in flags.values() if any(rule_groups[n] == group for n in numbers)))
+            for group in dict.fromkeys(rule_groups)]
