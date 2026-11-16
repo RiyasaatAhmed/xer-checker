@@ -1,8 +1,8 @@
 import { Check, Flag } from 'lucide-react'
 import type { RuleStatus } from '../types'
 
-/** How the headline checks came out, in one pill: "2 of 5 over the limit" or "All 5 within the limit". */
-export function HeadlineBadge({ checks }: { checks: { status: RuleStatus }[] }) {
+/** How a file's checks came out, in one pill: "7 of 17 over the limit" or "All 17 within the limit". Checks that couldn't run aren't counted. */
+export function ChecksBadge({ checks }: { checks: { status: RuleStatus }[] }) {
   const ran = checks.filter((c) => c.status !== 'n/a')
   const over = ran.filter((c) => c.status === 'flag').length
   if (ran.length === 0) return <span className="pill none">No check could run</span>

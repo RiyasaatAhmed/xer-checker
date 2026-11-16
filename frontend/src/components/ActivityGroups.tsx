@@ -11,7 +11,7 @@ import { VirtualList } from './VirtualList'
 // ---------- Constants ----------
 
 const HEAD_PX = 40 // a group header
-const ROW_PX = { wide: 60, phone: 112 } // an activity line: on a phone its parts stack, so it is taller
+const ROW_PX = { wide: 60, phone: 128 } // an activity line: on a phone its 3 parts stack, with room around them
 const WINDOW_PX = 520 // the list is this tall at most, however many activities there are
 const BUDGET = 24 // groups open by themselves while their rows add up to this: a small result shows everything at once
 const FLOAT_BAR_PX = 48 // the longest float bar
@@ -113,18 +113,19 @@ export function ActivityGroups({ groups, categories, categoryOf, resetKey, domai
         const span = domain && r.start && r.finish ? { left: percentAt(domain, r.start), width: Math.max(1.5, percentAt(domain, r.finish) - percentAt(domain, r.start)) } : null
         return (
           <div className="arow">
+            {/* Two lines that always fit the row's fixed height: the ID and its chip, then the name and WBS, cut with "…" */}
             <span className="who">
-              <span className="who-top">
-                <span className={`sdot ${STATUS_TONE[r.status] ?? 'step-1'}`} data-tip={r.status} role="img" aria-label={r.status} />
-                <span className="id mono">{r.code}</span>
+              <span className={`sdot ${STATUS_TONE[r.status] ?? 'step-1'}`} data-tip={r.status} role="img" aria-label={r.status} />
+              <span className="id mono">{r.code}</span>
+              {(r.fails ?? 1) > 1 && (
+                <span className="fails" data-tip={r.failed && r.failed.length > 0 ? `Fails ${r.failed.map((id) => checkNames[id] ?? id).join(', ')}` : 'Flagged by more than one check'}>
+                  fails {r.fails}
+                </span>
+              )}
+              <span className="who-line" data-tip={r.wbs !== it.group.name ? `${r.name} · ${r.wbs}` : r.name}>
                 <span className="name">{r.name}</span>
-                {(r.fails ?? 1) > 1 && (
-                  <span className="fails" data-tip={r.failed && r.failed.length > 0 ? `Fails ${r.failed.map((id) => checkNames[id] ?? id).join(', ')}` : 'Flagged by more than one check'}>
-                    fails {r.fails}
-                  </span>
-                )}
+                {r.wbs !== it.group.name && <span className="wbs">{r.wbs}</span>}
               </span>
-              {r.wbs !== it.group.name && <span className="wbs">{r.wbs}</span>}
             </span>
             <LogicChain row={r} tone={categoryOf(r).tone} />
             <span className="afloat num" data-tip={`Total float ${daysText(r.float_days)} d. Bar below: ${rangeText(r.start, r.finish)}${dataDate ? `, against the data date ${dayText(dataDate)}` : ''}`}>

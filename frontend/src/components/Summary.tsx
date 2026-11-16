@@ -38,7 +38,7 @@ export function Summary({ points, author, result, project }: Props) {
           {copied ? <Check size={15} strokeWidth={2.5} aria-hidden /> : <Copy size={15} aria-hidden />}
         </button>
       </div>
-      <details className="summary">
+      <details className="summary" open>
         <summary>
           <h2 id="summary-title">Summary</h2>
           <span className="pill info">{byAi ? 'Written by AI' : 'Written by code'}</span>

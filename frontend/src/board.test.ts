@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barAt, changes, flaggedIn, groupsOf, heatFor, isSerious, limitParts, ratio, shade, tally, headlineOf, trendOf, worstFirst, worstSort } from './board'
+import { changes, flaggedIn, groupsOf, heatFor, isSerious, ratio, shade, tally, trendOf, worstFirst, worstSort } from './board'
 import type { RuleResult } from './types'
 
 function rule(id: string, over: Partial<RuleResult> = {}): RuleResult {
@@ -37,21 +37,6 @@ describe('serious checks and their words', () => {
   it('calls a check of severity 2 or more serious', () => {
     expect([1, 2, 3].map((severity) => isSerious({ severity }))).toEqual([false, true, true])
     expect(isSerious({})).toBe(false) // an older check with no severity
-  })
-  it('sets a failing check against its limit: times over it, or none allowed for a limit of 0', () => {
-    expect(limitParts(rule('a', { status: 'flag', percent: 46.6, count: 170 }), 365)).toEqual({ share: '46.6%', against: '9.3x the 5% limit' })
-    expect(limitParts(rule('a', { status: 'flag', percent: 29.9, count: 109, limit_percent: 0 }), 365)).toEqual({ share: '29.9%', against: 'none allowed' })
-  })
-  it('shows a count, not a share, for a small file, and the limit alone for an index', () => {
-    expect(limitParts(rule('a', { status: 'flag', percent: 25, count: 1 }), 4)).toEqual({ share: '1 of 4', against: '5.0x the 5% limit' })
-    expect(limitParts(rule('a', { status: 'flag', measure: 'index', limit_percent: 0.95 }), 365)).toEqual({ share: '', against: 'limit 0.95' })
-  })
-  it('draws every bar on one scale: the limit at a tenth of the bar, ten times the limit at its end', () => {
-    expect(barAt(5, 5)).toBe(10)
-    expect(barAt(15, 5)).toBe(30) // 3x the limit
-    expect(barAt(14, 10)).toBeCloseTo(14) // 1.4x a 10% limit
-    expect(barAt(90, 5)).toBe(100) // past the end: capped
-    expect(barAt(3, 0)).toBe(0) // a limit of 0 has no bar
   })
 })
 
@@ -113,11 +98,5 @@ describe('worstSort', () => {
 describe('shade', () => {
   it('steps up with the share flagged, and is 0 for none', () => {
     expect([0, 0.04, 0.1, 0.3, 0.9].map(shade)).toEqual([0, 1, 2, 3, 4])
-  })
-})
-
-describe('headlineOf', () => {
-  it('picks the 5 headline checks in the demo\'s order, and leaves out one the file lacks', () => {
-    expect(headlineOf([rule('high-float'), rule('link-types'), rule('lags'), rule('leads'), rule('missing-links')]).map((r) => r.id)).toEqual(['missing-links', 'leads', 'lags', 'high-float'])
   })
 })

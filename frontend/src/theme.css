@@ -33,10 +33,10 @@
   --float-near2: #6d5223;
   --float-fine: #3f3f46;
   --float-fine2: #71717a;
-  --heat-1: #2c1c1f;
-  --heat-2: #4b2c30;
-  --heat-3: #7f4a4d;
-  --heat-4: #b9696b;
+  --heat-1: rgba(217, 112, 111, 0.14); /* the flag red at 4 strengths: one hue, so the steps read as more or less of one thing */
+  --heat-2: rgba(217, 112, 111, 0.3);
+  --heat-3: rgba(217, 112, 111, 0.55);
+  --heat-4: rgba(217, 112, 111, 0.9);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 34px -18px rgba(0, 0, 0, 0.8);
   --heat-4-ink: #0b0b0e; /* text on the darkest heat cell */

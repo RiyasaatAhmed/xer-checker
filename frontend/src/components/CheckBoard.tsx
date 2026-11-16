@@ -1,9 +1,13 @@
 import { ChevronDown, ChevronRight, Minus, X } from 'lucide-react'
 import { useState } from 'react'
 import { ROWS_SHOWN, SHOW_ALL_UP_TO, isSerious, trendOf, worstFirst } from '../board'
-import type { Previous, RuleResult } from '../types'
+import type { Previous, RuleResult, SetCount } from '../types'
+
+// ---------- Constants ----------
+
+const TICKS = [0, 25, 50, 75, 100] // the board's axis, in % of the activities checked
 import { CheckRow } from './CheckRow'
-import { HealthStrip } from './HealthStrip'
+import { SetBars } from './SetBars'
 
 interface Props {
   rules: RuleResult[]
@@ -15,10 +19,12 @@ interface Props {
   notes?: Record<string, string> // what else a row counts, by check ID: { leads: "18 leads" }
   onPick: (id: string) => void
   onGroup: (group: string | null) => void
+  sets?: SetCount[] // activities flagged per set, drawn as bars over the rows
 }
 
-/** All the checks in one card. Failing checks are rows, worst first. Passing ones and ones that can't run fold into a line each. */
-export function CheckBoard({ rules, previous, selected, group, lowestFloat, checked, notes = {}, onPick, onGroup }: Props) {
+/** All the checks in one card, under one heading. Failing checks are rows, worst first, under Serious and Minor.
+ *  Passing ones and ones that can't run fold into a line each. */
+export function CheckBoard({ rules, previous, selected, group, lowestFloat, checked, notes = {}, onPick, onGroup, sets = [] }: Props) {
   const [more, setMore] = useState(false)
   const inScope = group ? rules.filter((r) => r.group === group) : rules
   const failing = worstFirst(inScope)
@@ -46,8 +52,13 @@ export function CheckBoard({ rules, previous, selected, group, lowestFloat, chec
       ))
 
   return (
-    <section className="card board" aria-label="Checks">
-      <HealthStrip rules={rules} selected={selected} group={group} onPick={onPick} onGroup={onGroup} />
+    <section className="card board" aria-labelledby="board-title">
+      <div className="card-head">
+        <h2 id="board-title">Checks</h2>
+      </div>
+      {/* One axis for the set bars and the check rows under them */}
+      <Axis checked={checked} />
+      {sets.length > 0 && <SetBars sets={sets} rules={rules} checked={checked} group={group} onGroup={onGroup} />}
       {group && (
         <span className="chip">
           {group} checks only
@@ -69,9 +80,6 @@ export function CheckBoard({ rules, previous, selected, group, lowestFloat, chec
         </>
       ) : (
         <>
-          <h2 className="board-title">
-            Needs attention <span className="faint num">{failing.length}</span>
-          </h2>
           {failing.length === 0 ? <p className="hint board-none">Nothing in {group ?? 'the file'} is over its limit.</p> : tiers(shown)}
           {!few && failing.length > ROWS_SHOWN && (
             <button type="button" className="link-inline board-more" onClick={() => setMore(!more)}>
@@ -91,6 +99,22 @@ export function CheckBoard({ rules, previous, selected, group, lowestFloat, chec
         </>
       )}
     </section>
+  )
+}
+
+/** The scale every bar is drawn on, once over the rows: 0 to 100% of the activities checked. It sits in the bars' column. */
+function Axis({ checked }: { checked: number }) {
+  return (
+    <div className="crow-axis" aria-hidden="true">
+      <span className="crow-axis-label">% of {checked.toLocaleString()} activities checked</span>
+      <span className="crow-axis-scale">
+        {TICKS.map((t) => (
+          <span key={t} style={{ left: `${t}%` }}>
+            {t}%
+          </span>
+        ))}
+      </span>
+    </div>
   )
 }
 

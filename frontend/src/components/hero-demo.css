@@ -68,26 +68,35 @@
 .hd .hd-track .ss-meter__fill { background: var(--ss-accent); transition-duration: 0.42s; }
 .hd .ss-badge { font-weight: 700; }
 
-/* ---- The 5 headline checks: name, a bar with the limit marked, the figure ---- */
-.hd .hd-checks { display: grid; }
+/* ---- The checks, as the home page lays them out: by set, in 2 columns, each set saying how many are over ---- */
+.hd .hd-label { font-size: 12px; font-weight: 500; color: var(--ss-text); padding: 0 12px 6px; }
+.hd .hd-sets { display: grid; grid-template-columns: 292px 292px; gap: 24px; align-items: start; margin-bottom: 12px; } /* 608px: the right column's words end 16px inside the crop */
+.hd .hd-set__name { display: flex; gap: 4px; height: 26px; align-items: center; padding: 0 12px; font-size: 12px; color: var(--ss-text); }
+.hd .hd-set__label { color: var(--ss-text-strong); font-weight: 600; }
+.hd .hd-set__over { color: #e8a3a1; font-weight: 600; }
 .hd .hd-check {
-  display: grid; grid-template-columns: 116px 56px minmax(0, 1fr); align-items: center; gap: 12px;
-  height: 36px; padding: 0 12px; border-bottom: 1px solid var(--ss-line);
-  font-size: 13px; color: var(--ss-text-strong);
+  display: grid; grid-template-columns: 14px minmax(0, 1fr) 48px 64px; align-items: center; gap: 10px;
+  height: 30px; padding: 0 12px; border-bottom: 1px solid var(--ss-line);
+  font-size: 13px; color: var(--ss-text); /* within the limit: steps back, so the flags read first */
 }
-.hd .hd-check__name { font-weight: 600; white-space: nowrap; }
+.hd .hd-check svg { color: #5fd68a; }
+.hd .hd-check[data-over] { color: var(--ss-text-strong); }
+.hd .hd-check[data-over] svg { color: #e8a3a1; }
+.hd .hd-check__name { white-space: nowrap; }
+.hd .hd-check[data-over] .hd-check__name { font-weight: 600; }
+.hd .hd-check__value { justify-self: end; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.hd .hd-check[data-over] .hd-check__value { color: #e8a3a1; }
+/* The bar ends at 10 times the limit, so the mark sits at a tenth and a bar past it is over. No limit, no bar */
 .hd .hd-check__meter { position: relative; height: 6px; background: #27272a; }
-.hd .hd-check__fill { position: absolute; inset: 0 auto 0 0; background: #24c25e; transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.hd .hd-check__fill { position: absolute; inset: 0 auto 0 0; min-width: 3px; background: #24c25e; transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .hd .hd-check[data-over] .hd-check__fill { background: #d9706f; }
 .hd .hd-check__limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #fafafa; }
-.hd .hd-check__value { justify-self: end; font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
-/* The bar takes the rest of the row and runs off the stage with the window: it reads cut, words don't */
-.hd .hd-check[data-over] .hd-check__value { color: #e8a3a1; }
+.hd .hd-off { display: flex; align-items: center; gap: 6px; height: 30px; margin-top: 8px; padding: 0 12px; font-size: 12px; color: var(--ss-text); }
+.hd .hd-off svg { flex: none; color: var(--ss-text-faint); }
+.hd .hd-off .hd-set__label { color: var(--ss-text); }
 
-/* ---- Recent checks: placeholder rows under the result ---- */
-.hd .hd-recent { padding-top: 16px; }
-.hd .hd-label { font-size: 12px; font-weight: 500; color: var(--ss-text); padding: 0 12px 6px; }
-.hd .hd-recent__row { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--ss-line); }
+/* ---- The schedule saved before: a placeholder row under the result, running off the bottom ---- */
+.hd .hd-next { display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px; margin-bottom: 12px; border: 1px solid #3f3f46; }
 
 /* ---- The P6 export's icon: a page with a folded corner and a dark XER band ---- */
 .hd .hd-xer {
@@ -112,8 +121,10 @@
 .hd .hd-drag[data-dropped] .hd-drag__inner { transform: scale(0.5); transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
 .hd .hd-drag__name { padding: 1px 5px; border-radius: 4px; background: var(--ss-accent); color: #09090b; white-space: nowrap; line-height: 1.35; }
 
-/* ---- Compact (a phone column): shorter rows, so all 5 checks stay whole and the window stays wider than tall ---- */
+/* ---- Compact (a phone column): 1 column, shorter rows. The Logic set shows whole; the Float set would be cut, so it waits below the crop ---- */
 .hd .hd-page[data-compact] { padding: 12px; }
 .hd .hd-page[data-compact] .hd-drop { height: 46px; margin-bottom: 10px; }
 .hd .hd-page[data-compact] .hd-file { height: 42px; margin-bottom: 10px; }
-.hd .hd-page[data-compact] .hd-check { height: 32px; grid-template-columns: 104px 52px minmax(0, 1fr); }
+.hd .hd-page[data-compact] .hd-sets { grid-template-columns: 330px; margin-bottom: 12px; }
+.hd .hd-page[data-compact] .hd-set[data-side='right'] { display: none; }
+.hd .hd-page[data-compact] .hd-check { height: 28px; }

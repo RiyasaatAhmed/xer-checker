@@ -9,7 +9,7 @@ import type { CheckResult } from './types'
 
 vi.mock('./components/HeroDemo', () => ({ HeroDemo: () => null }))
 
-beforeEach(() => window.history.replaceState(null, '', `/uploads/${CST_RESULT.upload_id}`))
+beforeEach(() => window.history.replaceState(null, '', `/report/${CST_RESULT.upload_id}`))
 afterEach(() => vi.unstubAllGlobals())
 
 /** Open one saved result, as the address bar names it. */
@@ -23,36 +23,51 @@ const WITH_PATH: CheckResult = { ...CST_RESULT, overview: { ...CST_RESULT.overvi
 const BROKEN: CheckResult = { ...CST_RESULT, checked: 4, broken_rows: [{ line: 12, message: "TASK total float 'TBD' is not a number" }], notes: [{ line: 17, message: 'TASK row ends early' }] }
 
 describe('first scan', () => {
-  it('says the file read cleanly, then every check over the limit under Serious or Minor, with what each tier asks', async () => {
+  it('says the file read cleanly, how many checks are over the limit and how many are serious, and lists them once', async () => {
     const verdict = await open()
     expect(verdict).toHaveTextContent('File reads cleanly · 145 activities read')
-    const over = within(verdict).getByRole('group', { name: 'Checks over the limit' })
-    expect(within(over).getByRole('heading', { name: 'Serious 2 · fix these before trusting the dates' })).toBeInTheDocument()
-    expect(within(over).getByRole('heading', { name: 'Minor 1 · tidy these at the next update' })).toBeInTheDocument()
+    expect(verdict).toHaveTextContent('2 serious')
+    expect(verdict).toHaveTextContent('1 minor')
+    expect(within(verdict).queryByRole('group', { name: 'Checks over the limit' })).not.toBeInTheDocument() // the board lists them, not the verdict too
+    expect(screen.getAllByRole('button', { name: /^Missing links, / })).toHaveLength(1)
   })
 
-  it('writes each of the worst checks as a sentence: the count, what is wrong, its size against the limit, and why it matters', async () => {
-    const verdict = await open()
-    const line = within(verdict).getByRole('button', { name: /^20 activities are missing a link/ })
-    expect(line).toHaveTextContent('15.0% · 3.0x the 5% limit')
-    expect(line).toHaveTextContent('Work with an open end can slip without moving the finish date.')
-    await userEvent.setup().click(line)
-    expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}/checks/missing-links`)
+  it('draws every check on one axis of the activities checked, a limit of 0 too', async () => {
+    const lead = { ...CST_RESULT, rules: CST_RESULT.rules.map((r) => (r.id === 'leads' ? { ...r, status: 'flag' as const, count: 1, percent: 0.8 } : r)) }
+    await open(lead)
+    const board = screen.getByRole('region', { name: 'Checks' })
+    expect(board).toHaveTextContent('% of 133 activities checked')
+    const fill = (name: RegExp) => within(board).getByRole('button', { name }).querySelector<HTMLElement>('.crow-fill')?.style.width
+    expect(fill(/^High float, /)).toBe('58.6%')
+    expect(fill(/^Leads, /)).toBe('0.8%') // none allowed, and still a bar
   })
 
-  it('writes one activity in the singular, and a limit of 0 as none allowed', async () => {
-    const one = { ...CST_RESULT, rules: [...CST_RESULT.rules, { ...CST_RESULT.rules[0], id: 'out-of-sequence', name: 'Out-of-sequence work', severity: 2, dcma_section: '', limit_percent: 0, count: 1, percent: 0.8 }] }
-    const verdict = await open(one)
-    expect(within(verdict).getByRole('button', { name: /^1 activity started before a predecessor finished/ })).toHaveTextContent('0.8% · none allowed')
+  it('draws a bar per set of checks on the board\'s axis, says why a set can\'t run, and filters the rows to a set on a click', async () => {
+    await open()
+    const board = screen.getByRole('region', { name: 'Checks' })
+    const sets = within(board).getByRole('group', { name: 'Activities flagged, by set of checks' })
+    const logic = within(sets).getByRole('button', { name: 'Logic: 25 activities, 18.8%, 1 of 4 checks over the limit' }) // each activity counted once
+    expect(logic.querySelector<HTMLElement>('.crow-fill')?.style.width).toMatch(/^18\.79/)
+    expect(within(sets).getByRole('button', { name: /^Constraints: 0 activities, 0\.0%, every check within the limit$/ }).querySelector('.crow-fill')).toBeNull()
+    expect(sets).toHaveTextContent('1 check can’t run: The file has no resource assignments.')
+    await userEvent.setup().click(logic)
+    expect(logic).toHaveAttribute('aria-pressed', 'true')
+    expect(within(board).getByText('Logic checks only')).toBeInTheDocument()
   })
 
-  it('shows the checks past the worst 3 as chips that name their unit, and opens one on a click', async () => {
-    const many = { ...CST_RESULT, rules: CST_RESULT.rules.map((r) => (r.id === 'lags' ? { ...r, status: 'flag' as const, count: 9, percent: 6.8 } : r)) }
-    const verdict = await open(many)
-    const chip = within(verdict).getByRole('button', { name: 'Lags 9 activities' })
-    expect(chip).toHaveAttribute('data-tip', '9 activities have a lag on a link into them. 6.8% · 1.4x the 5% limit')
-    await userEvent.setup().click(chip)
-    expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}/checks/lags`)
+  it('puts what is wrong and why it matters in a failing row\'s tooltip, and opens its activities on a click', async () => {
+    await open()
+    const row = within(screen.getByRole('region', { name: 'Checks' })).getByRole('button', { name: /^Missing links, / })
+    expect(row).toHaveAttribute('data-tip', 'DCMA 4.1. 20 activities are missing a link before or after them. Work with an open end can slip without moving the finish date.')
+    await userEvent.setup().click(row)
+    expect(window.location.pathname).toBe(`/report/${CST_RESULT.upload_id}/checks/missing-links`)
+  })
+
+  it('opens an older /uploads link as the report, and moves the address to /report', async () => {
+    window.history.replaceState(null, '', `/uploads/${CST_RESULT.upload_id}/checks/high-float`)
+    await open()
+    expect(window.location.pathname).toBe(`/report/${CST_RESULT.upload_id}/checks/high-float`)
+    expect(await screen.findByRole('region', { name: /^High float: / })).toBeInTheDocument()
   })
 
   it('says what to do in P6 above the activities of a check', async () => {
@@ -109,21 +124,17 @@ describe('first scan', () => {
     await open(result)
     const board = screen.getByRole('region', { name: 'Checks' })
     expect(within(board).getByRole('button', { name: /^Lags,/ })).toHaveTextContent('1 activity (1 lag)')
-    expect(within(board).getByRole('button', { name: 'No resources: can\'t be checked' })).toBeInTheDocument()
+    await userEvent.setup().click(within(board).getByRole('button', { name: /Can’t be checked/ }))
+    expect(within(board).getByText('No resources')).toBeInTheDocument()
   })
 
-  it('folds a set of checks that all cannot run into one cell with their reason', async () => {
-    const result = { ...CST_RESULT, rules: [...CST_RESULT.rules, { ...CST_RESULT.rules[9], id: 'cpli', name: 'CPLI' }] }
-    await open(result)
-    const board = screen.getByRole('region', { name: 'Checks' })
-    expect(within(board).getByRole('button', { name: "Execution: 2 checks can't be checked. Needs a baseline schedule. The checker reads the current file only." })).toBeInTheDocument()
-  })
-
-  it('lists an activity picked in Fix first, filtered to its ID, and names the checks it fails', async () => {
+  it('shows the activities that fail the most checks as a grid, and lists one picked in Fix first, filtered to its ID', async () => {
     const result = { ...CST_RESULT, fix_first: { ...CST_RESULT.fix_first!, repeat_offenders: [{ ...CST_RESULT.fix_first!.repeat_offenders[0], checks: ['missing-links', 'long-durations'] }] } }
     await open(result)
     const fix = screen.getByRole('region', { name: 'Fix first' })
-    expect(fix).toHaveTextContent('ContractNo_CAL01 fails 2 checks: Missing links, Long durations.')
+    const grid = within(fix).getByRole('table', { name: 'Activities that fail the most checks' })
+    expect(within(grid).getAllByRole('rowheader').map((h) => h.textContent)).toEqual(['Missing links', 'Long durations', 'Checks failed'])
+    expect(within(grid).getByRole('img', { name: 'ContractNo_CAL01 fails Long durations' })).toBeInTheDocument()
     await userEvent.setup().click(within(fix).getByRole('button', { name: 'ContractNo_CAL03' }))
     expect(await screen.findByDisplayValue('ContractNo_CAL03')).toHaveAccessibleName('Filter by activity ID, name or WBS')
     expect(screen.getByRole('region', { name: 'Missing links: 20 activities' })).toBeInTheDocument()

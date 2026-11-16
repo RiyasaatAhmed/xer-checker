@@ -132,11 +132,11 @@ export function Dashboard({ result: saved, checkId, onCheck }: Props) {
         </p>
       </header>
 
-      <Verdict result={result} project={project} onPick={showRule} onIssues={showIssues} />
+      <Verdict result={result} project={project} onIssues={showIssues} />
 
       {issues > 0 && <FileIssues broken={result.broken_rows} notes={result.notes} open={issuesOpen} onToggle={setIssuesOpen} />}
 
-      <CheckBoard rules={rules} previous={result.previous} selected={rule?.id ?? ''} group={setOfChecks} lowestFloat={result.overview?.lowest_float} checked={result.checked} notes={notes} onPick={showRule} onGroup={pickSet} />
+      <CheckBoard rules={rules} previous={result.previous} selected={rule?.id ?? ''} group={setOfChecks} lowestFloat={result.overview?.lowest_float} checked={result.checked} notes={notes} onPick={showRule} onGroup={pickSet} sets={result.sets} />
 
       {result.overview && <FloatStrip overview={result.overview} onShow={showRule} />}
 

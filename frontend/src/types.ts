@@ -157,6 +157,12 @@ export interface RowNote {
 }
 
 /** Everything the checker found in one file, as saved. */
+/** Activities that fail at least one check of one set, each counted once. Mirrors SetCount in the backend. */
+export interface SetCount {
+  group: string // the set, like "Logic"
+  flagged: number
+}
+
 export interface CheckResult {
   upload_id: string // open it again with GET /api/uploads/{upload_id}
   uploaded_at: string // ISO date and time
@@ -173,6 +179,7 @@ export interface CheckResult {
   months?: string[] // the month axis of WbsGroup.heat, like "2026-07"
   previous?: Previous | null // the last earlier upload of the same file
   fix_first?: FixFirst
+  sets?: SetCount[] // activities flagged per set; missing on an upload saved before it was counted
 }
 
 /** One check's status, for the strip on the upload list. */

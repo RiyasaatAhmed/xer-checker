@@ -33,13 +33,28 @@
 
 /* ---------- Check board: serious and minor ---------- */
 
+/* The board's one axis, over the rows: the same columns as a row, the scale in the bars' column */
+.crow-axis { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(140px, 1.6fr) 64px 92px 112px 108px; gap: 0 14px; padding: 0 8px; margin-top: 4px; font-size: 11px; color: var(--faint); }
+.crow-axis-label { align-self: end; }
+.crow-fill { min-width: 3px; } /* 1 activity in 4,000 still shows: a limit of 0 has no tick to hide it behind */
+.crow-axis-scale { position: relative; height: 14px; border-bottom: 1px solid var(--line); }
+.crow-axis-scale span { position: absolute; bottom: 2px; transform: translateX(-50%); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.crow-axis-scale span:first-child { transform: none; }
+.crow-axis-scale span:last-child { transform: translateX(-100%); }
+@media (max-width: 760px) { .crow-axis { grid-template-columns: 1fr; } .crow-axis-label { display: none; } }
+
+/* The set bars: the check rows' look and columns, a step quieter, over the rows */
+.sets { margin-top: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.sets .tier-title { margin-bottom: 2px; }
+.set-row { min-height: 36px; }
+.set-row.pass .crow-name span, .set-row.pass .crow-value { color: var(--muted); font-weight: 500; } /* every check within: steps back, as within-limit rows do */
+.set-row .crow-ratio { font-weight: 500; }
 .tier { display: grid; gap: 2px; }
 .tier + .tier, .tier + .crows { margin-top: 10px; }
 .tier-title { font-size: 13px; font-weight: 600; color: var(--muted); display: flex; align-items: baseline; gap: 6px; }
 .tier-title.serious { color: var(--flag-ink); }
 .crow-nobar { display: block; height: 8px; }
 .crow.serious .crow-name { font-weight: 700; }
-.cell.wide { width: auto; min-width: 22px; padding: 0 6px; gap: 3px; grid-auto-flow: column; font-size: 11px; font-weight: 600; }
 
 /* ---------- Float strip: the limit tick says what it is ---------- */
 
@@ -49,7 +64,7 @@
 /* ---------- Map legend ---------- */
 
 .smap-legend { margin-bottom: 10px; }
-.key-heat { background: var(--heat-3); }
+.key-heat { width: 4px; height: 10px; border-radius: 1px 1px 0 0; background: var(--flag); } /* a month's bar, as on the map */
 .key-span { height: 4px; background: linear-gradient(90deg, var(--slate-deep) 50%, var(--slate-soft) 50%); }
 .key-past { background: color-mix(in srgb, var(--slate-soft) 45%, transparent); border: 1px solid var(--line); }
 
@@ -57,6 +72,19 @@
 
 .fixlist .link-inline.id { font-size: inherit; color: var(--ink); }
 .fix-wbs { font-size: 12px; }
+/* The activities that fail the most checks: checks down, activities across, a mark where one fails */
+.fix-cols:has(.failgrid) { grid-template-columns: minmax(0, 1fr); } /* the grid alone takes the full width */
+.fix-cols:has(.failgrid):has(> :nth-child(2)) { grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); } /* the open ends: a narrow column, the grid the rest */
+.failgrid { width: auto; font-size: 13px; }
+.failgrid th, .failgrid td { position: static; padding: 5px 10px; border: 0; background: none; }
+.failgrid thead th { font-size: 12px; text-align: center; border-bottom: 1px solid var(--line); }
+.failgrid tbody th, .failgrid tfoot th { font-weight: 500; color: var(--ink); text-align: left; white-space: nowrap; padding-left: 0; }
+.failgrid tbody tr + tr > * { border-top: 1px solid var(--line); }
+.failgrid td { text-align: center; }
+.failgrid tfoot > tr > * { border-top: 1px solid var(--line-strong); color: var(--muted); font-size: 12px; }
+.failgrid tfoot td { color: var(--ink); font-weight: 650; }
+.faildot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--flag); vertical-align: middle; }
+@media (max-width: 760px) { .fix-cols:has(.failgrid), .fix-cols:has(.failgrid):has(> :nth-child(2)) { grid-template-columns: minmax(0, 1fr); } } /* phones: one column; the grid scrolls in its own box, the words wrap */
 
 /* ---------- Summary: the one line to copy ---------- */
 
@@ -66,48 +94,13 @@
 .crow-note { display: block; }
 @media (max-width: 760px) { .crow-nobar { grid-area: bar; height: 0; } } /* phones: a row with no bar keeps the bar's place, at no height */
 
-/* ---------- Verdict: every check over the limit, worst first ---------- */
+/* ---------- Verdict: how serious the checks over the limit are ---------- */
 
-.over { grid-column: 1 / -1; display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--line); }
-.over-tier { display: grid; gap: 4px; }
-.over-title { display: flex; align-items: baseline; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.over-tier.serious .over-title { color: var(--flag-ink); }
-.over-advice { font-weight: 400; color: var(--muted); }
-.over-lines, .over-chips { margin: 0; padding: 0; list-style: none; }
-.over-lines { display: grid; gap: 2px; }
-
-/* A sentence: icon, count, what is wrong, size against the limit, arrow. Why it matters sits under the words. */
-.over-line {
-  display: grid; grid-template-columns: 16px max-content minmax(0, 1fr) max-content 16px;
-  grid-template-areas: 'icon count text size go' '. . why why .'; column-gap: 12px; row-gap: 1px; align-items: baseline;
-  width: 100%; padding: 7px 8px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-@media (hover: hover) { .over-line:hover { background: var(--sunken); } .over-line:hover .over-go { color: var(--ink); transform: translateX(2px); } }
-.over-icon { grid-area: icon; align-self: center; color: var(--flag-ink); }
-.over-count { grid-area: count; min-width: calc(var(--digits, 3) * 1ch); text-align: right; font-size: 20px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); }
-.over-line.serious .over-count { color: var(--flag-ink); }
-.over-text { grid-area: text; font-size: 15px; font-weight: 500; color: var(--ink); }
-.over-size { grid-area: size; font-size: 13px; color: var(--muted); white-space: nowrap; }
-.over-size b { font-weight: 600; color: var(--ink); }
-.over-go { grid-area: go; align-self: center; color: var(--muted); transition: transform 0.15s ease, color 0.15s ease; }
-.over-why { grid-area: why; font-size: 13px; color: var(--muted); }
-
-/* The rest, as chips: a name and its count, with the sentence on hover */
-.over-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 8px 0; }
-.over-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: none; font-size: 13px; white-space: nowrap; cursor: pointer; transition: border-color 0.15s ease; }
-.over-chip svg { flex: none; color: var(--flag-ink); }
-.over-chip-name { font-weight: 500; color: var(--ink); }
-.over-chip-count { color: var(--muted); }
-.over-chip-count b { color: var(--ink); }
-@media (hover: hover) { .over-chip:hover { border-color: var(--flag); } }
-
-@media (max-width: 760px) {
-  /* Phones: the count and words on top, the size and why under them */
-  .over-line { grid-template-columns: 16px max-content minmax(0, 1fr) 16px; grid-template-areas: 'icon count text go' '. . size .' '. . why .'; }
-  .over-count { font-size: 18px; }
-  .over-text { font-size: 14px; }
-}
+.verdict-tiers { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 2px 0 0 28px; font-size: 13px; color: var(--muted); }
+.tier-count { display: inline-flex; align-items: center; gap: 5px; }
+.tier-count svg { color: var(--flag-ink); }
+.tier-count b { color: var(--ink); font-weight: 650; }
+.tier-count.serious b { color: var(--flag-ink); }
 
 /* ---------- The activities behind a check: what to do about them ---------- */
 

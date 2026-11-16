@@ -102,7 +102,7 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
 
       {view === 'time' && (
         <ul className="legend smap-legend" aria-label="How to read the map">
-          <li><span className="swatch key-heat" aria-hidden="true" /> Flagged starts in a month: darker is more</li>
+          <li><span className="swatch key-heat" aria-hidden="true" /> Flagged starts in a month: taller is more</li>
           <li><span className="swatch key-span" aria-hidden="true" /> The group’s span, filled for the share finished</li>
           <li><span className="swatch key-past" aria-hidden="true" /> Before the data date</li>
         </ul>
@@ -182,7 +182,8 @@ export function ScheduleMap({ groups, project, rules, months, scope, choices, ch
                         if (count === 0) return null
                         const left = percentAt(domain, monthStarts[m])
                         const right = percentAt(domain, monthStarts[m + 1] ?? `${months[m]}-28T00:00:00`)
-                        return <span key={months[m]} className={`smap-cell h${Math.max(1, Math.ceil((4 * count) / hottest))}`} style={{ left: `${left}%`, width: `${Math.max(0.6, right - left)}%` }} data-tip={`${months[m]}: ${countText(count, 'flagged activity', 'flagged activities')} start`} />
+                        // A bar per month, as tall as its share of the busiest month on the map: height reads at a glance, shades don't
+                        return <span key={months[m]} className="smap-col" style={{ left: `${left}%`, width: `${Math.max(0.6, right - left)}%`, '--h': count / hottest } as React.CSSProperties} data-tip={`${months[m]}: ${countText(count, 'flagged activity', 'flagged activities')} start`} />
                       })
                     : span && flagged > 0 && <span className={`smap-bar${share >= MANY_FLAGGED ? ' many' : ''}`} style={{ left: `${span.left}%`, width: `${span.width}%` }} aria-hidden="true" />}
                 </span>

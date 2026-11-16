@@ -24,7 +24,7 @@ async function uploadWith(upload: () => Response, name = 'CSTv2.4.xer', backend:
   await user().upload(input, new File(['ERMHDR'], name))
   const live = await screen.findByRole('region', { name: 'Latest check' }).catch(() => null)
   const link = live && (await within(live).findByRole('link', { name }).catch(() => null))
-  if (link) await user().click(link) // the 5 headline checks show on the home page first; the file's name opens the report
+  if (link) await user().click(link) // every check shows on the home page first; the file's name opens the report
   return fetch
 }
 
@@ -46,40 +46,60 @@ describe('App', () => {
     expect(screen.getAllByRole('button', { name: 'Drop a .xer file to check it' })).toHaveLength(1) // not repeated in the header
   })
 
-  it('after an upload, stays on the home page and shows the 5 headline checks as the demo does, over the limit or within it', async () => {
+  it('shows how far the upload has got as a bar across the whole row, from 1% up, while the file is checked', async () => {
+    let answer: (value: Response) => void = () => {}
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return new Promise<Response>((r) => { answer = r }) // held: the check is still running
+      return Promise.resolve(url.includes('/progress/') ? reply(200, { percent: 60, stage: 'Running the checks' }) : reply(200, []))
+    }))
+    render(<App />)
+    const [input] = await screen.findAllByTestId('file-input')
+    await user().upload(input, new File(['ERMHDR'], 'CSTv2.4.xer'))
+    const bar = await screen.findByRole('progressbar', { name: 'Checking CSTv2.4.xer' })
+    expect(Number(bar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(1)
+    await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '60'), { timeout: 2000 }) // the backend's stage
+    expect(screen.getByRole('region', { name: 'Latest check' })).toHaveTextContent('Running the checks 60%')
+    answer(reply(200, CST_RESULT))
+    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument())
+  })
+
+  it('after an upload, stays on the home page and shows every check by set, as the demo draws them, over the limit or within it', async () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT)))
     render(<App />)
     const [input] = await screen.findAllByTestId('file-input')
     await user().upload(input, new File(['ERMHDR'], 'CSTv2.4.xer'))
     const live = await screen.findByRole('region', { name: 'Latest check' })
-    expect(live).toHaveTextContent('2 of 5 over the limit')
+    expect(live).toHaveTextContent('3 of 8 over the limit') // the 2 that can't run aren't counted
+    expect(Array.from(live.querySelectorAll('.live-set-name')).map((h) => h.textContent)).toEqual(['Logic · 1 over', 'Constraints', 'Float · 1 over', 'Duration · 1 over'])
+    expect(Array.from(live.querySelectorAll('.live-set-off')).map((p) => p.textContent?.trim())).toEqual(['Resources · 1 check can’t run', 'Execution · 1 check can’t run'])
     const rows = Array.from(live.querySelectorAll<HTMLElement>('.live-row'))
-    expect(rows.map((r) => `${r.querySelector('.live-check-name')?.textContent} ${r.className.split(' ')[1]} ${r.getAttribute('data-tip')}`)).toEqual([
-      'Missing links flag 15.0% of activities, over the 5% limit',
-      'Leads pass 0.0% of activities, within the 0% limit',
-      'Lags pass 0.8% of activities, within the 5% limit',
-      'Negative float pass 0.0% of activities, within the 0% limit',
-      'High float flag 58.6% of activities, over the 5% limit',
-    ])
+    expect(rows.map((r) => `${r.className.split(' ')[1]} ${r.getAttribute('data-tip')}`)).toEqual([
+      'flag Missing links: 15.0% of activities, over the 5% limit',
+      'pass Leads: 0.0% of activities, within the 0% limit',
+      'pass Lags: 0.8% of activities, within the 5% limit',
+      'pass Not finish to start: 8.3% of activities, within the 10% limit',
+      'pass Hard constraints: 0.0% of activities, within the 5% limit',
+      'pass Negative float: 0.0% of activities, within the 0% limit',
+      'flag High float: 58.6% of activities, over the 5% limit',
+      'flag Long durations: 17.3% of activities, over the 5% limit',
+    ]) // every check that ran, in report order, named as the report names it; a set where none ran is one line
     expect(window.location.pathname).toBe('/') // no report: the home page holds the answer
     expect(screen.queryByRole('region', { name: 'Verdict' })).not.toBeInTheDocument()
     await user().click(within(live).getByRole('link', { name: 'CSTv2.4.xer' })) // the file's name still opens its report
     expect(await screen.findByRole('region', { name: 'Verdict' })).toBeInTheDocument()
   })
 
-  it('answers in the verdict: how many checks are over, the worst ones, the finish against the deadline, and what changed', async () => {
+  it('answers in the verdict: how many checks are over and how serious, the finish against the deadline, and what changed', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const verdict = await screen.findByRole('region', { name: 'Verdict' })
     expect(verdict).toHaveTextContent('3 of 8 checks over the limit') // 8 could run; 2 could not
+    expect(verdict).toHaveTextContent('2 serious')
     expect(verdict).toHaveTextContent('10 days early')
     expect(verdict).toHaveTextContent('Deadline 30 Oct 2027')
     expect(verdict).toHaveTextContent('2 better than the last upload')
-    const sentence = (b: HTMLElement) => `${b.querySelector('.over-count')?.textContent} ${b.querySelector('.over-text')?.textContent}`
-    expect(within(verdict).getAllByRole('button').map(sentence)).toEqual([
-      '20 activities are missing a link before or after them',
-      '78 activities have more than 44 working days of float',
-      '23 activities have more than 44 working days of work left',
-    ]) // the most serious first, each a sentence led by its count
+    const board = screen.getByRole('region', { name: 'Checks' })
+    const over = Array.from(board.querySelectorAll<HTMLElement>('.crow.flag:not(.set-row)')).map((b) => b.getAttribute('aria-label')?.split(',')[0])
+    expect(over).toEqual(['Missing links', 'High float', 'Long durations']) // the most serious first, on the board below
   })
 
   it('says no check could run, not that all are within the limit, when nothing was checked', async () => {
@@ -90,11 +110,10 @@ describe('App', () => {
     expect(verdict).not.toHaveTextContent('within the limit')
   })
 
-  it('shows all the checks as a strip, and only the failing ones as rows, with the rest folded away', async () => {
+  it('shows the failing checks as rows under one Checks heading, with the rest folded away', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const board = await screen.findByRole('region', { name: 'Checks' })
-    expect(within(board).getAllByRole('button', { name: /: (over the limit|within the limit|can't be checked)$/ })).toHaveLength(10) // one cell each
-    expect(within(board).getByRole('heading', { name: /Needs attention/ })).toHaveTextContent('3')
+    expect(within(board).getByRole('heading', { level: 2 })).toHaveTextContent(/^Checks$/) // no strip of cells over the rows: they say it once
     expect(within(board).getAllByRole('button', { name: /, \d+\.\d%, over the limit/ })).toHaveLength(3)
     expect(within(board).queryByRole('button', { name: /^Leads,/ })).not.toBeInTheDocument() // folded
 
@@ -108,7 +127,7 @@ describe('App', () => {
     await uploadWith(() => reply(200, SMALL_RESULT), 'CSTv2.4.xer', fakeBackend(() => reply(200, SMALL_RESULT), [], SMALL_RESULT))
     const board = await screen.findByRole('region', { name: 'Checks' })
     expect(within(board).getAllByRole('button', { name: /^(Missing links|Negative float|High float),/ })).toHaveLength(3)
-    expect(within(board).queryByRole('heading', { name: /Needs attention/ })).not.toBeInTheDocument()
+    expect(within(board).getByRole('heading', { level: 2 })).toHaveTextContent(/^Checks$/)
   })
 
   it('shows how far over its limit a check is, and the change since the last upload', async () => {
@@ -131,22 +150,22 @@ describe('App', () => {
     await user().click(within(screen.getByRole('region', { name: 'Checks' })).getByRole('button', { name: /^High float, 58\.6%/ }))
     expect(screen.getByRole('region', { name: 'High float: 78 activities' })).toBeInTheDocument()
     expect((await within(list()).findAllByText('ContractNo_U350')).length).toBeGreaterThan(0)
-    expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}/checks/high-float`)
+    expect(window.location.pathname).toBe(`/report/${CST_RESULT.upload_id}/checks/high-float`)
   })
 
   it('opens the check named in the address, and the worst one when the address names none that exists', async () => {
-    window.history.replaceState(null, '', `/uploads/${CST_RESULT.upload_id}/checks/long-durations`)
+    window.history.replaceState(null, '', `/report/${CST_RESULT.upload_id}/checks/long-durations`)
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     const { unmount } = render(<App />)
     expect(await screen.findByRole('region', { name: 'Long durations: 23 activities' })).toBeInTheDocument()
     unmount()
-    window.history.replaceState(null, '', `/uploads/${CST_RESULT.upload_id}/checks/nope`)
+    window.history.replaceState(null, '', `/report/${CST_RESULT.upload_id}/checks/nope`)
     render(<App />)
     expect(await screen.findByRole('region', { name: 'Missing links: 20 activities' })).toBeInTheDocument()
   })
 
   it('says why a check that cannot run was not run, instead of listing activities', async () => {
-    window.history.replaceState(null, '', `/uploads/${CST_RESULT.upload_id}/checks/bei`)
+    window.history.replaceState(null, '', `/report/${CST_RESULT.upload_id}/checks/bei`)
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     const card = await screen.findByRole('region', { name: "BEI: can't be checked" })
@@ -192,20 +211,27 @@ describe('App', () => {
     expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
   })
 
-  it('lists recent schedules as file rows with the 5 headline checks, the newest open, and opens a saved one at its own address', async () => {
+  it('draws the list page bars as the report does: the share of activities checked, a limit of 0 with a bar and no tick', async () => {
+    const lead = UPLOAD_LIST.map((u, i) => (i === 0 ? { ...u, checks: u.checks?.map((c) => (c.id === 'leads' ? { ...c, status: 'flag' as const, percent: 0.8 } : c)) } : u))
+    vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), lead))
+    render(<App />)
+    const recent = await screen.findByRole('region', { name: 'Recent schedules' })
+    const row = (name: string) => Array.from(recent.querySelectorAll<HTMLElement>('.live-row')).find((r) => r.querySelector('.live-check-name')?.textContent === name) as HTMLElement
+    expect(row('High float').querySelector<HTMLElement>('.live-fill')?.style.getPropertyValue('--w')).toBe('58.6%')
+    expect(row('Leads').querySelector<HTMLElement>('.live-fill')?.style.getPropertyValue('--w')).toBe('0.8%') // none allowed, and still a bar
+    expect(row('Leads').querySelector('.live-limit')).toBeNull() // a limit of 0 has no tick
+  })
+
+  it('lists recent schedules as file rows with every check, the newest open, and opens a saved one at its own address', async () => {
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     const recent = await screen.findByRole('region', { name: 'Recent schedules' })
     const head = within(recent).getByRole('button', { name: /^CSTv2\.4\.xer/ })
     expect(head).toHaveAttribute('aria-expanded', 'true') // the newest opens by default
-    expect(head).toHaveTextContent('2 of 5 over the limit')
-    expect(Array.from(recent.querySelectorAll('.live-row')).map((r) => r.getAttribute('data-tip'))).toEqual([
-      '15.0% of activities, over the 5% limit',
-      '0.0% of activities, within the 0% limit',
-      '0.8% of activities, within the 5% limit',
-      '0.0% of activities, within the 0% limit',
-      '58.6% of activities, over the 5% limit',
-    ])
+    expect(head).toHaveTextContent('3 of 8 over the limit')
+    expect(recent.querySelectorAll('.live-row')).toHaveLength(8) // every check that ran, not only the headline 5
+    expect(recent.querySelectorAll('.live-set-off')).toHaveLength(2) // and one line for each set where none could
+    expect(Array.from(recent.querySelectorAll('.live-row.flag .live-check-name')).map((n) => n.textContent)).toEqual(['Missing links', 'High float', 'Long durations'])
     expect(tipped(recent, 'Couldn’t be checked: the file is empty')[0]).toHaveTextContent('Can’t be read')
 
     await user().click(head) // closes, and opens again
@@ -218,7 +244,7 @@ describe('App', () => {
     await user().click(head) // closed, the row still opens its report in one click
     await user().click(within(recent).getByRole('link', { name: 'Open the report for CSTv2.4.xer' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4' })).toBeInTheDocument()
-    expect(window.location.pathname).toBe(`/uploads/${CST_RESULT.upload_id}`)
+    expect(window.location.pathname).toBe(`/report/${CST_RESULT.upload_id}`)
     expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0 }) // the schedule opens at its top, not at the list
   })
 
@@ -318,7 +344,8 @@ describe('App', () => {
     await user().click(within(map).getByRole('button', { name: 'All checks' }))
     expect(within(map).getByRole('button', { name: 'All checks', pressed: true })).toBeInTheDocument()
     expect(within(map).getAllByRole('row').slice(1).map((r) => r.textContent)[0]).toContain('Placeholder20 / 20') // each group's flags, all checks
-    await user().click(within(screen.getByRole('region', { name: 'Checks' })).getByRole('button', { name: /^Logic/ })) // a set on the strip
+    await user().click(within(map).getByRole('button', { name: 'By set of checks' }))
+    await user().click(within(map).getByRole('columnheader', { name: 'Logic' })) // a set, picked on the matrix
     expect(within(map).getByRole('button', { name: 'Logic checks', pressed: true })).toBeInTheDocument()
   })
 
@@ -403,14 +430,14 @@ describe('App', () => {
     expect(within(list).queryByRole('combobox', { name: 'Sort' })).not.toBeInTheDocument() // nothing to sort by
   })
 
-  it('folds the summary away, so the picture comes first', async () => {
+  it('shows the summary open, at the foot of the page after the pictures', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const summary = (await screen.findByText('Summary')).closest('details')!
-    expect(summary).not.toHaveAttribute('open')
+    expect(summary).toHaveAttribute('open') // still a details element: a click folds it away
   })
 
   it('opens the schedule in the address bar when the page loads', async () => {
-    window.history.replaceState(null, '', `/uploads/${CST_RESULT.upload_id}`)
+    window.history.replaceState(null, '', `/report/${CST_RESULT.upload_id}`)
     vi.stubGlobal('fetch', fakeBackend(() => reply(200, CST_RESULT), UPLOAD_LIST))
     render(<App />)
     expect(await screen.findByRole('heading', { level: 1, name: 'CSTv2.4' })).toBeInTheDocument()
@@ -419,14 +446,14 @@ describe('App', () => {
   it('shows a tooltip on hover after a short delay, with the tooltip layer describing the element, and hides it on Escape', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const board = await screen.findByRole('region', { name: 'Checks' })
-    const cell = within(board).getByRole('button', { name: 'Missing links: over the limit' })
+    const cell = within(board).getByRole('button', { name: /^Missing links, / })
     const tip = screen.getByRole('tooltip', { hidden: true })
     expect(tip).not.toHaveAttribute('data-open')
 
     const u = user()
     await u.hover(cell)
     await waitFor(() => expect(tip).toHaveAttribute('data-open'))
-    expect(tip).toHaveTextContent('Missing links: over the limit')
+    expect(tip).toHaveTextContent('20 activities are missing a link before or after them.')
     expect(cell).toHaveAttribute('aria-describedby', tip.id)
 
     await u.keyboard('{Escape}')
@@ -437,7 +464,7 @@ describe('App', () => {
   it('keeps a tooltip while the pointer is on it, and shows the next one at once after one closes', async () => {
     await uploadWith(() => reply(200, CST_RESULT))
     const board = await screen.findByRole('region', { name: 'Checks' })
-    const [first, second] = within(board).getAllByRole('button', { name: /: (over the limit|within the limit)$/ })
+    const [first, second] = Array.from(board.querySelectorAll<HTMLElement>('.crow.flag:not(.set-row)'))
     const tip = screen.getByRole('tooltip', { hidden: true })
     const u = user()
     await u.hover(first)

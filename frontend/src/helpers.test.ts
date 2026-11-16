@@ -36,29 +36,36 @@ describe('rangeText', () => {
 })
 
 describe('route', () => {
-  it('reads an upload ID from its path, and nothing else', () => {
-    expect(uploadIdIn(`/uploads/${ID}`)).toBe(ID)
+  it('reads an upload ID from its report path, and nothing else', () => {
+    expect(uploadIdIn(`/report/${ID}`)).toBe(ID)
     expect(uploadIdIn('/')).toBeNull()
-    expect(uploadIdIn('/uploads/not-an-id')).toBeNull()
-    expect([pathFor(ID), pathFor(null)]).toEqual([`/uploads/${ID}`, '/'])
+    expect(uploadIdIn('/report/not-an-id')).toBeNull()
+    expect([pathFor(ID), pathFor(null)]).toEqual([`/report/${ID}`, '/'])
   })
 
   it('reads a check from its path too, and writes one', () => {
-    expect(routeIn(`/uploads/${ID}/checks/high-float`)).toEqual({ uploadId: ID, checkId: 'high-float' })
-    expect(routeIn(`/uploads/${ID}`)).toEqual({ uploadId: ID, checkId: null })
-    expect(routeIn(`/uploads/${ID}/checks/`)).toEqual({ uploadId: null, checkId: null })
-    expect(pathFor(ID, 'leads')).toBe(`/uploads/${ID}/checks/leads`)
+    expect(routeIn(`/report/${ID}/checks/high-float`)).toEqual({ uploadId: ID, checkId: 'high-float' })
+    expect(routeIn(`/report/${ID}`)).toEqual({ uploadId: ID, checkId: null })
+    expect(routeIn(`/report/${ID}/checks/`)).toEqual({ uploadId: null, checkId: null })
+    expect(pathFor(ID, 'leads')).toBe(`/report/${ID}/checks/leads`)
     expect(pathFor(null, 'leads')).toBe('/')
+  })
+
+  it('still reads an older /uploads link, so a link shared before /report opens', () => {
+    expect(routeIn(`/uploads/${ID}/checks/lags`)).toEqual({ uploadId: ID, checkId: 'lags' })
   })
 })
 
 describe('validate', () => {
-  it('takes a .xer in any case, and refuses other types and files over 50 MB', () => {
+  it('takes a .xer in any case, and refuses other types and files over 500 MB', () => {
     expect(fileProblem(new File(['x'], 'plan.XER'))).toBeNull()
     expect(fileProblem(new File(['x'], 'plan.xml'))).toMatch("isn't a .xer file")
     const big = new File(['x'], 'big.xer')
-    Object.defineProperty(big, 'size', { value: 51 * 1024 * 1024 })
-    expect(fileProblem(big)).toMatch('over 50 MB')
+    Object.defineProperty(big, 'size', { value: 501 * 1024 * 1024 })
+    expect(fileProblem(big)).toMatch('over 500 MB')
+    const fine = new File(['x'], 'fine.xer')
+    Object.defineProperty(fine, 'size', { value: 499 * 1024 * 1024 })
+    expect(fileProblem(fine)).toBeNull() // 499 MB passes: the old 50 MB limit would refuse it
   })
 })
 

@@ -1,12 +1,13 @@
-import { headlineOf } from '../board'
+import type { UploadProgress } from '../api'
 import { pathFor } from '../route'
 import type { CheckResult } from '../types'
-import { HeadlineBadge } from './HeadlineBadge'
-import { HeadlineChecks } from './HeadlineChecks'
+import { ChecksBadge } from './ChecksBadge'
+import { CheckBars } from './CheckBars'
 
 export interface Fresh {
   name: string // the file being checked
   result: CheckResult | null // null while it is checked
+  progress?: UploadProgress // how far it has got while it is checked: 1 to 100
 }
 
 interface Props {
@@ -14,11 +15,12 @@ interface Props {
   onOpen: (uploadId: string) => void
 }
 
-/** The file just uploaded, drawn as the demo draws it: its row with a bar while it is checked, then its 5 headline checks.
- *  Once the file is in the saved list, the list shows it instead. */
+/** The file just uploaded, drawn as the demo draws it: its row with a bar across its full width while it is checked,
+ *  then every check, by set. Once the file is in the saved list, the list shows it instead. */
 export function LiveCheck({ fresh, onOpen }: Props) {
   const { name, result } = fresh
-  const headline = result ? headlineOf(result.rules) : []
+  const progress = fresh.progress ?? { percent: 1, stage: 'Sending the file' }
+  const checks = result?.rules ?? []
   return (
     <section className="live" aria-label="Latest check" aria-live="polite" aria-busy={result === null}>
       <div className={`live-file${result ? ' done' : ''}`}>
@@ -42,14 +44,19 @@ export function LiveCheck({ fresh, onOpen }: Props) {
           <span className="live-name">{name}</span>
         )}
         {result ? (
-          <HeadlineBadge checks={headline} />
+          <ChecksBadge checks={checks} />
         ) : (
-          <span className="live-track" role="progressbar" aria-label="Checking">
-            <span />
+          <span className="live-stage">
+            {progress.stage} <b className="num">{progress.percent}%</b>
+          </span>
+        )}
+        {!result && (
+          <span className="live-track" role="progressbar" aria-label={`Checking ${name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-valuetext={`${progress.percent}%, ${progress.stage}`}>
+            <span style={{ width: `${progress.percent}%` }} />
           </span>
         )}
       </div>
-      {result && <HeadlineChecks checks={headline} />}
+      {result && <CheckBars checks={checks} />}
     </section>
   )
 }

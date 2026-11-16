@@ -1,11 +1,10 @@
 import { ArrowRight, ChevronDown, Trash2, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { dateText } from '../format'
-import { headlineOf } from '../board'
 import { pathFor } from '../route'
 import type { UploadSummary } from '../types'
-import { HeadlineBadge } from './HeadlineBadge'
-import { HeadlineChecks } from './HeadlineChecks'
+import { ChecksBadge } from './ChecksBadge'
+import { CheckBars } from './CheckBars'
 
 interface Props {
   uploads: UploadSummary[] // newest first
@@ -13,7 +12,7 @@ interface Props {
   onDelete: (uploadId: string) => Promise<void>
 }
 
-/** Saved schedules, drawn as the demo draws a file: its row, and under it the 5 headline checks. Each row opens and
+/** Saved schedules, drawn as the demo draws a file: its row, and under it every check, by set. Each row opens and
  *  closes; the newest opens by default, and again when a new file arrives. Each row opens its report in one click,
  *  and deletes the file after a second click to confirm. */
 export function RecentUploads({ uploads, onOpen, onDelete }: Props) {
@@ -35,7 +34,7 @@ export function RecentUploads({ uploads, onOpen, onDelete }: Props) {
       {uploads.map((upload) => {
         const ready = upload.status === 'ready'
         const shown = ready && ids.has(upload.upload_id)
-        const headline = headlineOf(upload.checks ?? [])
+        const checks = upload.checks ?? []
         const panel = `file-${upload.upload_id}`
         const head = (
           <>
@@ -44,7 +43,7 @@ export function RecentUploads({ uploads, onOpen, onDelete }: Props) {
             </span>
             <span className="file-name">{upload.file_name}</span>
             {ready ? (
-              <HeadlineBadge checks={headline} />
+              <ChecksBadge checks={checks} />
             ) : (
               <span className="pill flag" data-tip={`Couldn’t be checked: ${upload.failure_reason ?? 'no reason saved'}`}>
                 <TriangleAlert size={12} strokeWidth={2.5} aria-hidden /> Can’t be read<span className="sr-only">: {upload.failure_reason}</span>
@@ -68,7 +67,7 @@ export function RecentUploads({ uploads, onOpen, onDelete }: Props) {
             </div>
             {shown && (
               <div id={panel} className="file-panel">
-                <HeadlineChecks checks={headline} />
+                <CheckBars checks={checks} />
               </div>
             )}
           </li>

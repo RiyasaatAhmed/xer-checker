@@ -88,6 +88,7 @@ export const CST_RESULT: CheckResult = {
     group('p', 'r', 'Placeholder', 1, 20, 20, '2026-01-02T08:00:00', '2027-10-20T16:00:00'),
   ],
   months: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07'],
+  sets: [{ group: 'Logic', flagged: 25 }, { group: 'Constraints', flagged: 0 }, { group: 'Float', flagged: 78 }, { group: 'Duration', flagged: 23 }, { group: 'Resources', flagged: 0 }, { group: 'Execution', flagged: 0 }],
   previous: { upload_id: '33333333-3333-4333-8333-333333333333', uploaded_at: '2026-11-01T00:00:00Z', values: { 'missing-links': 20, 'high-float': 62, 'long-durations': 17.3 } },
   fix_first: {
     open_ends: [{ code: 'ContractNo_CAL03', name: 'Calendar placeholder 3', wbs: 'Utility', clears: 5 }],

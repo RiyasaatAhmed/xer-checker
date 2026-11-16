@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, Check, Flag, Minus } from 'lucide-react'
-import { SMALL_SAMPLE, TIMES_SHOWN, barAt, isSerious, ratio, type Trend } from '../board'
+import { SMALL_SAMPLE, isSerious, ratio, type Trend } from '../board'
 import { percentText } from '../format'
-import { ruleText } from '../rules'
+import { problemText, ruleText } from '../rules'
 import type { RuleResult, RuleStatus } from '../types'
 
 // ---------- Constants ----------
@@ -22,16 +22,18 @@ interface Props {
 }
 
 /** One check as a bullet bar: its value against its limit, how many times over, and the change since last time.
- *  Every bar ends at the same multiple of its limit, so the bars compare down the board. A limit of 0 has no bar. */
+ *  A share of activities sits on the board's one axis, 0 to 100% of the activities checked, with its limit marked:
+ *  every check has a bar, a limit of 0 too, and bar lengths compare down the board. An index keeps its own scale. */
 export function CheckRow({ rule, trend, selected, onSelect, checked, note, lowestFloat, quiet = false }: Props) {
   const Icon = ICON[rule.status]
   const over = ratio(rule)
   const serious = rule.status === 'flag' && isSerious(rule)
   const index = rule.measure === 'index'
-  const at = (value: number) => (index ? Math.min(100, (100 * value) / (rule.limit_percent * INDEX_SPAN)) : barAt(value, rule.limit_percent))
+  const at = (value: number) => Math.min(100, Math.max(0, index ? (100 * value) / (rule.limit_percent * INDEX_SPAN) : value))
   const limitAt = at(rule.limit_percent)
-  const hasBar = rule.limit_percent > 0 && rule.measure !== 'test'
-  const overflows = !index && rule.percent > rule.limit_percent * TIMES_SHOWN
+  const hasBar = rule.measure === 'percent' || (index && rule.limit_percent > 0)
+  const { count, text } = problemText(rule)
+  const why = ruleText(rule.id).impact
   const small = rule.measure === 'percent' && checked > 0 && checked < SMALL_SAMPLE
   const value = small ? `${rule.count.toLocaleString()} of ${checked.toLocaleString()}` : percentText(rule.percent, rule.count)
   return (
@@ -41,7 +43,7 @@ export function CheckRow({ rule, trend, selected, onSelect, checked, note, lowes
       aria-pressed={selected}
       aria-label={`${rule.name}, ${value}, ${WORDS[rule.status].toLowerCase()}${over !== null ? `, ${over.toFixed(1)} times the limit` : ''}${rule.status === 'flag' ? (serious ? ', serious' : ', minor') : ''}`}
       onClick={() => onSelect(rule.id)}
-      data-tip={`${rule.dcma_section ? `DCMA ${rule.dcma_section}: ` : 'Not a DCMA check: '}${ruleText(rule.id).short}`}
+      data-tip={`${rule.dcma_section ? `DCMA ${rule.dcma_section}` : 'Not a DCMA check'}. ${rule.status === 'flag' && count ? `${count} ${text}.` : `${ruleText(rule.id).short}.`}${why ? ` ${why}` : ''}`}
     >
       <span className="crow-name">
         <Icon size={15} strokeWidth={2.5} fill={serious ? 'currentColor' : 'none'} aria-hidden />
@@ -49,10 +51,9 @@ export function CheckRow({ rule, trend, selected, onSelect, checked, note, lowes
       </span>
       {hasBar ? (
         <span className="crow-bar" aria-hidden="true">
-          <span className="crow-zone" style={rule.direction === 'below' ? { left: 0, width: `${limitAt}%` } : { left: `${limitAt}%`, right: 0 }} />
-          <span className="crow-fill" style={{ width: `${at(rule.percent)}%` }} />
-          <span className="crow-limit" style={{ left: `${limitAt}%` }} />
-          {overflows && <span className="crow-break">»</span>}
+          {index && <span className="crow-zone" style={rule.direction === 'below' ? { left: 0, width: `${limitAt}%` } : { left: `${limitAt}%`, right: 0 }} />}
+          {(index || rule.count > 0) && <span className="crow-fill" style={{ width: `${at(rule.percent)}%` }} />}
+          {(index || rule.limit_percent > 0) && <span className="crow-limit" style={{ left: `${limitAt}%` }} />}
         </span>
       ) : (
         <span className="crow-nobar" aria-hidden="true" />

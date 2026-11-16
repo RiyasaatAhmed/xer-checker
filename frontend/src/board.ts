@@ -1,7 +1,6 @@
 // The logic behind the check board: which checks are loud, in what order, and what changed.
 // Pure functions on the backend's answer, so each can be tested alone.
 
-import { percentText } from './format'
 import type { Previous, RuleResult, RuleStatus } from './types'
 
 // ---------- Constants ----------
@@ -9,11 +8,8 @@ import type { Previous, RuleResult, RuleStatus } from './types'
 export const SHOW_ALL_UP_TO = 6 // with this many checks or fewer, every check is a row
 export const ROWS_SHOWN = 8 // failing checks shown before "show more"
 const SAME = 0.05 // a change smaller than this (in percent points) is "no change"
-export const MAX_WORST = 3 // failing checks the verdict writes out as sentences; the rest are chips
 export const SERIOUS = 2 // a check of this severity or more is serious: 1 minor, 2 serious, 3 critical
 export const SMALL_SAMPLE = 30 // with fewer activities checked, a share says "1 of 4", not "25.0%"
-export const TIMES_SHOWN = 10 // every check bar ends at this many times its limit, so bars compare down the board
-const HEADLINE = ['missing-links', 'leads', 'lags', 'negative-float', 'high-float'] // the 5 checks the home page shows, as the demo does: logic, then float
 const SHADE_STEPS = [0.05, 0.15, 0.4] // share flagged that steps a matrix cell's shade up: up to 5%, 15%, 40%, then more
 
 export type Trend = { delta: number; better: boolean | null } // better is null when nothing changed
@@ -38,20 +34,6 @@ export function isSerious(rule: { severity?: number }): boolean {
   return (rule.severity ?? 1) >= SERIOUS
 }
 
-/** A failing check against its limit: { share: "46.6%", against: "9.3x the 5% limit" }, or "none allowed" for a limit of 0.
- *  A small file shows the share as "1 of 4". */
-export function limitParts(rule: RuleResult, checked: number): { share: string; against: string } {
-  if (rule.measure !== 'percent') return { share: '', against: `limit ${rule.limit_percent}` }
-  const share = checked > 0 && checked < SMALL_SAMPLE ? `${rule.count.toLocaleString()} of ${checked.toLocaleString()}` : percentText(rule.percent, rule.count)
-  const over = ratio(rule)
-  if (over !== null) return { share, against: `${over.toFixed(1)}x the ${rule.limit_percent}% limit` }
-  return { share, against: rule.limit_percent > 0 ? `limit ${rule.limit_percent}%` : 'none allowed' }
-}
-
-/** Where a value sits on a check bar, in % of its width: every bar ends at TIMES_SHOWN times its own limit. */
-export function barAt(value: number, limit: number): number {
-  return limit > 0 ? Math.min(100, Math.max(0, (100 * value) / (limit * TIMES_SHOWN))) : 0
-}
 
 /** The check groups in the order the backend lists them: ["Logic", "Constraints", ...]. */
 export function groupsOf(rules: { group: string }[]): string[] {
@@ -121,8 +103,3 @@ export function shade(share: number): number {
   return 1 + SHADE_STEPS.filter((step) => share > step).length
 }
 
-
-/** The 5 headline checks from a file's checks, in the demo's order. A check the file lacks is left out. */
-export function headlineOf<T extends { id: string }>(checks: T[]): T[] {
-  return HEADLINE.map((id) => checks.find((c) => c.id === id)).filter((c): c is T => c !== undefined)
-}

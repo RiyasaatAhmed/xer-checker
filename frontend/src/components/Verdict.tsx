@@ -4,7 +4,6 @@ import { countText, dayText, daysBetween, plural } from '../format'
 import { progressOf, trustOf } from '../glance'
 import type { CheckResult, ProjectInfo } from '../types'
 import { FinishGap } from './FinishGap'
-import { OverLimit } from './OverLimit'
 
 // ---------- Constants ----------
 
@@ -13,13 +12,12 @@ const DRIVING_TIP = 'The checked activities at the lowest float, within half a w
 interface Props {
   result: CheckResult
   project: ProjectInfo | undefined // the project picked, when the file holds more than one
-  onPick: (id: string) => void // a named check
   onIssues: () => void // show the broken rows
 }
 
-/** The answer in 3 seconds: can the file be trusted, and how many checks are over the limit?
- *  What drives the finish, will it finish on time, and how far along is it? Under them, every check over the limit, worst first. */
-export function Verdict({ result, project, onPick, onIssues }: Props) {
+/** The answer in 3 seconds: can the file be trusted, how many checks are over the limit and how serious they are?
+ *  What drives the finish, will it finish on time, and how far along is it? The checks themselves are on the board below. */
+export function Verdict({ result, project, onIssues }: Props) {
   const counts = tally(result.rules)
   const runnable = counts.flag + counts.pass
   const change = changes(result.rules, result.previous)
@@ -44,6 +42,7 @@ export function Verdict({ result, project, onPick, onIssues }: Props) {
             )}
           </span>
         </p>
+        {bad && <Tiers serious={counts.serious} minor={counts.flag - counts.serious} />}
         {change && (
           <p className="verdict-change">
             {change.worse === 0 && change.better === 0 ? (
@@ -94,9 +93,25 @@ export function Verdict({ result, project, onPick, onIssues }: Props) {
         </p>
         <Progress result={result} />
       </div>
-
-      <OverLimit rules={result.rules} checked={result.checked} onPick={onPick} />
     </section>
+  )
+}
+
+/** How many of the checks over the limit are serious and how many minor: a filled flag, then an outline one, as on the board. */
+function Tiers({ serious, minor }: { serious: number; minor: number }) {
+  return (
+    <p className="verdict-tiers">
+      {serious > 0 && (
+        <span className="tier-count serious" data-tip="Fix these before trusting the dates">
+          <Flag size={13} strokeWidth={2.5} fill="currentColor" aria-hidden /> <b className="num">{serious}</b> serious
+        </span>
+      )}
+      {minor > 0 && (
+        <span className="tier-count" data-tip="Tidy these at the next update">
+          <Flag size={13} strokeWidth={2.5} aria-hidden /> <b className="num">{minor}</b> minor
+        </span>
+      )}
+    </p>
   )
 }
 
