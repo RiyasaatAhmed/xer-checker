@@ -22,7 +22,7 @@ No exceptions, even for one line. The skill says how much checking a one-line te
 A checker for Primavera P6 schedule files (`.xer`). You upload a file in the browser and see a dashboard. For each file, it:
 
 1. Flags broken rows, with their line numbers.
-2. Runs 16 checks on unfinished work, in 7 sets (logic, constraints, float, duration, dates, resources, execution). 4 of them need a baseline or a delay test and say why they can't run.
+2. Runs 21 checks on unfinished work, in 7 sets (logic, constraints, float, duration, dates, resources, execution). 14 are DCMA's, numbered as in PAM 200.1 section 4. 7 are ours. 4 need a baseline or a delay test and say why they can't run.
 3. Draws one chart of the results.
 4. Writes a short summary. Gemini picks the words; code computes every number.
 5. Saves the upload and its results, so they can be opened again.
@@ -44,6 +44,7 @@ Run the Python commands from `backend/`: `checker.py` finds `data/` from the cur
 | Command | What it does |
 |---|---|
 | `docker compose up --build` | From the repo root: builds and starts all three services. The app is at http://localhost:3000, the API at http://localhost:8000/docs. |
+| `scripts/watch-uploads.sh` | Opens a tmux session that follows each upload: nginx, the backend's 3 stages, then the rows saved. Needs Docker running. |
 | `../.venv/bin/uvicorn main:app --reload` | Runs the API on port 8000. Without `DATABASE_URL`, it saves to `backend/xer_checker.db` (gitignored). |
 | `npm run dev` | From `frontend/`: the app at http://localhost:5173. It passes `/api` to port 8000. |
 | `npm test`, `npm run lint`, `npm run build` | From `frontend/`: tests with a faked backend, oxlint, and the production build. |
@@ -95,12 +96,12 @@ In `xer_checker/`, each file has one job and one test file in `tests/`:
 
 `backend/tests/test_baseline.py` locks these and compares them with Kazinex's reports in `backend/results-from-kazinex/`. A change that moves one needs a reason the user agrees with.
 
-| File | Checked | Missing links | Leads | Lags | Negative float | High float |
-|---|---|---|---|---|---|---|
-| `CSTv2.4.xer` | 133 | 20 (15.0%) | 0 | 1 (0.8%) | 0 | 78 (58.6%) |
-| `example_xer_file.xer` | 365 | 6 (1.6%) | 11 (3.0%) | 26 (7.1%) | 0 | 170 (46.6%) |
+| File | Checked | Missing links | Leads | Lags | Long lags | Negative float | High float |
+|---|---|---|---|---|---|---|---|
+| `CSTv2.4.xer` | 133 | 20 (15.0%) | 0 | 1 (0.8%) | 0 | 0 | 78 (58.6%) |
+| `example_xer_file.xer` | 365 | 6 (1.6%) | 11 (3.0%) | 26 (7.1%) | 8 (2.2%) | 0 | 170 (46.6%) |
 
-These 5 are the headline checks the home page and the demo show (`HEADLINE` in `frontend/src/board.ts`). Leads and lags are matched to Kazinex link by link: Kazinex lists each link under its earlier activity, and we flag the later one.
+The demo on the empty home page shows 5 headline checks: missing links, leads, lags, negative float and high float. The home page list shows every check. Leads, lags and long lags match Kazinex link by link. Kazinex lists each link under its earlier activity, and we flag the later one.
 
 ## Code rules
 
@@ -121,7 +122,7 @@ These 5 are the headline checks the home page and the demo show (`HEADLINE` in `
 - A new column on an existing table must be optional (nullable): `add_missing_columns` in `database/db.py` adds it on start. A required column needs Alembic first.
 - Frontend: a tooltip is a `data-tip="text"` attribute on the element, never `title`. One `TooltipLayer` in `App.tsx` shows it on hover and keyboard focus.
 - Frontend: one component per file in `src/components/`. Status shows an icon and a word, never color alone.
-- Frontend look: every color, font and shape is a token in `frontend/src/theme.css`. The portfolio's black and zinc palette and Inter (dark by default, light under `data-theme="light"`). One near-white accent, red only for flagged, green only for within the limit, 8px corners, no uppercase labels. A status always has an icon and a word. Blue appears once, for the forecast finish (`--info`). One exception: the float bar colors float by how close to critical it is (`--float-*`), and the heat cells use `--heat-*`.
+- Frontend look: every color, font and shape is a token in `frontend/src/theme.css`. The portfolio's black and zinc palette and Inter (dark by default, light under `data-theme="light"`). One near-white accent, red only for flagged, green only for within the limit, 8px corners, no uppercase labels. A status always has an icon and a word. Blue appears once, for the forecast finish (`--info`). Two exceptions. The float bar colors float by how close to critical it is (`--float-*`). The map's grid view uses `--heat-*`, the flag red at 4 strengths. The map's months are bars in `--flag`, as tall as their count: height, not shade.
 - Frontend words around the numbers live in `frontend/src/rules.ts`: what a check means, and what to do in P6. The numbers always come from the API.
 - `frontend/src/kit/` is Stageshow's kit, copied in: don't edit it, except as its README records.
 - To change `HeroDemo.tsx`, use the `stageshow` skill. Restore it with `npx skills experimental_install`. Film it with `--gate` at both widths until it ends `rehearsal passed`, then update `REHEARSAL.md`.

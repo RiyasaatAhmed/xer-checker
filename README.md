@@ -2,429 +2,75 @@
 
 [![Tests](https://github.com/RiyasaatAhmed/xer-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/RiyasaatAhmed/xer-checker/actions/workflows/tests.yml)
 
-Checks Primavera P6 schedule files (`.xer`). Upload a file in the browser and see what needs attention first, then the checks and the activities behind each number.
+**Upload a Primavera P6 schedule (`.xer`) and see what needs fixing first.** The app runs 21 health checks, shows where in the project the problems are, and lists the activities behind each one.
 
 > [!NOTE]
 > **The submitted version** is the [`take-home-submission`](https://github.com/RiyasaatAhmed/xer-checker/tree/take-home-submission) tag, from 9 Nov 2026: one script with the 3 checks and the chart. Everything on `main` since then is later work.
 
 <p align="center">
-  <img src="frontend/screenshots/empty-state.gif" width="680" alt="Empty-state demo: a dropped .xer file and its 5 headline checks">
+  <img src="frontend/screenshots/empty-state-demo.gif" width="680" alt="Empty-state demo: a dropped .xer file and its checks arriving">
 </p>
 
-**The empty state:** before the first upload, the home page plays this demo. It shows the real results for `CSTv2.4.xer`.
+## What it does
 
-**A report:** the verdict comes first. It says whether the file reads cleanly, how many checks are over the limit, and the finish against the deadline.
+1. **Reads the file**, and flags broken rows with their line numbers.
+2. **Runs 21 checks**, 14 of them DCMA's: logic, constraints, float, duration, dates and resources. [All 21 checks](docs/checks.md)
+3. **Shows a report:** the verdict first, then the checks, where the problems are, and what to fix first. [Every feature](docs/features.md)
+4. **Writes a short summary.** The AI picks the words; code fills in every number. [How](docs/ai-summary.md)
+5. **Saves each upload**, so it can be opened again and shared by its link.
 
-![A report: the verdict for example_xer_file.xer](frontend/screenshots/report.png)
+![A report: the verdict, then the checks](frontend/screenshots/report.png)
 
-For each file, it:
+## Results on the 2 public files
 
-1. **Flags broken rows**, with their line numbers.
-2. **Runs 16 checks** on unfinished work, in 7 sets. Each is a value against a limit:
-   - **Logic:** missing links, leads, lags, link types, duplicate links, out-of-sequence work.
-   - **Constraints:** hard constraints. **Float:** negative float, high float.
-   - **Duration, dates, resources:** long durations, invalid dates, resources.
-   - **Execution:** missed tasks, critical path test, CPLI and BEI. These need a baseline or a delay test, so they say why they can't run.
-   - **Locked numbers:** missing links (limit 5%), leads (0%), lags (5%), negative float (0%) and high float (5%) match Kazinex.
-3. **Draws one chart** of the results.
-4. **Writes a short summary.** Gemini picks the words; code computes every number.
-5. **Saves the upload and its results**, so you can open them again.
+| File | Activities checked | Broken rows | Missing links | Leads | Lags | Long lags | Negative float | High float |
+|---|---|---|---|---|---|---|---|---|
+| `CSTv2.4.xer` | 133 | 0 | 20 (15.0%) | 0 | 1 (0.8%) | 0 | 0 | 78 (58.6%) |
+| `example_xer_file.xer` | 365 | 0 | 6 (1.6%) | 11 (3.0%) | 26 (7.1%) | 8 (2.2%) | 0 | 170 (46.6%) |
 
-The command line draws the same results as one chart, for both files:
+- **Matched to Kazinex:** these 6 checks give the same answers as Kazinex, an independent P6 checker, on every test run. [How it's tested](docs/validation.md)
+- **What each number means:** [Results](docs/results.md).
+- **Where the files come from:** [The 2 test files](docs/test-files.md).
 
-![Chart](backend/chart.png)
+The command line draws the same results as one chart:
 
-**How to read the chart:**
+![Chart: the checks furthest over their limit, in both files](backend/chart.png)
 
-- **Bars shown:** the 6 checks furthest over their limit, in either file.
-- **Each bar:** the share of a file's unfinished activities a check caught.
-- **Dashed line:** the DCMA limit.
+- **Each bar:** the share of a file's unfinished activities a check caught. The dashed line is the DCMA limit.
 - **Biggest problems:** no resources in `CSTv2.4.xer` (88.7%), and high float in both files (58.6% and 46.6%).
-- **Under the bars:** each file's summary, and who wrote it ([The AI summary](#the-ai-summary)).
-
-## Features
-
-| Area | What it does |
-|---|---|
-| **Reading** | Reads `.xer` files (UTF-8 or Windows-1252, values that span lines). Flags broken rows with their line numbers. Says why a file can't be checked |
-| **Checks** | 16 checks, one file per rule, in 7 sets. 12 can run on a file. 4 need a baseline or a delay test and say so. 2 are ours, not DCMA's (duplicate links, out-of-sequence work). Float is converted to days with each activity's own calendar |
-| **Schedule** | Reads each project's dates, every activity (name, WBS, float, duration, dates) and every link |
-| **Overview** | Counts what's in the file: status, types, links, leads, lags, constraints, float profile. Matched to Kazinex |
-| **Summary** | A short written summary. Gemini picks the words, code fills every number; code writes it if the AI is off or breaks a rule |
-| **API** | Upload a file, list saved schedules, open one, delete one, and open one check's activities on its own. Clear errors: 404, 413, 422 |
-| **Saving** | PostgreSQL in Docker (9 tables), SQLite without it. A result looks the same every time it's opened |
-| **Home page** | The demo and an upload button when there are no schedules. Else a drop area and the saved files, newest first. Each file is a row that opens on its 5 headline checks, drawn as the demo draws them. Each row opens its report in one click, and deletes the file after a confirm. A new upload stays on this page and opens at the top |
-| **Schedule map** | The WBS tree as rows, worst first. It counts the picked check, a set of checks, or all flags. Cells show the month flagged work starts, a thin bar shows the span and finished share. A second view is a matrix of groups against sets of checks. Click a group to list its activities |
-| **Activity lines** | Flagged activities grouped by WBS group, one line each. The line shows the logic: what's before, what's after, and a red `none` where a link is missing. The list is a fixed-height window with only the lines on screen in the page, and the group name stays pinned while you scroll. Sort and filter it |
-| **Scale** | Tested with a real 20,000-activity file (16,783 missing links). The page holds about 650 elements and scrolls at 60 fps. A filter updates in under 0.1 s, and a saved check reopens in under 1 s. Saving the upload takes about 10 s |
-| **A schedule** | The verdict first: checks over the limit, finish against deadline, what changed since the last upload. Then the checks: a strip of cells and a row for each failing check, with passing ones and ones that can't run folded away. Then the float bar, the map, "Fix first" and the activities behind the picked check. A small file profile and the folded summary come last |
-| **Fix first** | One open end that many flagged activities lead only into, and the activities that fail the most checks |
-| **Details** | Each schedule and each check in it has its own link. Works on phones, in dark mode and with the keyboard |
-| **Proof** | Tests compare the 5 locked checks with Kazinex on each run: 237 backend, 114 frontend |
-| **Tooling** | `docker compose up` runs everything. `CLAUDE.md` and a writing skill keep the docs short |
-
-**Not yet:** login (the list isn't per user), splitting a file with several projects, and the checks that need a baseline or a delay test. The leads, lags and link types checks count activities, not links.
-
-## Results
-
-| File | Activities checked | Broken rows | Missing links | Leads | Lags | Negative float | High float |
-|---|---|---|---|---|---|---|---|
-| `CSTv2.4.xer` | 133 | 0 | 20 (15.0%) | 0 | 1 (0.8%) | 0 | 78 (58.6%) |
-| `example_xer_file.xer` | 365 | 0 | 6 (1.6%) | 11 (3.0%) | 26 (7.1%) | 0 | 170 (46.6%) |
-
-These 5 are the headline checks: the home page and the demo show them for every file. Each one is matched to Kazinex in [Validation](#validation).
-
-**What the numbers mean:**
-
-| | `CSTv2.4.xer` (template, not started) | `example_xer_file.xer` (demo, partly finished) |
-|---|---|---|
-| Broken rows | None. | None. One calendar spans 100 lines inside quotes, and it's read correctly. |
-| Missing links | All 20 are placeholder rows from the MassDOT template. No real work activity is missing a link. | 6 activities have nothing after them. Under the 5% limit. |
-| Leads | None. | 11 activities have a link with a lead into them. DCMA allows none, so this is a flag. |
-| Lags | 1 activity has a link with a lag into it. Under the 5% limit. | 26 activities have a link with a lag into them. Over the 5% limit. |
-| Negative float | None. The lowest float is 0 days, on the critical path. | None. Every unfinished activity has at least 6 days of float. The forecast finish, 6 May 2027, is before the 16 May deadline. |
-| High float | 20 of the 78 are the same placeholder rows. | 170 activities have more than 44 days of float. |
-
-> [!NOTE]
-> DCMA treats a number over its limit as a flag: a reason to look closer, not a failed schedule.
-
-**What's in the files**, as the page shows it under "The schedule, counted". These are facts, not pass or fail:
-
-| | `CSTv2.4.xer` | `example_xer_file.xer` |
-|---|---|---|
-| Activities | 145, all not started | 435: 385 not started, 29 in progress, 21 complete |
-| Links, one per pair | 194: 166 finish to start (85.6%) | 551: 451 finish to start (81.9%) |
-| Leads and lags | 0 leads, 1 lag | 18 leads, 29 lags |
-| Constraints | 5 | 2 |
-| Forecast finish vs deadline | 20 Oct 2027; no deadline set | 6 May 2027, 10 days before the 16 May deadline |
-
-The link and constraint figures equal Kazinex's, to the last decimal. The demo file links 4 pairs of activities twice; each pair counts once, using its later row, as Kazinex does.
-
-## Validation
-
-**Kazinex is our source of truth.** [Kazinex](https://www.kazinex.com/) is an independent P6 schedule checker. We ran both files through it. Its reports, in [`backend/results-from-kazinex/`](backend/results-from-kazinex/), are the baseline our results must agree with.
-
-**[`test_baseline.py`](backend/tests/test_baseline.py) compares them on every test run.** It reads Kazinex's reports directly, and fails when any of these breaks:
-
-| Test | Fails when |
-|---|---|
-| Our numbers equal the [Results](#results) table | a change moves any number |
-| Kazinex flags every activity we flag | we flag an activity Kazinex doesn't |
-| Every extra activity Kazinex flags is one DCMA leaves out | Kazinex flags real work we missed |
-| Our float in days equals Kazinex's, for all 272 high-float activities it lists | float is read or converted wrong |
-| Kazinex counts the same lead and lag links, and lists the same ones with the same lag in days | a link or its lag is read wrong |
-| We flag the later activity of each of those links, when DCMA checks it | leads or lags flag the wrong activity |
-
-[`test_overview.py`](backend/tests/test_overview.py) does the same for "What's in the files": links, the finish-to-start share, leads, lags, start-to-finish links and constraints, against Kazinex's Logic and Constraint sheets.
-
-**Before anything ships:**
-
-1. Add the feature.
-2. Run the tests. They need no key, internet or database: Gemini's replies and the backend are faked, and each test gets its own empty database.
-   ```
-   cd backend && pip install -r requirements-dev.txt && pytest
-   cd frontend && npm install && npm test
-   ```
-3. **Pass:** no number moved. **Fail:** a number changed, so we find the bug and fix it before it reaches a client.
-
-**Why Kazinex counts more:** it checks every activity. DCMA leaves out finished, level-of-effort, WBS summary and milestone activities.
-
-| | `CSTv2.4.xer` | `example_xer_file.xer` |
-|---|---|---|
-| All activities (Kazinex) | 145 | 435 |
-| Checked by DCMA (this checker) | 133 | 365 |
-
-Every extra activity Kazinex flags is one DCMA leaves out:
-
-| File | Check | Kazinex | This checker | Extra activities in Kazinex |
-|---|---|---|---|---|
-| `CSTv2.4.xer` | Missing links | 21 | 20 | 1 level-of-effort activity |
-| `CSTv2.4.xer` | High float | 79 | 78 | 1 finish milestone |
-| `example_xer_file.xer` | Missing links | 46 | 6 | 27 finish milestones, 10 WBS summaries, 3 finished activities |
-| `example_xer_file.xer` | High float | 193 | 170 | 21 finish milestones, 2 WBS summaries |
-
-- **Negative float:** neither finds any.
-
-**Leads and lags count links in Kazinex, and activities here.** Kazinex lists each link under its earlier activity. We flag the later one, as DCMA counts the activity a lead or lag delays. The links themselves are the same:
-
-| File | Check | Kazinex (links) | This checker (activities) | Why the counts differ |
-|---|---|---|---|---|
-| `CSTv2.4.xer` | Lags | 1 | 1 | They don't |
-| `example_xer_file.xer` | Leads | 18 | 11 | 6 activities have 2 lead links into them. 1 is a finish milestone |
-| `example_xer_file.xer` | Lags | 29 | 26 | 2 finish milestones and 1 finished activity |
-
-- **Leads limit:** Kazinex's own leads check allows 5% of links. DCMA allows none, as does Kazinex's negative lag check, which lists all 18.
-- **Percentages differ** for the same reason: 79 of 145 is 54.5%, and 78 of 133 is 58.6%.
-- **Missing-links limit:** Kazinex uses 0%. DCMA uses 5%.
-
-## Folders
-
-| Folder | What it holds |
-|---|---|
-| [`backend/`](backend/) | The API and the checker: code, tests, the two files and Kazinex's reports |
-| [`frontend/`](frontend/) | The page where you upload a file and see where its problems are. See its [README](frontend/README.md) |
-| [`database/`](database/) | PostgreSQL: every upload and its results. See its [README](database/README.md) |
-
-Each folder has its own `Dockerfile`. [`docker-compose.yml`](docker-compose.yml) runs all three.
 
 ## Run it
-
-**With Docker**, all three:
 
 ```
 docker compose up --build
 ```
 
-| Service | What you get |
+| Open | What you get |
 |---|---|
-| frontend | The app at http://localhost:3000: upload a file, see its dashboard |
-| backend | The API at http://localhost:8000. Try it at http://localhost:8000/docs |
-| database | PostgreSQL at `localhost:5432`, with every upload |
+| http://localhost:3000 | The app: upload a file, see its report |
+| http://localhost:8000/docs | The API, to try in the browser |
 
-**Without Docker**, in two terminals. The backend then saves to a local SQLite file, `backend/xer_checker.db`:
+**Without Docker, or from the command line:** [Running it](docs/running.md).
 
-```
-cd backend
-pip install -r requirements.txt      # the API, the database, the chart, and the optional AI
-uvicorn main:app --reload            # the API at http://localhost:8000
-```
+**Tests:** 277 backend and 114 frontend. They need no AI key, internet or database.
 
 ```
-cd frontend
-npm install
-npm run dev                          # the app at http://localhost:5173
+cd backend && pip install -r requirements-dev.txt && pytest
+cd frontend && npm install && npm test
 ```
 
-**The command line**, from `backend/`, needs no server:
+## More
 
-```
-python checker.py                    # check both files in data/ and save chart.png
-python checker.py data/CSTv2.4.xer   # check one file; chart.png stays as it is
-```
-
-**Broken rows.** The two real files have none. So `broken_test.xer` is a short excerpt of `CSTv2.4.xer`, damaged on purpose. From `backend/`:
-
-```
-python checker.py broken_test.xer
-```
-
-```
-broken_test.xer: 4 activities checked
-  Broken rows: 7
-    line 12: TASK total float 'TBD' is not a number
-    line 13: TASK row has 15 values, expected 61
-    line 14: line doesn't start with %T, %F, %R or %E: '& Surrounding Area - P1SA NB'
-    line 21: TASKPRED link points to an activity that's missing or on a broken row
-    ...
-    line 26: no %E end marker, so the file may be cut off
-  Rows read with blanks at the end: 1
-    line 17: TASK row ends early; read as blank: crt_path_num
-```
-
-**A row that only ends early is read, not dropped:**
-
-- **Why:** some real exports leave off empty values at the end, like MPXJ's `TwentyFourHourCalendar.xer` (P6 8.2).
-- **How:** the missing values are read as blanks, and the row is listed as a note.
-- **Only when:** nothing the checks need is missing, and every value still fits its column.
-- **Tested on:** 10,583 rows in 8 real exports from 5 sources (P6 8.2 to 24.12).
-
-**A file that can't be checked says why.** The checker then moves on to the next file, and exits with code 1:
-
-| File | What the checker says |
+| Doc | What it covers |
 |---|---|
-| Missing | `can't open the file (no such file or directory)` |
-| Empty | `the file is empty` |
-| A P6 XML export | `it's an XML file, not an XER export: export the schedule from P6 as XER` |
-| Not a P6 export, like a PDF | `it isn't a P6 XER export: line 1 should start with ERMHDR, not '%PDF-1.7'` |
-| No activities | `it has no TASK table, so there are no activities to check` |
-| A column the checks need is missing | `its TASK table has no status_code column, which the checks need` |
-
-**Two more cases:**
-
-- **Nothing to check** (only finished, milestone, level-of-effort or WBS summary activities): shows n/a, not pass.
-- **A UTF-16 file, or one that starts with a byte-order mark** (a hidden marker some editors add): read normally.
-
-## The API
-
-| Method | Path | What it does |
-|---|---|---|
-| `POST` | `/api/uploads` | Checks one `.xer` file, sent as the form field `file`, and saves it |
-| `GET` | `/api/uploads` | The 20 newest uploads, failed ones included |
-| `GET` | `/api/uploads/{upload_id}` | One saved upload's results |
-| `DELETE` | `/api/uploads/{upload_id}` | Deletes one upload and its results. Answers 204, or 404 if there's no such upload |
-| `GET` | `/` | Answers `{"status": "ok"}` when the API is up |
-| `GET` | `/docs` | A page to try each endpoint in the browser |
-
-```
-curl -F "file=@backend/data/CSTv2.4.xer" http://localhost:8000/api/uploads
-```
-
-**The answer** has the same results as the command line:
-
-- **`upload_id` and `uploaded_at`:** open it again with `GET /api/uploads/{upload_id}`.
-- **`checked`:** unfinished work activities checked.
-- **`rules`:** one entry per DCMA rule, with its DCMA section, limit, count, percent, status (`pass`, `flag` or `n/a`) and the activity IDs.
-- **`broken_rows` and `notes`:** each with its line number.
-- **`summary` and `summary_author`:** the short points, and who wrote them.
-- **`projects`:** each P6 project's data date, planned start, forecast finish and deadline.
-- **`overview`:** what's in the file, counted: activities by status and type, links by type, leads, lags, constraints, and the float profile.
-- **`rules[].details`:** each flagged activity's name, WBS, predecessors, successors, float, remaining duration, dates and status. Also up to 4 activities linked before it, and 4 after.
-- **`structure`:** the WBS tree in tree order. Each group has its checked and flagged counts, flagged per rule, and the dates its work spans.
-
-**It's read back from the database**, so a result looks the same now and later.
-
-| Status | When |
-|---|---|
-| `200` | The file was checked and saved |
-| `404` | No checked upload has this ID |
-| `413` | The file is over 50 MB |
-| `422` | The file can't be checked, with the reason: `can't be checked: the file is empty`. It's saved as failed, with that reason |
-
-## The checks
-
-Only unfinished work activities are checked.
-
-**Float:** how many working days an activity can slip without delaying the project. P6 stores it in hours. The checker converts it to days with each activity's own calendar (8 or 24 hours a day).
-
-**Each rule is its own file** in [`backend/xer_checker/rules/`](backend/xer_checker/rules/), with its own tests. A wrong count points straight to one file:
-
-| Check | Why it matters | Limit | Rule file | Its tests |
-|---|---|---|---|---|
-| Missing links | A loose activity can slip without moving the finish date, so the schedule can't be trusted | 5% | [`missing_links.py`](backend/xer_checker/rules/missing_links.py) | [`test_rule_missing_links.py`](backend/tests/test_rule_missing_links.py) |
-| Negative float | The activity is already late for a deadline | 0% | [`negative_float.py`](backend/xer_checker/rules/negative_float.py) | [`test_rule_negative_float.py`](backend/tests/test_rule_negative_float.py) |
-| High float | Over 44 working days (about 2 months) of spare time can mean a link is missing | 5% | [`high_float.py`](backend/xer_checker/rules/high_float.py) | [`test_rule_high_float.py`](backend/tests/test_rule_high_float.py) |
-
-**To add a rule:** add its file to `rules/`, then add it to `RULES` in [`rules/__init__.py`](backend/xer_checker/rules/__init__.py). The report, the chart, the summary and the API pick it up.
-
-**Where the rules come from:** the DCMA 14-Point Assessment, section 4 of DCMA-EA PAM 200.1 (October 2012). It is the last published version.
-
-- [Copy hosted by Mosaic Projects](https://mosaicprojects.com.au/PDF-Gen/DCMA-PAM-200-1.pdf)
-- [Plain-terms white paper](https://www.mosaicprojects.com.au/WhitePapers/WP1088_DCMA-14-Point.pdf)
-
-| Rule | From PAM 200.1 | In this checker |
-|---|---|---|
-| What to check (4.0) | "should exclude Completed tasks, LOE tasks, Subprojects ... and Milestones" | Skips finished, level-of-effort, WBS summary and milestone activities |
-| Logic (4.1) | "missing a predecessor and/or a successor ... should not exceed 5%" | Missing links, limit 5% |
-| High float (4.6) | "total float greater than 44 working days" ... "If the percentage ... exceeds 5%" | High float, over 44 days, limit 5% |
-| Negative float (4.7) | "total float less than 0 working days" ... "there should not be any negative float" | Negative float, limit 0 |
-| Over a limit (4.0) | "not in and of itself synonymous with failure" | Reported as FLAG, not FAIL |
-
-**A row is broken when:**
-
-- it has the wrong number of values
-- it has no table above it
-- it has no `%T`, `%F`, `%R` or `%E` marker
-- it links to a missing or broken activity
-- its float isn't a number
-- or the file has no `%E` end marker
-
-[`reader.py`](backend/xer_checker/reader.py) finds these. [`checks.py`](backend/xer_checker/checks.py) picks the activities to check, works out their links and float, and runs every rule.
-
-## The AI summary
-
-A few one-sentence points per file. **Code owns every number; the AI only chooses the words.**
-
-**How it works:**
-
-1. [`facts.py`](backend/xer_checker/facts.py) computes named facts, like `"missing_links": "20"` or `"missing_links_vs_limit": "over DCMA's 5% limit"`. Code decides pass or flag, not the AI.
-2. Gemini replies in a fixed JSON shape, up to 4 points. It writes placeholders instead of numbers: `{"about": "missing_links", "text": "{missing_links} activities ({missing_links_pct}) have no link before or after them"}`. Its instructions are in [`prompt.md`](backend/xer_checker/summary/prompt.md).
-3. [`rules.py`](backend/xer_checker/summary/rules.py) checks each point against the rules below.
-4. Code fills in the real values.
-
-**A point is rejected when it:**
-
-| Rule | What it stops |
-|---|---|
-| has a digit | a typed number, like "21" when the fact says 20 |
-| spells a number or an amount (twenty, half, most, none ...) | a number in words, or "most" for 46.6% |
-| has a % sign | `{missing_links}%`, which would turn a count of 20 into a made-up 20% |
-| points at a fact that doesn't exist | an invented figure, like `{critical_path_days}` |
-| doesn't point at any fact | a claim with nothing behind it, like "the schedule is healthy" |
-| writes a fact's name without braces | "missing_links reached 25.0%" showing up in the summary |
-| uses a fact from another check | the high-float count in a sentence about negative float |
-| holds two sentences, a semicolon, or more than 25 words | a paragraph instead of one point with one idea |
-| says "limit" or "threshold" itself | "exceed the float limit": over or within comes only from the facts |
-| uses filler like "additionally", "overall", "notably" | text that sounds machine-written |
-
-**The whole reply is rejected** if a check over its limit has no point. So the AI can't leave out a flag.
-
-**When a reply fails:**
-
-| What happens | What the checker does |
-|---|---|
-| A point breaks a rule | Asks once more, with the reasons |
-| The second try fails too, or the call fails | Code writes the summary from the same facts, and the chart says so |
-| Gemini answers "busy" (429 or 5xx) | Tries the call up to 3 times |
-
-**Measured** on 30 real calls: every reply passed every rule on the first try. Each file got about 3 points, of 15 words each.
-
-- **What Gemini sees:** only the facts. Never activity names or file text.
-- **What the rules can't catch:** a wrong *word*. A person should still read a summary before it reaches a client.
-
-**Setup (optional).** Without a key, code writes the summary. To use Gemini, copy the example settings at the repo root, then put your key from [Google AI Studio](https://aistudio.google.com/apikey) in `.env`:
-
-```
-cp .env.example .env
-```
-
-`.env` is gitignored. Docker Compose reads it too.
-
-| Setting | What it does | In `.env.example` |
-|---|---|---|
-| `GEMINI_API_KEY` | Turns the AI on; empty turns it off | `<YOUR_API_KEY>` |
-| `GEMINI_MODEL` | The model that writes the summaries; required with a key | `gemini-3.5-flash-lite` |
-| `GEMINI_THINKING_LEVEL` | `minimal`, `low`, `medium` or `high`; empty for the model's default | `minimal` |
-
-- **A small model is enough:** on the same request, `gemini-3.5-flash-lite` took 1.8 seconds and `gemini-3.8-flash` took 113.
-- **A bad setting never stops the checker.** Code writes the summary and names the setting to fix.
-
-## How the code is organized
-
-The backend's code is in `backend/`, one job per file, each with its own tests in `tests/`. Steps pass plain data to each other, so each can be tested alone. The frontend's files are listed in [its README](frontend/README.md).
-
-| Folder or file | What it is |
-|---|---|
-| `main.py` | Starts the API |
-| `modules/` | One folder per API feature, each with `route.py`, `schema.py`, `service.py` and `model.py`. Now: `uploads/` |
-| `database/` | The database connection |
-| `checker.py` | Starts the command line |
-| `xer_checker/` | The checker itself, used by both |
-| `xer_checker/rules/` | One file per DCMA rule |
-
-<details>
-<summary>Every file, its job and its tests</summary>
-
-| File | Its one job | Tests |
-|---|---|---|
-| `main.py` | Create the API and add each module's routes | `test_main.py` |
-| `modules/uploads/route.py` | The 3 upload endpoints: answer 404, 413 or 422 on errors | `test_uploads_route.py` |
-| `modules/uploads/service.py` | Check the upload, save it with its results, read saved ones back (`schema.py`) | `test_uploads_service.py` |
-| `modules/uploads/model.py` | The 9 tables, described in the [database README](database/README.md) | `test_database.py` |
-| `modules/uploads/snapshot.py` | Save the schedule's rows; read back the project dates, the overview and each activity's details | `test_uploads_service.py` |
-| `database/db.py` | Connect to PostgreSQL, or SQLite without Docker; create the tables | `test_database.py` |
-| `reader.py` | Read a `.xer` file into tables; say why a broken one can't be checked | `test_reader.py` |
-| `checks.py` | Pick the activities to check, work out their links and float, run every rule | `test_checks.py`, and `test_baseline.py` against Kazinex |
-| `activity.py` | What a rule sees about one activity | |
-| `schedule.py` | Read the projects, activities and links a scheduler needs to see: names, WBS, dates, float in days | `test_schedule.py` |
-| `overview.py` | Count what's in the schedule: status, types, links, leads and lags, constraints, float profile | `test_overview.py`, against Kazinex |
-| `structure.py` | Roll the WBS tree up: checked and flagged per group, and the dates each group's work spans | `test_structure.py` |
-| `rules/*.py` | One DCMA rule each | `test_rule_*.py` |
-| `facts.py` | Turn the results into the named numbers a summary may use | `test_facts.py` |
-| `summary/settings.py` | Read the Gemini settings from `.env`, and check them | `test_summary_settings.py` |
-| `summary/rules.py` | The rules a summary must pass; filling in the facts | `test_summary_rules.py` |
-| `summary/gemini.py` | The call to Gemini: reply shape, time limit, retries | `test_summary_gemini.py` |
-| `summary/writer.py` | Ask Gemini, check, retry once, or let code write it | `test_summary_writer.py` |
-| `summary/prompt.md` | Gemini's instructions | |
-| `report.py`, `chart.py` | Print one file's results; draw the chart | `test_report_and_chart.py` |
-| `cli.py` | Run those steps for each file, and set the exit code. The API reuses its `check_file` | `test_cli.py` |
-
-</details>
-
-## The two files
-
-| File | What it is | Where it comes from |
-|---|---|---|
-| `CSTv2.4.xer` | MassDOT's schedule template for design-bid-build highway contracts (P6 23.12) | The Massachusetts DOT [Contractor Schedule Toolkit page](https://www.mass.gov/info-details/massdot-highway-contractors-schedule-toolkit), as "CST DBB Version 2.4.xer" |
-| `example_xer_file.xer` | An anonymized, partly finished demo project (P6 EPPM 24.12) | `tests/fixtures/example_xer_file.xer` in [Badr1600/p6-analyzer](https://github.com/Badr1600/p6-analyzer). MIT license, Copyright (c) 2026 TeckFuture |
-
-Both are unchanged copies with their original names, in `backend/data/`.
+| [Features](docs/features.md) | Everything the app does, and what isn't done yet |
+| [The checks](docs/checks.md) | All 21 checks, their limits, and where the rules come from |
+| [Results](docs/results.md) | What the numbers on the 2 files mean |
+| [Validation](docs/validation.md) | How every number is tested against Kazinex |
+| [Running it](docs/running.md) | Without Docker, the command line, and broken files |
+| [The API](docs/api.md) | The endpoints, their answers and status codes |
+| [The AI summary](docs/ai-summary.md) | How the AI is kept from inventing a number, and how to set it up |
+| [The code](docs/code.md) | The folders, and every file's job |
+| [The 2 test files](docs/test-files.md) | Where the 2 public files come from |
+| [Frontend](frontend/README.md) | The page, its look and its files |
+| [Database](database/README.md) | The tables |
