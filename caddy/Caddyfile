@@ -1,0 +1,18 @@
+# The public entry in production (docker-compose.prod.yml): HTTPS for SITE_ADDRESS, with a certificate Caddy gets and renews.
+# Everything goes to the frontend's nginx, which serves the app and passes /api to the backend.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	request_body {
+		max_size 501MB # the backend's 500 MB limit, plus room for the form around the file
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy frontend:80
+}

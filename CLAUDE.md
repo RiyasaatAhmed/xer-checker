@@ -44,6 +44,7 @@ Run the Python commands from `backend/`: `checker.py` finds `data/` from the cur
 | Command | What it does |
 |---|---|
 | `docker compose up --build` | From the repo root: builds and starts all three services. The app is at http://localhost:3000, the API at http://localhost:8000/docs. |
+| `docker compose -f docker-compose.prod.yml up -d --build` | Production: the same services plus Caddy for HTTPS on `SITE_ADDRESS`. Only 80 and 443 are open. See `docs/running.md` |
 | `scripts/watch-uploads.sh` | Opens a tmux session that follows each upload: nginx, the backend's 3 stages, then the rows saved. Needs Docker running. |
 | `../.venv/bin/uvicorn main:app --reload` | Runs the API on port 8000. Without `DATABASE_URL`, it saves to `backend/xer_checker.db` (gitignored). |
 | `npm run dev` | From `frontend/`: the app at http://localhost:5173. It passes `/api` to port 8000. |

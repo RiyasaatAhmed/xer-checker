@@ -50,7 +50,7 @@ docker compose up --build
 | http://localhost:3000 | The app: upload a file, see its report |
 | http://localhost:8000/docs | The API, to try in the browser |
 
-**Without Docker, or from the command line:** [Running it](docs/running.md).
+**Without Docker, from the command line, or in production with HTTPS:** [Running it](docs/running.md).
 
 **Tests:** 277 backend and 114 frontend. They need no AI key, internet or database.
 

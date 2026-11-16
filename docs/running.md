@@ -80,3 +80,33 @@ broken_test.xer: 4 activities checked
 
 - **Nothing to check** (only finished, milestone, level-of-effort or WBS summary activities): shows n/a, not pass.
 - **A UTF-16 file, or one that starts with a byte-order mark** (a hidden marker some editors add): read normally.
+
+## In production
+
+[`docker-compose.prod.yml`](../docker-compose.prod.yml) runs the same 3 services, plus Caddy for HTTPS. It differs from the dev file:
+
+| Part | Dev (`docker-compose.yml`) | Production (`docker-compose.prod.yml`) |
+|---|---|---|
+| HTTPS | None | Caddy gets and renews a certificate for `SITE_ADDRESS` ([`caddy/Caddyfile`](../caddy/Caddyfile)) |
+| Open ports | 3000, and 8000 and 5432 on this machine | 80 and 443 only. The backend and database have none outside Docker |
+| Database password | A local default | Required in `.env`, or the stack won't start |
+| Restarts | None | After a crash or a reboot |
+| Logs | Unlimited | At most 5 files of 20 MB per container |
+
+**First deploy**, on the server:
+
+1. `git clone https://github.com/RiyasaatAhmed/xer-checker.git && cd xer-checker`
+2. `cp .env.example .env`, then set `SITE_ADDRESS`, a strong `POSTGRES_PASSWORD` and, for the AI, the Gemini settings.
+3. `docker compose -f docker-compose.prod.yml up -d --build`
+
+**Redeploy** after new commits:
+
+```
+cd ~/xer-checker && git pull && docker compose -f docker-compose.prod.yml up -d --build
+```
+
+| Task | Command |
+|---|---|
+| See what runs | `docker compose -f docker-compose.prod.yml ps` |
+| Follow the logs | `docker compose -f docker-compose.prod.yml logs -f backend` |
+| Stop it | `docker compose -f docker-compose.prod.yml down`. The database and certificate volumes stay |

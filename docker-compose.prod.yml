@@ -1,0 +1,87 @@
+# Production: the same 3 services as docker-compose.yml, plus Caddy for HTTPS.
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Settings come from .env (copy .env.example). SITE_ADDRESS and POSTGRES_PASSWORD are required.
+# Only Caddy is open to the internet, on 80 and 443. The backend and database have no ports outside Docker.
+
+name: xer-checker # the same project as the dev file, so the database volume and its uploads carry over
+
+x-logging: &logging # each container keeps at most 5 log files of 20 MB
+  driver: json-file
+  options: {max-size: "20m", max-file: "5"}
+
+services:
+  caddy:
+    container_name: xer-checker-caddy
+    image: caddy:2.10
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env, like 54-253-142-247.sslip.io}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # the HTTPS certificate: kept, so a restart doesn't ask for a new one
+      - caddy-config:/config
+    depends_on:
+      - frontend
+    logging: *logging
+
+  frontend:
+    container_name: xer-checker-frontend
+    build: ./frontend
+    restart: unless-stopped
+    expose:
+      - "80" # to Caddy only
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging: *logging
+
+  backend:
+    container_name: xer-checker-backend
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      DEPLOYMENT_ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-xer_checker}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@database:5432/${POSTGRES_DB:-xer_checker}
+    # Trust the X-Forwarded-* headers from nginx and Caddy, which sit in front of it inside Docker
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    expose:
+      - "8000" # to nginx only
+    depends_on:
+      database:
+        condition: service_healthy # the API creates its tables at start
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    logging: *logging
+
+  database:
+    container_name: xer-checker-database
+    build: ./database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-xer_checker}
+      POSTGRES_USER: ${POSTGRES_USER:-xer_checker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+volumes:
+  database-data:
+  caddy-data:
+  caddy-config:
